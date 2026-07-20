@@ -21,7 +21,7 @@ export default function HalamanCuti() {
         </thead>
         <tbody>
           <tr>
-            <td className="border p-2 text-center">Andi Ahohoy</td>
+            <td className="border p-2 text-center">RAPAEL EL EL UHUYYY</td>
             <td className="border p-2 text-center">21 Jul - 23 Jul 2026</td>
             <td className="border p-2 text-center">Cuti Tahunan</td>
             <td className="border p-2 flex justify-center">
