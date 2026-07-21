@@ -1,4 +1,4 @@
-import GroupBtn from '../components/GroupBtn';
+import GroupBtn from '../components/Buttons/GroupBtn';
 
 export default function home() {
   return (
