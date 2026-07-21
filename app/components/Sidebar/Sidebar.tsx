@@ -11,8 +11,14 @@ export default function Sidebar() {
         <Link href="/cuti" className="hover:bg-gray-800 p-2 rounded transition">
           Pengajuan Cuti
         </Link>
-        <Link href="/izin-sakit" className="hover:bg-gray-800 p-2 rounded transition">
+        <Link href="/izinsakit" className="hover:bg-gray-800 p-2 rounded transition">
           Izin Sakit
+        </Link>
+        <Link href="/izinsakit" className="hover:bg-gray-800 p-2 rounded transition">
+          Payment Request
+        </Link>
+        <Link href="/izinsakit" className="hover:bg-gray-800 p-2 rounded transition">
+          Talent Profile
         </Link>
       </nav>
     </aside>
