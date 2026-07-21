@@ -6,7 +6,7 @@ export default function Sidebar() {
       <h2 className="text-2xl font-bold mb-8 text-blue-400">AMANA HR</h2>
       <nav className="flex flex-col gap-4">
         <Link href="/beranda" className="hover:bg-gray-800 p-2 rounded transition">
-          Beranda / Dashboard
+          Dashboard
         </Link>
         <Link href="/cuti" className="hover:bg-gray-800 p-2 rounded transition">
           Pengajuan Cuti
