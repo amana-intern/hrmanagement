@@ -4,24 +4,26 @@ import { useState } from "react";
 import SidebarUser from "../../../components/Sidebar/SidebarUser/Sidebaruser";
 
 export default function LeaveRequestPage() {
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [selectedLeave, setSelectedLeave] = useState<string | null>(null);
-  const [selectedSpecialLeave, setSelectedSpecialLeave] = useState<string | null>(null);
+  const [selectedLeave, setSelectedLeave] = useState<string>("");
+  const [selectedSpecialLeave, setSelectedSpecialLeave] = useState<string>("");
 
   const specialLeaveList = [
-    "sakit karena haid (2)",
-    "menikah (3)",
-    "menikahkan anak (2)",
-    "mengkhitankan (2)",
-    "membaptis anak (2)",
-    "istri melahirkan (2)",
-    "salah satu anggota keluarga meninggal dunia (2)",
-    "Anggota keluarga serumah meninggal dunia (1)"
+    "Sakit karena haid (Maximum of 2 days)",
+    "Menikah (Maximum of 3 days)",
+    "Menikahkan anak (Maximum of 2 days)",
+    "Mengkhitankan (Maximum of 2 days)",
+    "Membaptis anak (Maximum of 2 days)",
+    "Istri melahirkan (Maximum of 2 days)",
+    "Salah satu anggota keluarga meninggal dunia (Maximum of 2 days)",
+    "Anggota keluarga serumah meninggal dunia (Maximum of 1 day)",
+    "Kewajiban negara (tergantung kebijakan perusahaan)",
+    "Menunaikan ibadah haji (tergantung kebijakan perusahaan)",
+    "Kecelakaan darurat (tergantung kebijakan perusahaan)"
   ];
 
-  // Logika validasi: Tombol submit aktif jika leave sudah dipilih, 
+  // Validasi: Tombol submit aktif jika leave sudah dipilih, 
   // dan jika Special Leave, rinciannya juga harus dipilih.
-  const isFormValid = selectedLeave !== null && (selectedLeave !== "Special Leave" || selectedSpecialLeave !== null);
+  const isFormValid = selectedLeave !== "" && (selectedLeave !== "Special Leave" || selectedSpecialLeave !== "");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,93 +31,92 @@ export default function LeaveRequestPage() {
     alert("Leave Request berhasil disubmit!");
   };
 
+  const inputClassName = "w-full px-4 py-2.5 bg-white border border-amana-sec-6 rounded-xl focus:border-amana-blue focus:ring-1 focus:ring-amana-blue outline-none text-sm font-normal transition-all text-amana-black shadow-xs";
+  const labelClassName = "block text-sm font-semibold text-amana-black mb-1.5";
+
   return (
-    <div className="flex min-h-screen bg-amana-white font-sans text-amana-black">
+    <div className="flex w-full h-screen overflow-hidden bg-amana-white font-sans">
       <SidebarUser />
 
-      <main className="flex-1 p-6 md:p-10 overflow-y-auto">
-        <div className="max-w-5xl mx-auto flex flex-col gap-8 w-full">
+      {/* Main Content Area */}
+      <main className="flex-1 p-6 text-amana-black flex flex-col items-center overflow-y-auto py-8 justify-start">
+        <div className="w-full max-w-4xl flex flex-col gap-6">
           
-          <h1 className="text-3xl font-semibold text-amana-blue">
+          <h1 className="text-2xl md:text-3xl font-semibold text-amana-blue">
             Leave Request - User
           </h1>
 
-          <div className="bg-white p-6 rounded-2xl border border-amana-sec-6 shadow-xs">
-            <h2 className="text-xl font-semibold mb-4 text-amana-blue">Leave Balance</h2>
-            <div className="flex gap-6">
+          {/* Leave Balance Section (Diperbesar simetris memenuhi canvas) */}
+          <div className="bg-white p-6 md:p-7 rounded-2xl border border-amana-sec-6 shadow-xs w-full">
+            <h2 className="text-lg font-semibold text-amana-blue mb-4 border-b border-amana-sec-6 pb-2">Leave Balance</h2>
+            <div className="grid grid-cols-3 gap-4 w-full">
               {[
                 { count: "12", label: "Paid Leave" },
                 { count: "0", label: "Special Leave" },
                 { count: "0", label: "Unpaid Leave" }
               ].map((item, idx) => (
-                <div key={idx} className="flex h-24 w-40 flex-col items-center justify-center border border-amana-sec-6 rounded-xl bg-amana-white">
+                <div key={idx} className="flex h-24 flex-col items-center justify-center border border-amana-sec-6 rounded-xl bg-amana-white w-full">
                   <span className="text-xl font-semibold text-amana-blue">{item.count}</span>
-                  <span className="text-sm text-amana-sec-7">{item.label}</span>
+                  <span className="text-xs font-medium text-amana-sec-7 mt-1">{item.label}</span>
                 </div>
               ))}
             </div>
           </div>
 
-          <form onSubmit={handleSubmit} className="bg-white p-6 rounded-2xl border border-amana-sec-6 shadow-xs flex flex-col gap-6">
-            <h2 className="text-xl font-semibold text-amana-blue">Request Leave</h2>
+          {/* Request Leave Form Section */}
+          <form onSubmit={handleSubmit} className="bg-white p-6 md:p-7 rounded-2xl border border-amana-sec-6 shadow-xs w-full flex flex-col gap-5">
+            <h2 className="text-lg font-semibold text-amana-blue mb-1 border-b border-amana-sec-6 pb-2">Request Leave</h2>
             
-            <button
-              type="button"
-              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-              className="flex w-full items-center justify-between border border-amana-sec-6 px-4 py-3 rounded-xl text-left text-amana-blue focus:outline-none md:w-1/2 bg-amana-white font-medium text-sm"
-            >
-              <span>{selectedLeave || "Leave Option (Dropdown Table)"}</span>
-              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
+            {/* Dropdown Leave Option Memanjang Penuh */}
+            <div>
+              <label className={labelClassName}>Leave Option</label>
+              <select
+                value={selectedLeave}
+                onChange={(e) => {
+                  setSelectedLeave(e.target.value);
+                  if (e.target.value !== "Special Leave") setSelectedSpecialLeave("");
+                }}
+                className={`${inputClassName} appearance-none cursor-pointer font-semibold`}
+              >
+                <option value="" disabled hidden>Leave Option (Dropdown Table)</option>
+                <option value="Paid Leave">Paid Leave</option>
+                <option value="Special Leave">Special Leave</option>
+                <option value="Unpaid Leave">Unpaid Leave</option>
+              </select>
+            </div>
 
-            {isDropdownOpen && (
-              <div className="flex flex-col gap-6 md:flex-row">
-                <div className="flex h-fit w-fit flex-col gap-3 border border-amana-sec-6 p-4 rounded-xl bg-amana-white">
-                  {["Paid Leave", "Special Leave", "Unpaid Leave"].map((type, idx) => (
-                    <label key={idx} className="flex cursor-pointer items-center gap-2 text-sm font-medium">
-                      <input
-                        type="radio"
-                        name="leaveType"
-                        onChange={() => {
-                          setSelectedLeave(type);
-                          if (type !== "Special Leave") setSelectedSpecialLeave(null);
-                        }}
-                        className="accent-amana-blue"
-                      />
-                      <span>{type}</span>
-                    </label>
-                  ))}
+            {/* Animasi Dropdown untuk List Special Leave */}
+            <div className={`grid transition-all duration-300 ease-in-out ${selectedLeave === "Special Leave" ? "grid-rows-[1fr] opacity-100 mt-2" : "grid-rows-[0fr] opacity-0 overflow-hidden"}`}>
+              <div className="overflow-hidden">
+                <div className="border border-amana-sec-6 bg-amana-white p-5 rounded-xl text-sm flex flex-col gap-3">
+                  <h3 className="font-semibold text-amana-blue text-sm border-b border-amana-sec-6 pb-2">
+                    List Special Leave (Pilih salah satu)
+                  </h3>
+                  <ul className="flex flex-col gap-2.5 max-h-[260px] overflow-y-auto pr-2">
+                    {specialLeaveList.map((item, idx) => (
+                      <li key={idx} className="flex items-start gap-3">
+                        <input 
+                          type="radio" 
+                          name="specialLeaveType"
+                          checked={selectedSpecialLeave === item}
+                          onChange={() => setSelectedSpecialLeave(item)}
+                          className="mt-1 accent-amana-blue cursor-pointer flex-shrink-0 scale-110" 
+                        /> 
+                        <span className="text-amana-black cursor-pointer leading-relaxed font-medium" onClick={() => setSelectedSpecialLeave(item)}>
+                          {item}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
-
-                {selectedLeave === "Special Leave" && (
-                  <div className="max-w-md border border-amana-sec-6 bg-amana-white p-4 rounded-xl text-sm">
-                    <h3 className="mb-2 font-semibold text-amana-blue">List Special Leave (Pilih salah satu)</h3>
-                    <ul className="flex flex-col gap-2">
-                      {specialLeaveList.map((item, idx) => (
-                        <li key={idx} className="flex items-start gap-2">
-                          <input 
-                            type="radio" 
-                            name="specialLeaveType"
-                            checked={selectedSpecialLeave === item}
-                            onChange={() => setSelectedSpecialLeave(item)}
-                            className="mt-1 accent-amana-blue cursor-pointer" 
-                          /> 
-                          <span className="text-amana-black cursor-pointer" onClick={() => setSelectedSpecialLeave(item)}>{item}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
               </div>
-            )}
+            </div>
 
-            <div className="flex justify-end pt-2">
+            <div className="flex justify-end mt-4 pt-3 border-t border-amana-sec-6">
               <button
                 type="submit"
                 disabled={!isFormValid}
-                className={`px-8 py-2.5 rounded-xl font-semibold text-sm transition shadow-xs ${
+                className={`px-6 py-2.5 rounded-xl font-semibold text-sm transition shadow-xs ${
                   isFormValid
                     ? "bg-amana-blue text-white hover:bg-amana-sec-5 cursor-pointer"
                     : "bg-amana-sec-6 text-amana-sec-7 cursor-not-allowed opacity-60"
