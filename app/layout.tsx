@@ -1,9 +1,13 @@
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
+import { Be_Vietnam_Pro } from 'next/font/google';
 import './globals.css';
-import Sidebar from './components/Sidebar/Sidebar';
 
-const inter = Inter({ subsets: ['latin'] });
+// Memuat font Be Vietnam Pro dari Google Fonts
+const beVietnamPro = Be_Vietnam_Pro({
+  subsets: ['latin'],
+  weight: ['300', '400', '500', '600', '700'], // Mengambil berbagai ketebalan font
+  variable: '--font-sans',
+});
 
 export const metadata: Metadata = {
   title: 'AMANA Solutions HR-OPS',
@@ -17,14 +21,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="id">
-      <body className={`${inter.className} bg-gray-50 flex`}>
-        {/* Sidebar akan selalu ada di kiri */}
-        <Sidebar />
-        
-        {/* Konten utama akan menyesuaikan halaman yang dibuka, digeser ke kanan */}
-        <main className="ml-64 w-full p-8 min-h-screen">
-          {children}
-        </main>
+      {/* Menerapkan font ke seluruh body */}
+      <body className={`${beVietnamPro.variable} antialiased`}>
+        {children}
       </body>
     </html>
   );
