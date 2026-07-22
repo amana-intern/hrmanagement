@@ -1,39 +1,18 @@
-import SidebarUser from '../components/Sidebar/SidebarUser/Sidebaruser';
-import SidebarHR from '../components/Sidebar/SidebarHR/Sidebarhr';
-import SidebarOPS from '../components/Sidebar/SidebarOPS/Sidebarops';
-import SidebarSuperAdmin from '../components/Sidebar/SidebarSuperAdmin/Sidebarsuperadmin';
+import SidebarUser from '../../components/Sidebar/SidebarUser/Sidebaruser';
 
-export default async function ProfilePage({
-  searchParams,
-}: {
-  searchParams: Promise<{ role?: string }>;
-}) {
-  const resolvedParams = await searchParams;
-  const role = resolvedParams.role || 'user';
-
-  const renderSidebar = () => {
-    switch (role) {
-      case 'hr':
-        return <SidebarHR />;
-      case 'ops':
-        return <SidebarOPS />;
-      case 'super':
-        return <SidebarSuperAdmin />;
-      default:
-        return <SidebarUser />;
-    }
-  };
+export default function ProfileUserPage() {
+  const role = 'user';
 
   return (
     <div className="flex w-full min-h-screen bg-amana-white font-sans">
       
-      {renderSidebar()}
+      <SidebarUser />
 
       <main className="flex-1 p-8 text-amana-blue overflow-x-hidden flex justify-center">
         <div className="w-full max-w-5xl mt-4">
           
           <h1 className="text-2xl font-semibold mb-8 border-b-2 border-amana-blue pb-2 inline-block">
-            Profile - {role.toUpperCase()}
+            Profile
           </h1>
 
           <div className="w-full bg-white p-8 rounded-2xl shadow-lg flex flex-col md:flex-row gap-10 items-start">
@@ -54,7 +33,7 @@ export default async function ProfilePage({
 
               <div className="border-2 border-amana-blue rounded-xl p-6 relative bg-white shadow-sm hover:shadow-md transition-shadow">
                 <h3 className="text-2xl font-bold leading-tight mb-8">
-                  {role === 'hr' ? 'HR Specialist' : role === 'ops' ? 'Operations Staff' : role === 'super' ? 'Super Administrator' : 'Intern Software Eng.'}
+                  {role === 'user' ? 'Amanalicious' : role === 'hr' ? 'HR Specialist' : role === 'ops' ? 'Operations Staff' : role === 'super' ? 'Super Administrator' : 'Partner'}
                 </h3>
                 <p className="text-sm font-medium text-amana-sec-7-5">
                   Kontrak Sampai : 13/10/2026
