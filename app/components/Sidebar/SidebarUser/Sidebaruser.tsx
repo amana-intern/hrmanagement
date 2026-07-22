@@ -37,13 +37,13 @@ export default function SidebarUser() {
               <div className="flex flex-col mt-3 pl-9 gap-1.5">
                 {/* Gunakan Link dan arahkan ke path yang benar */}
                 <Link 
-                  href="/user/attendance/leave-request" 
+                  href="/user/attendance/leaverequest" 
                   className="font-normal text-left text-xs py-2 px-3 rounded-xl text-amana-blue hover:bg-amana-blue hover:text-white transition-all block w-full"
                 >
                   Leave Request
                 </Link>
                 <Link 
-                  href="/user/attendance/sick-leave" 
+                  href="/user/attendance/sickleave" 
                   className="font-normal text-left text-xs py-2 px-3 rounded-xl text-amana-blue hover:bg-amana-blue hover:text-white transition-all block w-full"
                 >
                   Sick Leave 
@@ -59,7 +59,7 @@ export default function SidebarUser() {
           <span className="font-semibold text-base ml-3 whitespace-nowrap">Payment</span>
         </Link>
 
-        <Link href="/user/career-hub" className="flex items-center px-3 py-3 rounded-2xl transition-colors cursor-pointer group hover:bg-amana-white hover:text-amana-blue">
+        <Link href="/user/careerhub" className="flex items-center px-3 py-3 rounded-2xl transition-colors cursor-pointer group hover:bg-amana-white hover:text-amana-blue">
           <img src="/icon/PCarrerHub.png" alt="Career Hub Icon" className="w-6 h-6 object-contain flex-shrink-0 group-hover:hidden" />
           <img src="/icon/BCarrerHub.png" alt="Career Hub Icon Hover" className="w-6 h-6 object-contain flex-shrink-0 hidden group-hover:block" />
           <span className="font-semibold text-base ml-3 whitespace-nowrap">Career Hub</span>
