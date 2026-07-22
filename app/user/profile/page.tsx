@@ -20,7 +20,7 @@ export default function ProfileUserPage() {
             <div className="flex-shrink-0 flex flex-col items-center">
               <div className="w-48 h-64 bg-amana-sec-6 rounded-xl overflow-hidden border-2 border-amana-blue shadow-md flex items-center justify-center">
                 <img 
-                  src="/rafael.jpg" 
+                  src="/PlaceholderPP.png" 
                   alt="Foto Profil" 
                   className="w-full h-full object-cover"
                 />
@@ -29,13 +29,21 @@ export default function ProfileUserPage() {
 
             <div className="flex-1 w-full flex flex-col gap-6">
               
-              <h2 className="text-4xl font-bold">Halo AmanaLicious!</h2>
+              <h2 className="text-4xl font-bold">Halo Rafael!</h2>
 
-              <div className="border-2 border-amana-blue rounded-xl p-6 relative bg-white shadow-sm hover:shadow-md transition-shadow">
-                <h3 className="text-2xl font-bold leading-tight mb-8">
-                  {role === 'user' ? 'Amanalicious' : role === 'hr' ? 'HR Specialist' : role === 'ops' ? 'Operations Staff' : role === 'super' ? 'Super Administrator' : 'Partner'}
-                </h3>
-                <p className="text-sm font-medium text-amana-sec-7-5">
+              <div className="border-2 border-amana-blue rounded-xl p-6 relative bg-white shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between h-full">
+                
+                {/* Divisi & Role dibuat mepet dengan gap-1 */}
+                <div className="flex flex-col gap-1 mb-6">
+                  <h3 className="text-2xl font-bold leading-tight">
+                    Intern
+                  </h3>
+                  <h3 className="text-2xl font-regular leading-tight">
+                    Software Engineer
+                  </h3>
+                </div>
+
+                <p className="text-sm font-medium pt-4 border-t border-slate-100">
                   Kontrak Sampai : 13/10/2026
                 </p>
               </div>
