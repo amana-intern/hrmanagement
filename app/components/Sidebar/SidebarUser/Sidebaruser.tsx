@@ -29,7 +29,7 @@ export default function SidebarUser() {
         
         {/* 1. Profile */}
         <Link 
-          href="/profile" 
+          href="/user/profile" 
           className="flex items-center px-3 py-3 rounded-2xl transition-colors cursor-pointer group hover:bg-amana-white hover:text-amana-blue"
         >
           <img 
@@ -77,14 +77,14 @@ export default function SidebarUser() {
                   href="/request-leave" 
                   className="font-normal text-xs py-2 px-3 rounded-xl text-amana-blue hover:bg-amana-blue hover:text-white transition-all block"
                 >
-                  Leave Approval
+                  Leave Request
                 </Link>
                 {/* Mapping B1 (Body under Heading): Be Vietnam Pro Regular */}
                 <Link 
                   href="/attendance-leaves" 
                   className="font-normal text-xs py-2 px-3 rounded-xl text-amana-blue hover:bg-amana-blue hover:text-white transition-all block"
                 >
-                  Attendance & Leaves
+                  Sick Leave
                 </Link>
               </div>
             </div>
@@ -114,7 +114,7 @@ export default function SidebarUser() {
 
         {/* 4. Career Hub */}
         <Link 
-          href="/career-hub" 
+          href="/user/careerhub" 
           className="flex items-center px-3 py-3 rounded-2xl transition-colors cursor-pointer group hover:bg-amana-white hover:text-amana-blue"
         >
           <img 
