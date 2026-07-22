@@ -47,10 +47,18 @@ export default function SidebarUser() {
           <div className="grid transition-all duration-300 ease-in-out grid-rows-[0fr] group-hover:grid-rows-[1fr] opacity-0 group-hover:opacity-100">
             <div className="overflow-hidden">
               <div className="flex flex-col mt-3 pl-9 gap-1.5">
-                <Link href="/user/request-leave" className="font-normal text-xs py-2 px-3 rounded-xl text-amana-blue hover:bg-amana-blue hover:text-white transition-all block">
+                {/* Mapping B1 (Body under Heading): Be Vietnam Pro Regular */}
+                <Link 
+                  href="/request-leave" 
+                  className="font-normal text-xs py-2 px-3 rounded-xl text-amana-blue hover:bg-amana-blue hover:text-white transition-all block"
+                >
                   Leave Request
                 </Link>
-                <Link href="/user/attendance-leaves" className="font-normal text-xs py-2 px-3 rounded-xl text-amana-blue hover:bg-amana-blue hover:text-white transition-all block">
+                {/* Mapping B1 (Body under Heading): Be Vietnam Pro Regular */}
+                <Link 
+                  href="/attendance-leaves" 
+                  className="font-normal text-xs py-2 px-3 rounded-xl text-amana-blue hover:bg-amana-blue hover:text-white transition-all block"
+                >
                   Sick Leave
                 </Link>
               </div>
@@ -72,7 +80,7 @@ export default function SidebarUser() {
 
         {/* 4. Career Hub */}
         <Link 
-          href="/user/career-hub" 
+          href="/user/careerhub" 
           className="flex items-center px-3 py-3 rounded-2xl transition-colors cursor-pointer group hover:bg-amana-white hover:text-amana-blue"
         >
           <img src="/icon/PCarrerHub.png" alt="Career Hub Icon" className="w-6 h-6 object-contain flex-shrink-0 group-hover:hidden" />
