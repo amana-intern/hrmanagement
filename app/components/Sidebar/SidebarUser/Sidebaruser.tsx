@@ -37,13 +37,13 @@ export default function SidebarUser() {
               <div className="flex flex-col mt-3 pl-9 gap-1.5">
                 {/* Gunakan Link dan arahkan ke path yang benar */}
                 <Link 
-                  href="/user/attendance/leave-request" 
+                  href="/user/attendance/leaverequest" 
                   className="font-normal text-left text-xs py-2 px-3 rounded-xl text-amana-blue hover:bg-amana-blue hover:text-white transition-all block w-full"
                 >
                   Leave Request
                 </Link>
                 <Link 
-                  href="/user/attendance/sick-leave" 
+                  href="/user/attendance/sickleave" 
                   className="font-normal text-left text-xs py-2 px-3 rounded-xl text-amana-blue hover:bg-amana-blue hover:text-white transition-all block w-full"
                 >
                   Sick Leave 
