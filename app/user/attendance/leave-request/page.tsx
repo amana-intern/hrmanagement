@@ -19,6 +19,16 @@ export default function LeaveRequestPage() {
     "Anggota keluarga serumah meninggal dunia (1)"
   ];
 
+  // Logika validasi: Tombol submit aktif jika leave sudah dipilih, 
+  // dan jika Special Leave, rinciannya juga harus dipilih.
+  const isFormValid = selectedLeave !== null && (selectedLeave !== "Special Leave" || selectedSpecialLeave !== null);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isFormValid) return;
+    alert("Leave Request berhasil disubmit!");
+  };
+
   return (
     <div className="flex min-h-screen bg-amana-white font-sans text-amana-black">
       <SidebarUser />
@@ -30,7 +40,6 @@ export default function LeaveRequestPage() {
             Leave Request - User
           </h1>
 
-          {/* Leave Balance Section */}
           <div className="bg-white p-6 rounded-2xl border border-amana-sec-6 shadow-xs">
             <h2 className="text-xl font-semibold mb-4 text-amana-blue">Leave Balance</h2>
             <div className="flex gap-6">
@@ -47,11 +56,11 @@ export default function LeaveRequestPage() {
             </div>
           </div>
 
-          {/* Request Leave Form Section */}
-          <div className="bg-white p-6 rounded-2xl border border-amana-sec-6 shadow-xs flex flex-col gap-6">
+          <form onSubmit={handleSubmit} className="bg-white p-6 rounded-2xl border border-amana-sec-6 shadow-xs flex flex-col gap-6">
             <h2 className="text-xl font-semibold text-amana-blue">Request Leave</h2>
             
             <button
+              type="button"
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
               className="flex w-full items-center justify-between border border-amana-sec-6 px-4 py-3 rounded-xl text-left text-amana-blue focus:outline-none md:w-1/2 bg-amana-white font-medium text-sm"
             >
@@ -102,13 +111,20 @@ export default function LeaveRequestPage() {
               </div>
             )}
 
-            {/* Tombol Submit diposisikan rapi di bawah dengan flexbox (tidak menumpuk garis) */}
             <div className="flex justify-end pt-2">
-              <button className="px-8 py-2.5 bg-amana-blue text-white rounded-xl hover:bg-amana-sec-5 font-semibold text-sm transition shadow-xs">
+              <button
+                type="submit"
+                disabled={!isFormValid}
+                className={`px-8 py-2.5 rounded-xl font-semibold text-sm transition shadow-xs ${
+                  isFormValid
+                    ? "bg-amana-blue text-white hover:bg-amana-sec-5 cursor-pointer"
+                    : "bg-amana-sec-6 text-amana-sec-7 cursor-not-allowed opacity-60"
+                }`}
+              >
                 Submit
               </button>
             </div>
-          </div>
+          </form>
 
         </div>
       </main>
