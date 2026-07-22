@@ -1,6 +1,9 @@
 @import "tailwindcss";
 
 @theme {
+  /* Paksa Tailwind ganti font-sans jadi Be Vietnam Pro */
+  --font-sans: var(--font-be-vietnam), ui-sans-serif, system-ui, sans-serif;
+
   /* AMANA Main Palette */
   --color-amana-black: #212022;
   --color-amana-white: #F3F5F1;
@@ -23,5 +26,4 @@
 body {
   background-color: var(--color-amana-white);
   color: var(--color-amana-black);
-  font-family: var(--font-sans), sans-serif;
 }

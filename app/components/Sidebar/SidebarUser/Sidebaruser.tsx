@@ -7,13 +7,21 @@ export default function SidebarUser() {
     <div className="min-h-screen bg-amana-blue text-amana-white flex flex-col font-sans w-64 shadow-2xl flex-shrink-0 z-50 p-3">
       
       {/* Header / Logo AMANA */}
-      <div className="pt-6 pb-8 flex flex-col items-center justify-center text-center px-2">
-        <h1 className="font-light tracking-wide mb-1 text-amana-white text-3xl">
-          AMANA
-        </h1>
-        <p className="text-[9px] uppercase tracking-widest text-amana-sec-2">
-          Core Administrative System
-        </p>
+      <div className="pt-4 pb-4 flex flex-col items-center justify-center text-center w-full">
+        
+        {/* Bungkus dengan w-fit agar lebar elemen menyesuaikan teks terpanjang */}
+        <div className="flex flex-col items-center w-fit">
+          <h1 className="font-normal tracking-wide mb-1 text-amana-white text-5xl">
+            AMANA
+          </h1>
+          <p className="font-semibold italic text-[10.5px] uppercase tracking-widest text-amana-white mb-4">
+            Core Administrative System
+          </p>
+
+          {/* Garis Pemisah sekarang otomatis simetris ngikutin lebar teks */}
+          <hr className="w-full border-t-[1.75px] border-amana-white/100" />
+        </div>
+        
       </div>
 
       {/* Menu List */}
@@ -34,12 +42,13 @@ export default function SidebarUser() {
             alt="Profile Icon Hover" 
             className="w-6 h-6 object-contain flex-shrink-0 hidden group-hover:block" 
           />
-          <span className="font-medium text-base ml-3 whitespace-nowrap">
+          {/* Mapping B2 (Standalone Body): Be Vietnam Pro Semibold */}
+          <span className="font-semibold text-base ml-3 whitespace-nowrap">
             Profile
           </span>
         </Link>
 
-        {/* 2. Group: Attendance (Card Style on Hover) */}
+        {/* 2. Group: Attendance */}
         <div className="group flex flex-col p-3 rounded-2xl cursor-pointer transition-all duration-300 hover:bg-amana-white hover:text-amana-blue">
           
           <div className="flex items-center">
@@ -53,24 +62,27 @@ export default function SidebarUser() {
               alt="Attendance Icon Hover" 
               className="w-6 h-6 object-contain flex-shrink-0 hidden group-hover:block" 
             />
-            <span className="font-medium text-base ml-3 whitespace-nowrap">
+            {/* Mapping B2 (Standalone Body): Be Vietnam Pro Semibold */}
+            <span className="font-semibold text-base ml-3 whitespace-nowrap">
               Attendance
             </span>
           </div>
 
-          {/* Sub-menu yang muncul berbentuk kartu di dalam hover */}
+          {/* Sub-menu */}
           <div className="grid transition-all duration-300 ease-in-out grid-rows-[0fr] group-hover:grid-rows-[1fr] opacity-0 group-hover:opacity-100">
             <div className="overflow-hidden">
               <div className="flex flex-col mt-3 pl-9 gap-1.5">
+                {/* Mapping B1 (Body under Heading): Be Vietnam Pro Regular */}
                 <Link 
                   href="/request-leave" 
-                  className="text-xs font-semibold py-2 px-3 rounded-xl text-amana-blue hover:bg-amana-blue hover:text-white transition-all block"
+                  className="font-normal text-xs py-2 px-3 rounded-xl text-amana-blue hover:bg-amana-blue hover:text-white transition-all block"
                 >
                   Leave Approval
                 </Link>
+                {/* Mapping B1 (Body under Heading): Be Vietnam Pro Regular */}
                 <Link 
                   href="/attendance-leaves" 
-                  className="text-xs font-semibold py-2 px-3 rounded-xl text-amana-blue hover:bg-amana-blue hover:text-white transition-all block"
+                  className="font-normal text-xs py-2 px-3 rounded-xl text-amana-blue hover:bg-amana-blue hover:text-white transition-all block"
                 >
                   Attendance & Leaves
                 </Link>
@@ -94,7 +106,8 @@ export default function SidebarUser() {
             alt="Payment Icon Hover" 
             className="w-6 h-6 object-contain flex-shrink-0 hidden group-hover:block" 
           />
-          <span className="font-medium text-base ml-3 whitespace-nowrap">
+          {/* Mapping B2 (Standalone Body): Be Vietnam Pro Semibold */}
+          <span className="font-semibold text-base ml-3 whitespace-nowrap">
             Payment
           </span>
         </Link>
@@ -114,7 +127,8 @@ export default function SidebarUser() {
             alt="Career Hub Icon Hover" 
             className="w-6 h-6 object-contain flex-shrink-0 hidden group-hover:block" 
           />
-          <span className="font-medium text-base ml-3 whitespace-nowrap">
+          {/* Mapping B2 (Standalone Body): Be Vietnam Pro Semibold */}
+          <span className="font-semibold text-base ml-3 whitespace-nowrap">
             Career Hub
           </span>
         </Link>

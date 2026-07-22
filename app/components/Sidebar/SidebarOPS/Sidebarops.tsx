@@ -6,14 +6,21 @@ export default function SidebarOPS() {
   return (
     <div className="min-h-screen bg-amana-blue text-amana-white flex flex-col font-sans w-64 shadow-2xl flex-shrink-0 z-50 p-3">
       
-      {/* Header / Logo */}
-      <div className="pt-6 pb-8 flex flex-col items-center justify-center text-center px-2">
-        <h1 className="font-light tracking-wide mb-1 text-amana-white text-3xl">
-          AMANA
-        </h1>
-        <p className="text-[9px] uppercase tracking-widest text-amana-sec-2">
-          OPS Portal
-        </p>
+      {/* Header / Logo AMANA */}
+      <div className="pt-4 pb-4 flex flex-col items-center justify-center text-center w-full">
+        
+        {/* Bungkus dengan w-fit agar lebar elemen menyesuaikan teks terpanjang */}
+        <div className="flex flex-col items-center w-fit">
+          <h1 className="font-normal tracking-wide mb-1 text-amana-white text-5xl">
+            AMANA
+          </h1>
+          <p className="font-semibold italic text-[10.5px] uppercase tracking-widest text-amana-white mb-4">
+            Core Administrative System
+          </p>
+
+          {/* Garis Pemisah sekarang otomatis simetris ngikutin lebar teks */}
+          <hr className="w-full border-t-[1.75px] border-amana-white/100" />
+        </div>
       </div>
 
       {/* Menu List */}
