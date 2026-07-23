@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import SidebarUser from '../../components/Sidebar/SidebarUser/Sidebaruser';
-import { PageLayout, PageTitle, Card, CardSection, Button, Input, Select, Label, Table, Badge } from '../../components/ui';
+import { PageLayout, Card, CardSection, Button, Input, Select, Label, Table, Badge } from '../../components/ui';
 
 interface OutgoingPayment {
   id: number;
@@ -91,7 +91,6 @@ export default function PaymentPage() {
 
   return (
     <PageLayout sidebar={<SidebarUser />}>
-      <PageTitle>Payment</PageTitle>
 
       <div className="animate-slide-up delay-100 flex flex-col gap-6">
         

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import SidebarUser from '../../../components/Sidebar/SidebarUser/Sidebaruser';
-import { PageLayout, PageTitle, Card, CardSection, Button, Input, Label } from '../../../components/ui';
+import { PageLayout, Card, CardSection, Button, Input, Label } from '../../../components/ui';
 
 export default function SickLeavePage() {
   const [startDate, setStartDate] = useState('');
@@ -19,7 +19,6 @@ export default function SickLeavePage() {
 
   return (
     <PageLayout sidebar={<SidebarUser />}>
-      <PageTitle>Sick Leave</PageTitle>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-6">
         <Card padding="lg" className="animate-fade-in delay-100">

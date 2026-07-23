@@ -2,7 +2,7 @@
 
 import React, { useState, useRef } from 'react';
 import SidebarUser from '../../components/Sidebar/SidebarUser/Sidebaruser';
-import { PageLayout, PageTitle, Card, CardSection, Button } from '../../components/ui';
+import { PageLayout, Card, CardSection, Button } from '../../components/ui';
 
 interface Certification {
   id: string;
@@ -86,7 +86,6 @@ export default function CareerHubPage() {
 
   return (
     <PageLayout sidebar={<SidebarUser />}>
-      <PageTitle>Career Hub</PageTitle>
 
       <Card padding="lg" className="mb-6 animate-fade-in delay-100">
         <CardSection title="Competency Assessment Test">

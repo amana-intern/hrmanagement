@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import SidebarUser from '../../../components/Sidebar/SidebarUser/Sidebaruser';
-import { PageLayout, PageTitle, Card, CardSection, Button, Select, Label } from '../../../components/ui';
+import { PageLayout, Card, CardSection, Button, Select, Label } from '../../../components/ui';
 
 const leaveBalanceItems = [
   { count: '12', label: 'Paid Leave' },
@@ -38,7 +38,6 @@ export default function LeaveRequestPage() {
 
   return (
     <PageLayout sidebar={<SidebarUser />}>
-      <PageTitle>Leave Request</PageTitle>
 
       <Card padding="lg" className="mb-6 animate-fade-in delay-100">
         <CardSection title="Leave Balance">
