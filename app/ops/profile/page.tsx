@@ -22,7 +22,7 @@ export default function SuperadminProfilePage() {
           </div>
 
           <div className="flex-1 flex flex-col justify-between gap-3">
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-amana-blue tracking-tight">Hello, OPS Admin!</h1>
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-amana-blue tracking-tight">Hello, OPS!</h1>
             <div className="bg-white border border-amana-sec-6 rounded-xl p-4 flex flex-col justify-center">
               <h2 className="text-xl font-bold text-amana-blue">Operation Department</h2>
               <p className="text-base font-medium text-amana-sec-7">Operations</p>

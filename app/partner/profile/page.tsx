@@ -25,7 +25,7 @@ export default function SuperadminProfilePage() {
           <div className="flex-1 flex flex-col justify-end gap-1">
             {/* Header menggunakan default font layout + leading-none */}
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-amana-blue leading-none pl-1">
-              Hello, Admin!
+              Hello, Partner!
             </h1>
 
             {/* Box Partner Health */}
