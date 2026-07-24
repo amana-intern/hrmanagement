@@ -2,11 +2,15 @@ import type { Metadata } from 'next';
 import { Be_Vietnam_Pro } from 'next/font/google';
 import './globals.css';
 
-// Deklarasi font Be Vietnam Pro dengan penambahan style Italic
+// Deklarasi font Be Vietnam Pro untuk Sistem Tipografi AMANA
 const beVietnamPro = Be_Vietnam_Pro({
   subsets: ['latin'],
-  weight: ['300', '400', '600'], // Light (300), Regular (400), Semibold (600)
-  style: ['normal', 'italic'],   // Wajib ditambahin agar H2 (Semibold Italic) bisa jalan
+  // 300 = H1 (Light)
+  // 400 = B1 (Regular)
+  // 600 = H2, B2, F (Semibold)
+  weight: ['300', '400', '600'], 
+  // 'italic' wajib untuk mendukung H2
+  style: ['normal', 'italic'],   
   variable: '--font-be-vietnam',
 });
 
@@ -22,7 +26,6 @@ export default function RootLayout({
 }) {
   return (
     <html lang="id">
-      {/* Masukin variabel font-nya ke body, dan tambahin class font-sans */}
       <body className={`${beVietnamPro.variable} font-sans antialiased`}>
         {children}
       </body>
