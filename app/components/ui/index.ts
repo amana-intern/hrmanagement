@@ -10,3 +10,4 @@ export { default as StatCard } from './StatCard';
 export { default as ProfileCard } from './ProfileCard';
 export { Input, Select, Label } from './Input';
 export { default as Modal } from './Modal';
+export { default as FileUpload } from './FileUpload';

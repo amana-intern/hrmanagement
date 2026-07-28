@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import SidebarUser from '../../components/Sidebar/SidebarUser/Sidebaruser';
-import { PageLayout, Card, CardSection, Button, Input, Select, Label, Table, Badge } from '../../components/ui';
+import { PageLayout, Card, CardSection, Button, Input, Select, Label, Table, Badge, FileUpload } from '../../components/ui';
 
 interface OutgoingPayment {
   id: number;
@@ -10,28 +10,6 @@ interface OutgoingPayment {
   toWhom: 'Vendor' | 'Individual' | 'Per Diem';
   submittedToWhom: string;
   status: 'Pending Ops' | 'Pending Partner' | 'Scheduled' | 'Rejected' | 'Done';
-}
-
-function UploadBox({ label, fileKey, files, onFileChange }: {
-  label?: string;
-  fileKey: string;
-  files: { [key: string]: File | null };
-  onFileChange: (key: string, file: File | null) => void;
-}) {
-  return (
-    <div className="group relative w-full border-2 border-dashed border-amana-sec-6 rounded-xl p-6 flex flex-col items-center justify-center bg-amana-white hover:border-amana-blue/40 hover:bg-white transition-all duration-200 cursor-pointer mt-1">
-      <input
-        type="file"
-        accept="application/pdf"
-        onChange={(e) => onFileChange(fileKey, e.target.files?.[0] || null)}
-        className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
-      />
-      <img src="/icon/BUpload.png" alt="" className="w-8 h-8 object-contain mb-2" />
-      <span className="text-[11px] font-semibold text-amana-blue uppercase tracking-wider text-center truncate max-w-full px-2">
-        {files[fileKey] ? files[fileKey]?.name : (label || 'UPLOAD INVOICE DOCUMENT (.PDF)')}
-      </span>
-    </div>
-  );
 }
 
 export default function PaymentPage() {
@@ -202,7 +180,7 @@ export default function PaymentPage() {
                 <div><Label>NPWP Vendor</Label><Input type="number" value={vendorNpwp} onChange={(e) => setVendorNpwp(e.target.value)} placeholder="Enter NPWP" /></div>
                 <div><Label>Payment Amount</Label><Input type="number" value={vendorAmount} onChange={(e) => setVendorAmount(e.target.value)} placeholder="e.g. 1500000" /></div>
                 <div><Label>Due Date</Label><Input type="date" value={vendorDueDate} onChange={(e) => setVendorDueDate(e.target.value)} /></div>
-                <div><Label>Attach Invoice</Label><UploadBox label="UPLOAD INVOICE DOCUMENT (.PDF)" fileKey="vendor-invoice" files={files} onFileChange={handleFileChange} /></div>
+                <div><Label>Attach Invoice</Label><FileUpload file={files['vendor-invoice']} onChange={(f) => handleFileChange('vendor-invoice', f)} placeholder="UPLOAD INVOICE DOCUMENT (.PDF)" /></div>
                 <div className="flex justify-end pt-4 border-t border-amana-sec-6">
                   <Button disabled={!isVendorComplete} onClick={handleSubmitPayment}>Submit Payment</Button>
                 </div>
@@ -234,8 +212,8 @@ export default function PaymentPage() {
                   <div><Label>Honor Components</Label><Input value={indComponent} onChange={(e) => setIndComponent(e.target.value)} placeholder="Component" /></div>
                   <div><Label>Amount</Label><Input type="number" value={indAmount} onChange={(e) => setIndAmount(e.target.value)} placeholder="Rp" /></div>
                 </div>
-                <div><Label>Copy of Individual KTP <span className="font-light text-amana-sec-7 ml-1">(For tax purposes)</span></Label><UploadBox label="UPLOAD KTP DOCUMENT (.PDF)" fileKey="ind-ktp" files={files} onFileChange={handleFileChange} /></div>
-                <div><Label>Attach Invoice <span className="font-light text-amana-sec-7 ml-1">(Optional)</span></Label><UploadBox label="UPLOAD INVOICE DOCUMENT (.PDF)" fileKey="ind-invoice" files={files} onFileChange={handleFileChange} /></div>
+                <div><Label>Copy of Individual KTP <span className="font-light text-amana-sec-7 ml-1">(For tax purposes)</span></Label><FileUpload file={files['ind-ktp']} onChange={(f) => handleFileChange('ind-ktp', f)} placeholder="UPLOAD KTP DOCUMENT (.PDF)" /></div>
+                <div><Label>Attach Invoice <span className="font-light text-amana-sec-7 ml-1">(Optional)</span></Label><FileUpload file={files['ind-invoice']} onChange={(f) => handleFileChange('ind-invoice', f)} placeholder="UPLOAD INVOICE DOCUMENT (.PDF)" /></div>
                 <div className="flex justify-end pt-4 border-t border-amana-sec-6">
                   <Button disabled={!isIndividualComplete} onClick={handleSubmitPayment}>Submit Payment</Button>
                 </div>
@@ -258,7 +236,7 @@ export default function PaymentPage() {
                   </div>
                   <img src="/perdiem.png" alt="Format Example" className="w-full rounded-lg border border-amana-sec-6 shadow-xs" />
                 </div>
-                <div><Label>Upload The File Here</Label><UploadBox label="UPLOAD PARTICIPANT LIST (.PDF)" fileKey="perdiem-file" files={files} onFileChange={handleFileChange} /></div>
+                <div><Label>Upload The File Here</Label><FileUpload file={files['perdiem-file']} onChange={(f) => handleFileChange('perdiem-file', f)} placeholder="UPLOAD PARTICIPANT LIST (.PDF)" /></div>
                 <div className="flex justify-end pt-4 border-t border-amana-sec-6">
                   <Button disabled={!isPerDiemComplete} onClick={handleSubmitPayment}>Submit Payment</Button>
                 </div>

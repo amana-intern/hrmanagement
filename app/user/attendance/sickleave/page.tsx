@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import SidebarUser from '../../../components/Sidebar/SidebarUser/Sidebaruser';
-import { PageLayout, Card, CardSection, Button, Input, Label } from '../../../components/ui';
+import { PageLayout, Card, CardSection, Button, Input, Label, FileUpload } from '../../../components/ui';
 
 export default function SickLeavePage() {
   const [startDate, setStartDate] = useState('');
@@ -38,19 +38,7 @@ export default function SickLeavePage() {
 
         <Card padding="lg" className="animate-slide-up delay-200">
           <CardSection title="Upload Medical Certificate">
-            <div className="group relative flex h-44 w-full cursor-pointer flex-col items-center justify-center border-2 border-dashed border-amana-sec-6 rounded-2xl bg-amana-white hover:border-amana-blue/40 hover:bg-white transition-all duration-200">
-              <input
-                type="file"
-                accept="application/pdf, image/*"
-                onChange={(e) => setMedicalFile(e.target.files?.[0] || null)}
-                className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-              />
-              <img src="/icon/BUpload.png" alt="" className="mb-2 h-10 w-10 object-contain" />
-              <span className="text-sm font-semibold text-amana-blue">
-                {medicalFile ? medicalFile.name : 'Drag Images/PDF or Click to Browse'}
-              </span>
-              <span className="text-xs text-amana-sec-7 mt-1 font-light">Format PDF / Image (Max 5MB)</span>
-            </div>
+            <FileUpload file={medicalFile} onChange={setMedicalFile} accept="application/pdf, image/*" placeholder="Drag Images/PDF or Click to Browse" hint="Format PDF / Image (Max 5MB)" />
           </CardSection>
         </Card>
 
