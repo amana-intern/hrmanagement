@@ -12,9 +12,10 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
 export async function GET(request: Request) {
   try {
-    const today = new Date();
-    const currentMonth = today.getMonth() + 1; 
-    const currentDay = today.getDate();
+    const now = new Date();
+    const jakartaTime = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Jakarta" }));
+    const currentMonth = jakartaTime.getMonth() + 1;
+    const currentDay = jakartaTime.getDate();
 
     // Query ke database
     const query = `
