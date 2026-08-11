@@ -1,50 +1,47 @@
-'use client';
+import ProfileOverview, { type Stat } from '../../components/data-display/ProfileOverview';
 
-import SidebarPar from '../../components/Sidebar/SidebarUser/Sidebaruser';
-import { PageLayout } from '../../components/ui';
-import StatCard from '../../components/ui/StatCard';
+const attendanceStats: Stat[] = [
+  { value: 1, label: 'Leave Pending', caption: 'Your leave request awaiting approval' },
+  { value: 3, label: 'Leave Taken', caption: 'Day(s) of leave taken this year' },
+  { value: 0, label: 'Sick Leave', caption: 'Sick leave record(s) this month' },
+];
 
-export default function SuperadminProfilePage() {
+const attendanceUpdates = [
+  'Your leave request #1024 is pending approval',
+  'Leave request #1024 submitted for approval',
+  'Sick leave record updated',
+  'Leave request #0998 approved last month',
+  'Attendance record synced today',
+];
+
+const careerHubStats: Stat[] = [
+  { value: 1, label: 'Assessment Test', caption: 'Assessment test still needs to be completed' },
+  { value: 1, label: 'Payment Approved', caption: 'Payment request approved this month' },
+  { value: 1, label: 'CV Update', caption: 'CV not updated in 3 months' },
+];
+
+const careerHubUpdates = [
+  'You still need to complete your assessment test',
+  'Payment request #1023 has been approved',
+  'Your CV has not been updated in 3 months',
+  'Payment #1023 approved by Partner',
+  'CV updated in Career Hub',
+];
+
+export default function UserProfilePage() {
   return (
-    <PageLayout sidebar={<SidebarPar />}>
-      <div className="bg-white border border-amana-sec-6 rounded-2xl p-6 shadow-sm flex flex-col gap-6">
-        
-        {/* Header & Info Partner */}
-        <div className="flex flex-col sm:flex-row gap-6 items-stretch">
-          
-          {/* Box Profile Image (Ratio 4:5) */}
-          <div className="w-40 aspect-[4/5] bg-amana-sec-2/10 border border-amana-sec-6 rounded-2xl flex-shrink-0 overflow-hidden">
-            <img 
-              src="/PlaceHolderPP.png" 
-              alt="Profile Picture" 
-              className="w-full h-full object-cover" 
-            />
-          </div>
-
-          <div className="flex-1 flex flex-col justify-between gap-3">
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-amana-blue tracking-tight">Hello, User!</h1>
-            <div className="bg-white border border-amana-sec-6 rounded-xl p-4 flex flex-col justify-center">
-              <h2 className="text-xl font-bold text-amana-blue">Grade</h2>
-              <p className="text-base font-medium text-amana-sec-7">Role</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Section Summary */}
-        <div className="border border-amana-sec-6 rounded-2xl p-5 flex flex-col gap-4">
-          <h3 className="text-xl font-bold text-amana-blue">Summary</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-            <div className="bg-amana-sec-2/10 border border-amana-sec-6 rounded-xl min-h-[120px] flex items-center justify-center p-4 text-xs font-medium text-amana-sec-7 text-center">
-              Visual / Graphic
-            </div>
-            <StatCard value={2} label="Pending Leaves" color="text-amana-blue" />
-            <StatCard value={1} label="Sick Leaves" color="text-amber-500" />
-            <StatCard value={0} label="Pending Payment" color="text-emerald-600" />
-            <StatCard value={3} label="Certificates" color="text-rose-600" />
-          </div>
-        </div>
-
-      </div>
-    </PageLayout>
+    <ProfileOverview
+      showGreeting
+      panels={[
+        { title: 'Attendance Summary', stats: attendanceStats, updates: attendanceUpdates },
+        { title: 'Career Hub Summary', stats: careerHubStats, updates: careerHubUpdates },
+      ]}
+      bio={{
+        name: 'Amana User',
+        role: 'Senior Analyst - Consultant',
+        email: 'user@amana.com',
+        phone: '+62 812-3456-7890',
+      }}
+    />
   );
 }

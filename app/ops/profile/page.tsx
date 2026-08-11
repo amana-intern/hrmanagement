@@ -1,50 +1,47 @@
-'use client';
+import ProfileOverview, { type Stat } from '../../components/data-display/ProfileOverview';
 
-import SidebarPar from '../../components/Sidebar/SidebarOPS/Sidebarops';
-import { PageLayout } from '../../components/ui';
-import StatCard from '../../components/ui/StatCard';
+const paymentStats: Stat[] = [
+  { value: 3, label: 'Pending Review', caption: 'Payment request(s) awaiting OPS review' },
+  { value: 2, label: 'Approved Today', caption: 'Payment(s) approved by Partner today' },
+  { value: 1, label: 'Rejected', caption: 'Payment request(s) rejected' },
+];
 
-export default function SuperadminProfilePage() {
+const paymentUpdates = [
+  '3 payment requests pending ops review',
+  '2 payments approved by Partner today',
+  '1 payment request was rejected',
+  'Monthly payment report ready to export',
+  'Payment #1024 approved by Partner',
+];
+
+const activityStats: Stat[] = [
+  { value: 4, label: 'Payments Processed', caption: 'Total payment(s) processed this week' },
+  { value: 1, label: 'Flagged', caption: 'Payment(s) flagged for review' },
+  { value: 2, label: 'Scheduled', caption: 'Payment(s) marked as scheduled' },
+];
+
+const activityUpdates = [
+  'Payment #1024 approved by Partner',
+  'Payment #1023 marked as Scheduled',
+  'Payment #1021 was rejected by Finance',
+  'Payment #1019 flagged for review',
+  'Monthly payment report generated',
+];
+
+export default function OPSProfilePage() {
   return (
-    <PageLayout sidebar={<SidebarPar />}>
-      <div className="bg-white border border-amana-sec-6 rounded-2xl p-6 shadow-sm flex flex-col gap-6">
-        
-        {/* Header & Info Partner */}
-        <div className="flex flex-col sm:flex-row gap-6 items-stretch">
-          
-          {/* Box Profile Image (Ratio 4:5) */}
-          <div className="w-40 aspect-[4/5] bg-amana-sec-2/10 border border-amana-sec-6 rounded-2xl flex-shrink-0 overflow-hidden">
-            <img 
-              src="/PlaceHolderPP.png" 
-              alt="Profile Picture" 
-              className="w-full h-full object-cover" 
-            />
-          </div>
-
-          <div className="flex-1 flex flex-col justify-between gap-3">
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-amana-blue tracking-tight">Hello, OPS!</h1>
-            <div className="bg-white border border-amana-sec-6 rounded-xl p-4 flex flex-col justify-center">
-              <h2 className="text-xl font-bold text-amana-blue">Operation Department</h2>
-              <p className="text-base font-medium text-amana-sec-7">Operations</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Section Summary */}
-        <div className="border border-amana-sec-6 rounded-2xl p-5 flex flex-col gap-4">
-          <h3 className="text-xl font-bold text-amana-blue">Summary</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-            <div className="bg-amana-sec-2/10 border border-amana-sec-6 rounded-xl min-h-[120px] flex items-center justify-center p-4 text-xs font-medium text-amana-sec-7 text-center">
-              Visual / Graphic
-            </div>
-            <StatCard value={5} label="Total Requests" color="text-amana-blue" />
-            <StatCard value={3} label="Pending Review" color="text-amber-500" />
-            <StatCard value={1} label="Approved" color="text-emerald-600" />
-            <StatCard value={1} label="Rejected" color="text-rose-600" />
-          </div>
-        </div>
-
-      </div>
-    </PageLayout>
+    <ProfileOverview
+      showGreeting
+      panels={[
+        { title: 'Payment Summary', stats: paymentStats, updates: paymentUpdates },
+        { title: 'Recent Activity', stats: activityStats, updates: activityUpdates },
+      ]}
+      bio={{
+        name: 'Amana User',
+        role: 'Operations - Officer',
+        email: 'ops@amana.com',
+        phone: '+62 813-4567-8901',
+      }}
+    />
   );
 }

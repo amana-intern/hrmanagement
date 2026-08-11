@@ -1,24 +1,26 @@
 'use client';
 
-import SidebarBase from '../SidebarBase';
-import type { SidebarConfig } from '../SidebarBase';
+import SidebarNavBase from '../SidebarNavBase';
+import type { NavGroup } from '../SidebarNavBase';
 
-const items: SidebarConfig = [
-  { type: 'item', href: '/user/profile', label: 'Profile', iconP: '/icon/PProfile.png', iconB: '/icon/BProfile.png' },
+const groups: NavGroup[] = [
   {
-    type: 'dropdown',
-    label: 'Attendance',
-    iconP: '/icon/PAttendance.png',
-    iconB: '/icon/BAttendance.png',
-    items: [
-      { href: '/user/attendance/leaverequest', label: 'Leave Request' },
-      { href: '/user/attendance/sickleave', label: 'Sick Leave' },
+    title: 'Employee',
+    links: [
+      { href: '/user/profile', label: 'Profile' },
+      { href: '/user/careerhub', label: 'Career Hub' },
     ],
   },
-  { type: 'item', href: '/user/payment', label: 'Payment', iconP: '/icon/PPayment.png', iconB: '/icon/BPayment.png' },
-  { type: 'item', href: '/user/careerhub', label: 'Career Hub', iconP: '/icon/PCarrerHub.png', iconB: '/icon/BCarrerHub.png' },
+  {
+    title: 'Services',
+    links: [
+      { href: '/user/leaverequest', label: 'Request Leave' },
+      { href: '/user/sickleave', label: 'Request Sick Leave' },
+      { href: '/user/payment', label: 'Request Payment' },
+    ],
+  },
 ];
 
 export default function SidebarUser() {
-  return <SidebarBase items={items} />;
+  return <SidebarNavBase groups={groups} />;
 }

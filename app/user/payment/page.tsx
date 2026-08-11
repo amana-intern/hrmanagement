@@ -1,36 +1,67 @@
-  'use client';
+'use client';
 
 import { useState } from 'react';
-import SidebarUser from '../../components/Sidebar/SidebarUser/Sidebaruser';
-import { PageLayout, Card, CardSection, Button, Input, Select, Label, Table, Badge } from '../../components/ui';
+import { motion } from 'framer-motion';
+import { ChevronLeft } from 'lucide-react';
+import { PageTopBar, SectionCard, DataTable, Button, TextField, SelectField, StatusPill, UploadBox as SharedUploadBox } from '../../components/ui';
+import { easeOut } from '@/app/utils/motion';
+import type { DataTableColumn } from '../../components/ui';
+
+type PaymentStatus = 'Pending Ops' | 'Pending Partner' | 'Scheduled' | 'Rejected' | 'Done';
 
 interface OutgoingPayment {
   id: number;
   timeSubmission: string;
   toWhom: 'Vendor' | 'Individual' | 'Per Diem';
   submittedToWhom: string;
-  status: 'Pending Ops' | 'Pending Partner' | 'Scheduled' | 'Rejected' | 'Done';
+  status: PaymentStatus;
 }
 
-function UploadBox({ label, fileKey, files, onFileChange }: {
+const outgoingPayments: OutgoingPayment[] = [
+  { id: 1, timeSubmission: '23 July 2026', toWhom: 'Vendor', submittedToWhom: 'PT Janji Cahaya Kembar', status: 'Pending Ops' },
+  { id: 2, timeSubmission: '20 July 2026', toWhom: 'Individual', submittedToWhom: 'Workshop Digital Marketing', status: 'Done' },
+  { id: 3, timeSubmission: '18 July 2026', toWhom: 'Per Diem', submittedToWhom: 'Team Building 2026', status: 'Pending Partner' },
+  { id: 4, timeSubmission: '15 July 2026', toWhom: 'Vendor', submittedToWhom: 'PT Solusi Teknologi', status: 'Scheduled' },
+  { id: 5, timeSubmission: '10 July 2026', toWhom: 'Individual', submittedToWhom: 'Seminar Pendidikan Nasional', status: 'Rejected' },
+];
+
+const statusStyle: Record<PaymentStatus, string> = {
+  'Pending Ops': 'bg-amana-warning-500',
+  'Pending Partner': 'bg-amana-primary-500',
+  Scheduled: 'bg-amana-success-500',
+  Rejected: 'bg-amana-danger-500',
+  Done: 'bg-amana-success-500',
+};
+
+const paymentColumns: DataTableColumn<OutgoingPayment>[] = [
+  { key: 'timeSubmission', label: 'Time Submission', sortValue: (r) => new Date(r.timeSubmission).getTime() },
+  { key: 'toWhom', label: 'To Whom' },
+  { key: 'submittedToWhom', label: 'Submitted To Whom' },
+  {
+    key: 'status',
+    label: 'Status',
+    render: (r) => <StatusPill color={statusStyle[r.status]}>{r.status}</StatusPill>,
+  },
+];
+
+function UploadBox({
+  label,
+  fileKey,
+  files,
+  onFileChange,
+}: {
   label?: string;
   fileKey: string;
   files: { [key: string]: File | null };
   onFileChange: (key: string, file: File | null) => void;
 }) {
   return (
-    <div className="group relative w-full border-2 border-dashed border-amana-sec-6 rounded-xl p-6 flex flex-col items-center justify-center bg-amana-white hover:border-amana-blue/40 hover:bg-white transition-all duration-200 cursor-pointer mt-1">
-      <input
-        type="file"
-        accept="application/pdf"
-        onChange={(e) => onFileChange(fileKey, e.target.files?.[0] || null)}
-        className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
-      />
-      <img src="/icon/BUpload.png" alt="" className="w-8 h-8 object-contain mb-2" />
-      <span className="text-[11px] font-semibold text-amana-blue uppercase tracking-wider text-center truncate max-w-full px-2">
-        {files[fileKey] ? files[fileKey]?.name : (label || 'UPLOAD INVOICE DOCUMENT (.PDF)')}
-      </span>
-    </div>
+    <SharedUploadBox
+      file={files[fileKey] ?? null}
+      placeholder={label || 'Upload Invoice Document (.pdf)'}
+      onFileSelect={(file) => onFileChange(fileKey, file)}
+      className="h-36"
+    />
   );
 }
 
@@ -59,214 +90,219 @@ export default function PaymentPage() {
   const [perDiemParticipants, setPerDiemParticipants] = useState('');
   const [files, setFiles] = useState<{ [key: string]: File | null }>({});
 
-  const [outgoingPayments] = useState<OutgoingPayment[]>([
-    { id: 1, timeSubmission: '23 Jul 2026', toWhom: 'Vendor',     submittedToWhom: 'PT Janji Cahaya Kembar',        status: 'Pending Ops' },
-    { id: 2, timeSubmission: '20 Jul 2026', toWhom: 'Individual', submittedToWhom: 'Workshop Digital Marketing',    status: 'Done' },
-    { id: 3, timeSubmission: '18 Jul 2026', toWhom: 'Per Diem',   submittedToWhom: 'Team Building 2026',            status: 'Pending Partner' },
-    { id: 4, timeSubmission: '15 Jul 2026', toWhom: 'Vendor',     submittedToWhom: 'PT Solusi Teknologi',           status: 'Scheduled' },
-    { id: 5, timeSubmission: '10 Jul 2026', toWhom: 'Individual', submittedToWhom: 'Seminar Pendidikan Nasional',   status: 'Rejected' },
-  ]);
-
-  const statusVariant = (s: OutgoingPayment['status']) =>
-    s === 'Pending Ops' ? 'warning' : s === 'Pending Partner' ? 'info' : s === 'Scheduled' ? 'success' : s === 'Rejected' ? 'rejected' : 'approved';
-
-  const paymentColumns = [
-    { key: 'time', label: 'Time Submission' },
-    { key: 'toWhom', label: 'To Whom' },
-    { key: 'submitted', label: 'Submitted To Whom' },
-    { key: 'status', label: 'Status', align: 'center' as const },
-  ];
-
   const handleFileChange = (key: string, file: File | null) => {
     setFiles((prev) => ({ ...prev, [key]: file }));
   };
 
-  const isVendorComplete = vendorName.trim() !== '' && vendorNpwp.trim() !== '' && vendorAmount.trim() !== '' && vendorDueDate.trim() !== '' && files['vendor-invoice'] !== null;
-  const isIndividualComplete = indActivity.trim() !== '' && indReceiver.trim() !== '' && individualRole !== '' && (individualRole !== 'Other' || indOtherRole.trim() !== '') && indBankName.trim() !== '' && indAccNumber.trim() !== '' && indComponent.trim() !== '' && indAmount.trim() !== '' && files['ind-ktp'] !== null;
-  const isPerDiemComplete = perDiemEvent.trim() !== '' && perDiemParticipants.trim() !== '' && files['perdiem-file'] !== null;
+  const isVendorComplete =
+    vendorName.trim() !== '' && vendorNpwp.trim() !== '' && vendorAmount.trim() !== '' && vendorDueDate.trim() !== '' && files['vendor-invoice'] != null;
+  const isIndividualComplete =
+    indActivity.trim() !== '' &&
+    indReceiver.trim() !== '' &&
+    individualRole !== '' &&
+    (individualRole !== 'Other' || indOtherRole.trim() !== '') &&
+    indBankName.trim() !== '' &&
+    indAccNumber.trim() !== '' &&
+    indComponent.trim() !== '' &&
+    indAmount.trim() !== '' &&
+    files['ind-ktp'] != null;
+  const isPerDiemComplete = perDiemEvent.trim() !== '' && perDiemParticipants.trim() !== '' && files['perdiem-file'] != null;
 
   const handleSubmitPayment = () => {
     alert(`Payment submitted successfully!\n\nType: ${paymentFor}`);
   };
 
   return (
-    <PageLayout sidebar={<SidebarUser />}>
+      <div className="w-full h-full flex flex-col gap-3">
+        <PageTopBar showGreeting section="Career Hub" page="Payment" />
 
-      <div className="animate-slide-up delay-100 flex flex-col gap-6">
-        
-        {/* Step 1 & Dashboard View */}
         {step === 1 && (
-          <>
-            {/* Outgoing Payments Section */}
-            <Card padding="lg" className="border border-amana-sec-5 rounded-3xl bg-white shadow-sm">
-              <h2 className="text-base font-semibold text-amana-black mb-4">Outgoing Payments</h2>
-              
+          <motion.div
+            initial={false}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.35, ease: easeOut }}
+            className="flex-1 min-h-0 flex flex-col gap-3"
+          >
+            <SectionCard title="Outgoing Payments" scroll>
               {outgoingPayments.length === 0 ? (
-                <div className="flex justify-center items-center py-8">
-                  <p className="text-sm text-amana-blue font-medium">You haven&apos;t requested any payments yet</p>
-                </div>
+                <p className="py-8 text-center text-[14px] text-amana-neutral-400 font-medium">
+                  You haven&apos;t requested any payments yet
+                </p>
               ) : (
-                <Table columns={paymentColumns}>
-                  {outgoingPayments.map((p) => (
-                    <tr key={p.id} className="hover:bg-amana-blue/[0.03] transition-colors duration-200">
-                      <td className="p-4 font-semibold text-amana-black whitespace-nowrap">{p.timeSubmission}</td>
-                      <td className="p-4 text-amana-sec-7">{p.toWhom}</td>
-                      <td className="p-4 text-amana-black">{p.submittedToWhom}</td>
-                      <td className="p-4 text-center"><Badge variant={statusVariant(p.status)}>{p.status}</Badge></td>
-                    </tr>
-                  ))}
-                </Table>
+                <DataTable columns={paymentColumns} rows={outgoingPayments} defaultSortKey="timeSubmission" />
               )}
-            </Card>
+            </SectionCard>
 
-            {/* Submitting Form Section */}
-            <Card padding="lg" className="border border-amana-sec-5 rounded-3xl bg-white shadow-sm">
-              <div className="space-y-4">
-                <div>
-                  <Label className="text-amana-blue text-lg mb-1 block">Submitting as</Label>
-                  <Select value={role} onChange={(e) => setRole(e.target.value)} className="border-amana-sec-5 text-amana-blue">
-                    <option value="" disabled>Click for select...</option>
-                    <option value="Consultant">Consultant</option>
-                    <option value="Project Manager">Project Manager</option>
-                  </Select>
-                </div>
-                <div>
-                  <Label className="text-amana-blue text-lg mb-1 block">Practice Group</Label>
-                  <Select value={practiceGroup} onChange={(e) => setPracticeGroup(e.target.value)} className="border-amana-sec-5 text-amana-blue">
-                    <option value="" disabled>Click for select...</option>
-                    <option value="Education">Education</option>
-                    <option value="Digital">Digital</option>
-                    <option value="Strategy and Transformation">Strategy and Transformation</option>
-                    <option value="Health and Wellbeing">Health and Wellbeing</option>
-                    <option value="Operations">Operations</option>
-                  </Select>
-                </div>
-                <div>
-                  <Label className="text-amana-blue text-lg mb-1 block">Related Partner</Label>
-                  <Select value={partner} onChange={(e) => setPartner(e.target.value)} className="border-amana-sec-5 text-amana-blue">
-                    <option value="" disabled>Click for select...</option>
-                    <option value="Nya' Zata Amani">Nya&apos; Zata Amani (Education / Health)</option>
-                    <option value="Prasetya Dwicahya">Prasetya Dwicahya (Strategy &amp; Transformation)</option>
-                    <option value="Endiyan Rakhmanda">Endiyan Rakhmanda (Digital)</option>
-                    <option value="Kevin Tan">Kevin Tan (Operationals)</option>
-                  </Select>
-                </div>
-                <div>
-                  <Label className="text-amana-blue text-lg mb-1 block">Payment Under</Label>
-                  <Select value={paymentUnder} onChange={(e) => setPaymentUnder(e.target.value)} className="border-amana-sec-5 text-amana-blue">
-                    <option value="" disabled>Click for select...</option>
-                    <option value="PT Janji Cahaya Kembar">PT Janji Cahaya Kembar</option>
-                    <option value="Yayasan Mitra Cahaya Amanah">Yayasan Mitra Cahaya Amanah</option>
-                  </Select>
-                </div>
+            <SectionCard title="Submit New Payment">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                <SelectField label="Submitting as" value={role} onChange={setRole} options={['Consultant', 'Project Manager']} />
+                <SelectField
+                  label="Practice Group"
+                  value={practiceGroup}
+                  onChange={setPracticeGroup}
+                  options={['Education', 'Digital', 'Strategy and Transformation', 'Health and Wellbeing', 'Operations']}
+                />
+                <SelectField
+                  label="Related Partner"
+                  value={partner}
+                  onChange={setPartner}
+                  options={["Nya' Zata Amani", 'Prasetya Dwicahya', 'Endiyan Rakhmanda', 'Kevin Tan']}
+                />
+                <SelectField
+                  label="Payment Under"
+                  value={paymentUnder}
+                  onChange={setPaymentUnder}
+                  options={['PT Janji Cahaya Kembar', 'Yayasan Mitra Cahaya Amanah']}
+                />
               </div>
-              <div className="flex justify-end mt-6">
-                <Button 
-                  disabled={!isStep1Complete} 
-                  onClick={() => setStep(2)}
-                  variant="secondary"
-                  className="rounded-full px-8"
-                >
+              <div className="flex justify-end mt-5 pt-4 border-t border-amana-neutral-200">
+                <Button variant="primary" size="lg" disabled={!isStep1Complete} onClick={() => setStep(2)}>
                   Next
                 </Button>
               </div>
-            </Card>
-          </>
+            </SectionCard>
+          </motion.div>
         )}
 
-        {/* Step 2 Form (Preserved) */}
         {step === 2 && (
-          <Card padding="lg" className="border border-amana-sec-5 rounded-3xl bg-white shadow-sm">
-            <div className="flex items-center gap-3 mb-4 border-b border-amana-sec-6 pb-3">
-              <button onClick={() => setStep(1)} className="text-amana-sec-7 hover:text-amana-blue transition p-1 hover:bg-amana-blue/5 rounded-lg">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
-                </svg>
+          <motion.div
+            initial={false}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.35, ease: easeOut }}
+            className="flex-1 min-h-0 flex flex-col"
+          >
+          <SectionCard scroll className="overflow-y-auto scroll-smooth">
+            <div className="flex-shrink-0 flex items-center gap-3 pb-1.5 mb-3 border-b border-amana-primary-500">
+              <button onClick={() => setStep(1)} className="text-amana-primary-500 hover:text-amana-danger-500">
+                <ChevronLeft className="w-6 h-6" />
               </button>
-              <h2 className="text-lg font-semibold text-amana-blue">Step 2: Payment Details</h2>
+              <h3 className="text-[20px] font-semibold text-amana-primary-500">Step 2: Payment Details</h3>
             </div>
 
-            <div className="mb-4">
-              <Label>To whom is this payment for</Label>
-              <Select value={paymentFor} onChange={(e) => { setPaymentFor(e.target.value); setIndividualRole(''); }}>
-                <option value="" disabled>Select Payment Type...</option>
-                <option value="Vendor">Vendor</option>
-                <option value="Individual(s)">Individual(s)</option>
-                <option value="Per Diem">Per Diem</option>
-              </Select>
-            </div>
+            <div className="flex flex-col gap-4">
+              <SelectField
+                label="To whom is this payment for"
+                value={paymentFor}
+                onChange={(v) => {
+                  setPaymentFor(v);
+                  setIndividualRole('');
+                }}
+                options={['Vendor', 'Individual(s)', 'Per Diem']}
+                placeholder="Select Payment Type..."
+              />
 
-            {paymentFor === 'Vendor' && (
-              <div className="space-y-4 animate-fade-in">
-                <div><Label>Vendor Name</Label><Input value={vendorName} onChange={(e) => setVendorName(e.target.value)} placeholder="Enter vendor name" /></div>
-                <div><Label>NPWP Vendor</Label><Input type="number" value={vendorNpwp} onChange={(e) => setVendorNpwp(e.target.value)} placeholder="Enter NPWP" /></div>
-                <div><Label>Payment Amount</Label><Input type="number" value={vendorAmount} onChange={(e) => setVendorAmount(e.target.value)} placeholder="e.g. 1500000" /></div>
-                <div><Label>Due Date</Label><Input type="date" value={vendorDueDate} onChange={(e) => setVendorDueDate(e.target.value)} /></div>
-                <div><Label>Attach Invoice</Label><UploadBox label="UPLOAD INVOICE DOCUMENT (.PDF)" fileKey="vendor-invoice" files={files} onFileChange={handleFileChange} /></div>
-                <div className="flex justify-end pt-4 border-t border-amana-sec-6">
-                  <Button disabled={!isVendorComplete} onClick={handleSubmitPayment}>Submit Payment</Button>
-                </div>
-              </div>
-            )}
-
-            {paymentFor === 'Individual(s)' && (
-              <div className="space-y-4 animate-fade-in">
-                <div><Label>Name of Activity</Label><Input value={indActivity} onChange={(e) => setIndActivity(e.target.value)} placeholder="Activity name" /></div>
-                <div><Label>Name of the Honor Receiver</Label><Input value={indReceiver} onChange={(e) => setIndReceiver(e.target.value)} placeholder="Receiver name" /></div>
-                <div>
-                  <Label>Their role in this event</Label>
-                  <Select value={individualRole} onChange={(e) => setIndividualRole(e.target.value)}>
-                    <option value="" disabled>Select role...</option>
-                    <option value="Speaker">Speaker</option>
-                    <option value="Moderator">Moderator</option>
-                    <option value="Language Interpreter">Language Interpreter</option>
-                    <option value="Other">Other (specify)</option>
-                  </Select>
-                  {individualRole === 'Other' && (
-                    <Input value={indOtherRole} onChange={(e) => setIndOtherRole(e.target.value)} placeholder="Please specify role..." className="mt-2" />
-                  )}
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div><Label>Bank Account Name</Label><Input value={indBankName} onChange={(e) => setIndBankName(e.target.value)} placeholder="Account Name" /></div>
-                  <div><Label>Bank Account Number</Label><Input type="number" value={indAccNumber} onChange={(e) => setIndAccNumber(e.target.value)} placeholder="Account Number" /></div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div><Label>Honor Components</Label><Input value={indComponent} onChange={(e) => setIndComponent(e.target.value)} placeholder="Component" /></div>
-                  <div><Label>Amount</Label><Input type="number" value={indAmount} onChange={(e) => setIndAmount(e.target.value)} placeholder="Rp" /></div>
-                </div>
-                <div><Label>Copy of Individual KTP <span className="font-light text-amana-sec-7 ml-1">(For tax purposes)</span></Label><UploadBox label="UPLOAD KTP DOCUMENT (.PDF)" fileKey="ind-ktp" files={files} onFileChange={handleFileChange} /></div>
-                <div><Label>Attach Invoice <span className="font-light text-amana-sec-7 ml-1">(Optional)</span></Label><UploadBox label="UPLOAD INVOICE DOCUMENT (.PDF)" fileKey="ind-invoice" files={files} onFileChange={handleFileChange} /></div>
-                <div className="flex justify-end pt-4 border-t border-amana-sec-6">
-                  <Button disabled={!isIndividualComplete} onClick={handleSubmitPayment}>Submit Payment</Button>
-                </div>
-              </div>
-            )}
-
-            {paymentFor === 'Per Diem' && (
-              <div className="space-y-4 animate-fade-in">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div><Label>Name of Event</Label><Input value={perDiemEvent} onChange={(e) => setPerDiemEvent(e.target.value)} placeholder="Event Name" /></div>
-                  <div><Label>Number of Participants</Label><Input type="number" value={perDiemParticipants} onChange={(e) => setPerDiemParticipants(e.target.value)} placeholder="E.g. 50" /></div>
-                </div>
-                <div className="bg-amana-white rounded-xl p-4 border border-amana-sec-6">
-                  <h3 className="text-base font-semibold text-amana-blue mb-2">Upload file with participant details</h3>
-                  <p className="text-xs text-amana-sec-7-5 mb-3">Please ensure the document includes:</p>
-                  <div className="grid grid-cols-2 gap-y-1 text-xs text-amana-black font-semibold mb-4">
-                    <p>1. Full Name</p><p>2. Phone Number</p>
-                    <p>3. Organization</p><p>4. Bank Account Name</p>
-                    <p>5. Bank Account Number</p><p>6. Amount</p>
+              {paymentFor === 'Vendor' && (
+                <div className="flex flex-col gap-4">
+                  <TextField label="Vendor Name" value={vendorName} onChange={setVendorName} placeholder="Enter vendor name" />
+                  <TextField label="NPWP Vendor" type="number" value={vendorNpwp} onChange={setVendorNpwp} placeholder="Enter NPWP" />
+                  <TextField label="Payment Amount" type="number" value={vendorAmount} onChange={setVendorAmount} placeholder="e.g. 1500000" />
+                  <TextField label="Due Date" type="date" value={vendorDueDate} onChange={setVendorDueDate} />
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[16px] font-semibold text-amana-neutral-500">Attach Invoice</label>
+                    <UploadBox label="Upload Invoice Document (.pdf)" fileKey="vendor-invoice" files={files} onFileChange={handleFileChange} />
                   </div>
-                  <img src="/perdiem.png" alt="Format Example" className="w-full rounded-lg border border-amana-sec-6 shadow-xs" />
+                  <div className="flex justify-end pt-4 border-t border-amana-neutral-200">
+                    <Button variant="primary" size="lg" disabled={!isVendorComplete} onClick={handleSubmitPayment}>
+                      Submit Payment
+                    </Button>
+                  </div>
                 </div>
-                <div><Label>Upload The File Here</Label><UploadBox label="UPLOAD PARTICIPANT LIST (.PDF)" fileKey="perdiem-file" files={files} onFileChange={handleFileChange} /></div>
-                <div className="flex justify-end pt-4 border-t border-amana-sec-6">
-                  <Button disabled={!isPerDiemComplete} onClick={handleSubmitPayment}>Submit Payment</Button>
+              )}
+
+              {paymentFor === 'Individual(s)' && (
+                <div className="flex flex-col gap-4">
+                  <TextField label="Name of Activity" value={indActivity} onChange={setIndActivity} placeholder="Activity name" />
+                  <TextField label="Name of the Honor Receiver" value={indReceiver} onChange={setIndReceiver} placeholder="Receiver name" />
+                  <div className="flex flex-col gap-1.5">
+                    <SelectField
+                      label="Their role in this event"
+                      value={individualRole}
+                      onChange={setIndividualRole}
+                      options={['Speaker', 'Moderator', 'Language Interpreter', 'Other']}
+                      placeholder="Select role..."
+                    />
+                    {individualRole === 'Other' && (
+                      <input
+                        value={indOtherRole}
+                        onChange={(e) => setIndOtherRole(e.target.value)}
+                        placeholder="Please specify role..."
+                        className="w-full border border-amana-neutral-300 rounded-[13px] px-3 py-2.5 text-[16px] text-amana-neutral-500 placeholder:text-amana-neutral-300 transition-colors duration-200 focus:outline-none focus:border-amana-primary-500"
+                      />
+                    )}
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <TextField label="Bank Account Name" value={indBankName} onChange={setIndBankName} placeholder="Account Name" />
+                    <TextField label="Bank Account Number" type="number" value={indAccNumber} onChange={setIndAccNumber} placeholder="Account Number" />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <TextField label="Honor Components" value={indComponent} onChange={setIndComponent} placeholder="Component" />
+                    <TextField label="Amount" type="number" value={indAmount} onChange={setIndAmount} placeholder="Rp" />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[16px] font-semibold text-amana-neutral-500">
+                      Copy of Individual KTP <span className="font-normal text-amana-neutral-400 ml-1">(For tax purposes)</span>
+                    </label>
+                    <UploadBox label="Upload KTP Document (.pdf)" fileKey="ind-ktp" files={files} onFileChange={handleFileChange} />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[16px] font-semibold text-amana-neutral-500">
+                      Attach Invoice <span className="font-normal text-amana-neutral-400 ml-1">(Optional)</span>
+                    </label>
+                    <UploadBox label="Upload Invoice Document (.pdf)" fileKey="ind-invoice" files={files} onFileChange={handleFileChange} />
+                  </div>
+                  <div className="flex justify-end pt-4 border-t border-amana-neutral-200">
+                    <Button variant="primary" size="lg" disabled={!isIndividualComplete} onClick={handleSubmitPayment}>
+                      Submit Payment
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            )}
-          </Card>
+              )}
+
+              {paymentFor === 'Per Diem' && (
+                <div className="flex flex-col gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <TextField label="Name of Event" value={perDiemEvent} onChange={setPerDiemEvent} placeholder="Event Name" />
+                    <TextField
+                      label="Number of Participants"
+                      type="number"
+                      value={perDiemParticipants}
+                      onChange={setPerDiemParticipants}
+                      placeholder="E.g. 50"
+                    />
+                  </div>
+                  <div className="bg-amana-neutral-100 rounded-[13px] p-4 border border-amana-neutral-300">
+                    <h4 className="text-[16px] font-semibold text-amana-primary-500 mb-2">Upload file with participant details</h4>
+                    <p className="text-xs text-amana-neutral-400 mb-3">Please ensure the document includes the following columns:</p>
+                    <div className="grid grid-cols-2 gap-y-2 text-xs text-amana-neutral-500 font-semibold mb-4">
+                      {['Full Name', 'Phone Number', 'Organization', 'Bank Account Name', 'Bank Account Number', 'Amount'].map((label, i) => (
+                        <p key={label} className="flex items-center gap-2">
+                          <span className="w-4 h-4 rounded-full bg-amana-primary-500 flex items-center justify-center text-amana-neutral-100 text-[9px]">
+                            {i + 1}
+                          </span>
+                          {label}
+                        </p>
+                      ))}
+                    </div>
+                    <div className="rounded-[13px] overflow-hidden border border-amana-neutral-300 bg-amana-neutral-100 p-2">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src="/perdiem.png" alt="Format Example" className="w-full h-auto rounded-[8px]" />
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[16px] font-semibold text-amana-neutral-500">Upload The File Here</label>
+                    <UploadBox label="Upload Participant List (.pdf)" fileKey="perdiem-file" files={files} onFileChange={handleFileChange} />
+                  </div>
+                  <div className="flex justify-end pt-4 border-t border-amana-neutral-200">
+                    <Button variant="primary" size="lg" disabled={!isPerDiemComplete} onClick={handleSubmitPayment}>
+                      Submit Payment
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </SectionCard>
+          </motion.div>
         )}
       </div>
-    </PageLayout>
   );
 }
