@@ -1,127 +1,350 @@
 'use client';
 
-import { useState } from 'react';
-import SidebarHR from '../../components/Sidebar/SidebarHR/Sidebarhr';
-import { PageLayout, PageTitle, Card, Badge, Button, Input, Label, Modal } from '../../components/ui';
+import { useEffect, useMemo, useState } from 'react';
+import PageTopBar from '../../components/layout/PageTopBar';
+import QuickSearchBox from '../../components/data-display/QuickSearchBox';
+import SectionCard from '../../components/layout/SectionCard';
+import DataTable from '../../components/data-display/DataTable';
+import type { DataTableColumn } from '../../components/data-display/DataTable';
+import Button from '../../components/forms/Button';
+import Modal from '../../components/feedback/Modal';
+import StatusPill from '../../components/data-display/StatusPill';
+import TextField from '../../components/forms/TextField';
 
 interface Job {
-  id: number;
+  id: string;
   title: string;
-  status: 'Active' | 'Closed';
+  status: 'DRAFT' | 'OPEN' | 'CLOSED';
   description: string;
-  qualifications: string;
   formLink: string;
 }
 
-let nextId = 5;
+interface RawJob {
+  idLowongan: string;
+  namaPosisi?: string | null;
+  idStatus?: string | null;
+  deskripsi?: string | null;
+  googleFormURL?: string | null;
+}
+
+const STATUS_LABELS: Record<Job['status'], { label: string; color: string }> = {
+  DRAFT: { label: 'Draft', color: 'bg-amana-neutral-400' },
+  OPEN: { label: 'Active', color: 'bg-amana-success-500' },
+  CLOSED: { label: 'Closed', color: 'bg-amana-neutral-400' },
+};
 
 export default function JobListingsPage() {
-  const [jobs, setJobs] = useState<Job[]>([
-    { id: 1, title: 'Senior Consultant - Education', status: 'Active', description: 'Lead consulting projects in the education sector.', qualifications: 'Min 5 years experience in consulting', formLink: '' },
-    { id: 2, title: 'Junior Analyst - Digital', status: 'Active', description: 'Assist in digital transformation projects.', qualifications: 'Fresh graduate or 1 year experience', formLink: '' },
-    { id: 3, title: 'Project Manager - Operations', status: 'Active', description: 'Manage end-to-end operational projects.', qualifications: 'PMP certification preferred', formLink: '' },
-    { id: 4, title: 'Finance Officer', status: 'Closed', description: 'Handle financial reporting and analysis.', qualifications: 'Min 2 years in finance role', formLink: '' },
-  ]);
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const [appliedQuery, setAppliedQuery] = useState('');
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [showTakedownModal, setShowTakedownModal] = useState<Job | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState<Job | null>(null);
+  const [editJob, setEditJob] = useState<Job | null>(null);
 
-  const [newJob, setNewJob] = useState({ title: '', description: '', qualifications: '', formLink: '' });
+  const [newJob, setNewJob] = useState({ title: '', description: '', formLink: '' });
+  const [editFields, setEditFields] = useState({ title: '', description: '', formLink: '' });
+  const [successMsg, setSuccessMsg] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
+  const [busy, setBusy] = useState(false);
 
-  const handleAddJob = () => {
-    if (!newJob.title || !newJob.description || !newJob.qualifications || !newJob.formLink) return;
-    setJobs([...jobs, { id: nextId++, ...newJob, status: 'Active' }]);
-    setNewJob({ title: '', description: '', qualifications: '', formLink: '' });
-    setShowAddModal(false);
+  const load = async () => {
+    const res = await fetch('/api/joblistings?all=1', { cache: 'no-store' });
+    if (res.ok) {
+      const data = (await res.json()) as { list?: RawJob[] };
+      setJobs(
+        (data.list ?? []).map((l) => ({
+          id: l.idLowongan,
+          title: l.namaPosisi ?? '-',
+          status: l.idStatus === 'DRAFT' ? 'DRAFT' : l.idStatus === 'CLOSED' ? 'CLOSED' : 'OPEN',
+          description: l.deskripsi ?? '',
+          formLink: l.googleFormURL ?? '',
+        }))
+      );
+    }
+    setLoading(false);
   };
 
-  const handleTakedown = (job: Job) => {
-    setJobs(jobs.map((j) => j.id === job.id ? { ...j, status: 'Closed' } : j));
+  useEffect(() => {
+    (async () => {
+      await load();
+    })();
+  }, []);
+
+  const filtered = useMemo(() => {
+    if (!appliedQuery) return jobs;
+    return jobs.filter((j) => j.title.toLowerCase().includes(appliedQuery.toLowerCase()));
+  }, [jobs, appliedQuery]);
+
+  const patchJob = async (id: string, body: Record<string, string | null>) => {
+    const res = await fetch(`/api/joblistings/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) throw new Error('Gagal memperbarui lowongan');
+  };
+
+  const handleAddJob = async (asDraft: boolean) => {
+    if (!newJob.title || !newJob.description) return;
+    setBusy(true);
+    setErrorMsg('');
+    try {
+      const res = await fetch('/api/joblistings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          namaPosisi: newJob.title,
+          deskripsi: newJob.description,
+          googleFormURL: newJob.formLink || null,
+          idStatus: asDraft ? 'DRAFT' : 'OPEN',
+        }),
+      });
+      if (!res.ok) {
+        setErrorMsg('Gagal menambahkan lowongan');
+        return;
+      }
+      await load();
+      setNewJob({ title: '', description: '', formLink: '' });
+      setShowAddModal(false);
+      setSuccessMsg(asDraft ? `Lowongan "${newJob.title}" disimpan sebagai draft` : `Lowongan "${newJob.title}" berhasil dipublikasikan`);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleSaveEdit = async (asDraft: boolean) => {
+    if (!editJob) return;
+    setBusy(true);
+    setErrorMsg('');
+    try {
+      const nextStatus = asDraft ? 'DRAFT' : 'OPEN';
+      await patchJob(editJob.id, {
+        namaPosisi: editFields.title,
+        deskripsi: editFields.description,
+        googleFormURL: editFields.formLink || null,
+        idStatus: nextStatus,
+      });
+      await load();
+      setEditJob(null);
+      setSuccessMsg(asDraft ? `Lowongan "${editFields.title}" disimpan sebagai draft` : `Lowongan "${editFields.title}" berhasil dipublikasikan`);
+    } catch {
+      setErrorMsg('Gagal memperbarui lowongan');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleTakedown = async (job: Job) => {
+    const res = await fetch(`/api/joblistings/${job.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ idStatus: 'CLOSED' }),
+    });
+    if (!res.ok) return alert('Gagal menutup lowongan');
     setShowTakedownModal(null);
+    setEditJob(null);
+    await load();
+    setSuccessMsg(`Lowongan "${job.title}" berhasil ditutup`);
   };
+
+  const handleDelete = async (job: Job) => {
+    const res = await fetch(`/api/joblistings/${job.id}`, { method: 'DELETE' });
+    if (!res.ok) return alert('Gagal menghapus lowongan');
+    setShowDeleteModal(null);
+    setEditJob(null);
+    await load();
+    setSuccessMsg(`Lowongan "${job.title}" berhasil dihapus`);
+  };
+
+  const openEdit = (job: Job) => {
+    setEditFields({ title: job.title, description: job.description, formLink: job.formLink });
+    setErrorMsg('');
+    setEditJob(job);
+  };
+
+  const editIsDraft = editJob?.status === 'DRAFT';
+
+  const columns: DataTableColumn<Job>[] = [
+    { key: 'title', label: 'Name' },
+    { key: 'description', label: 'Description' },
+    {
+      key: 'status',
+      label: 'Status',
+      width: '140px',
+      render: (j) => {
+        const s = STATUS_LABELS[j.status];
+        return <StatusPill color={s.color}>{s.label}</StatusPill>;
+      },
+    },
+    {
+      key: 'id',
+      label: 'Actions',
+      width: '140px',
+      render: (j) => (
+        <Button variant="primary" size="sm" className="w-full whitespace-nowrap" onClick={() => openEdit(j)}>
+          Edit
+        </Button>
+      ),
+    },
+  ];
+
+  if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
 
   return (
-    <PageLayout sidebar={<SidebarHR />}>
-      <div className="flex items-center justify-between">
-        <Button variant="primary" onClick={() => setShowAddModal(true)}>+ Add Job</Button>
+    <>
+      <div className="w-full h-full flex flex-col gap-3">
+        <PageTopBar showGreeting section="Career Hub" page="Job Listing" />
+
+        <QuickSearchBox
+          title="Filter Job Listing"
+          subtitle="Filter job listings by title"
+          query={query}
+          onQueryChange={setQuery}
+          onSearch={() => setAppliedQuery(query)}
+          placeholder="Search by job title..."
+          open={searchOpen}
+          onToggle={() => setSearchOpen((v) => !v)}
+        />
+
+        <SectionCard
+          title="Job Listing(s)"
+          subtitle={`${filtered.length} listing(s)`}
+          scroll
+          action={
+            <Button variant="primary" size="md" onClick={() => { setNewJob({ title: '', description: '', formLink: '' }); setErrorMsg(''); setShowAddModal(true); }}>
+              Add Listing
+            </Button>
+          }
+        >
+          {successMsg && (
+            <p className="pb-2 text-[13px] font-medium text-amana-success-500">{successMsg}</p>
+          )}
+          {errorMsg && (
+            <p className="pb-2 text-[13px] font-medium text-amana-danger-500">{errorMsg}</p>
+          )}
+          <DataTable columns={columns} rows={filtered} defaultSortKey="title" emptyMessage="Belum ada lowongan." />
+        </SectionCard>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        {jobs.map((job, i) => (
-          <div key={job.id} style={{ animationDelay: `${(i + 1) * 100}ms` }} className="animate-fade-in">
-            <Card padding="lg">
-              <div className="flex items-start justify-between mb-3">
-                <h3 className="font-semibold text-amana-black text-base">{job.title}</h3>
-                <Badge variant={job.status === 'Active' ? 'success' : 'default'}>{job.status}</Badge>
-              </div>
-              <div className="space-y-1 mb-4">
-                <p className="text-xs text-amana-sec-7">{job.description}</p>
-              </div>
-              {job.status === 'Active' ? (
-                <Button
-                  variant="danger"
-                  className="w-full"
-                  onClick={() => setShowTakedownModal(job)}
-                >
-                  Takedown Job Listing
-                </Button>
+      {showAddModal && (
+        <Modal title="Add New Job" onClose={() => setShowAddModal(false)} maxWidth="max-w-2xl" className="max-h-[90vh]">
+          <div className="flex-1 min-h-0 overflow-y-auto scroll-smooth p-5 flex flex-col gap-4">
+            <TextField label="Job Title" value={newJob.title} onChange={(v) => setNewJob((p) => ({ ...p, title: v }))} placeholder="e.g. Senior Consultant" />
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[16px] font-semibold text-amana-neutral-500">Job Description</label>
+              <textarea
+                value={newJob.description}
+                onChange={(e) => setNewJob((p) => ({ ...p, description: e.target.value }))}
+                placeholder="Describe the role and responsibilities..."
+                rows={4}
+                className="w-full border border-amana-neutral-300 rounded-[13px] px-3 py-2.5 text-[16px] text-amana-neutral-500 placeholder:text-amana-neutral-300 transition-colors duration-200 focus:outline-none focus:border-amana-primary-500 resize-none"
+              />
+            </div>
+            <TextField label="Google Form Link" value={newJob.formLink} onChange={(v) => setNewJob((p) => ({ ...p, formLink: v }))} placeholder="https://docs.google.com/forms/..." />
+          </div>
+
+          {errorMsg && (
+            <p className="px-5 pb-1 text-[13px] font-medium text-amana-danger-500">{errorMsg}</p>
+          )}
+
+          <div className="flex-shrink-0 flex justify-end gap-3 px-5 py-4 border-t border-amana-neutral-200">
+            <Button variant="ghost" disabled={!newJob.title || !newJob.description || busy} onClick={() => handleAddJob(true)}>
+              Save Draft
+            </Button>
+            <Button variant="primary" size="lg" disabled={!newJob.title || !newJob.description || busy} onClick={() => handleAddJob(false)}>
+              {busy ? 'Publishing...' : 'Publish Job'}
+            </Button>
+          </div>
+        </Modal>
+      )}
+
+      {editJob && (
+        <Modal title={`Edit Job - ${editJob.title}`} onClose={() => setEditJob(null)} maxWidth="max-w-2xl" className="max-h-[90vh]">
+          <div className="flex-1 min-h-0 overflow-y-auto scroll-smooth p-5 flex flex-col gap-4">
+            <TextField label="Job Title" value={editFields.title} onChange={(v) => setEditFields((p) => ({ ...p, title: v }))} placeholder="e.g. Senior Consultant" />
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[16px] font-semibold text-amana-neutral-500">Job Description</label>
+              <textarea
+                value={editFields.description}
+                onChange={(e) => setEditFields((p) => ({ ...p, description: e.target.value }))}
+                placeholder="Describe the role and responsibilities..."
+                rows={4}
+                className="w-full border border-amana-neutral-300 rounded-[13px] px-3 py-2.5 text-[16px] text-amana-neutral-500 placeholder:text-amana-neutral-300 transition-colors duration-200 focus:outline-none focus:border-amana-primary-500 resize-none"
+              />
+            </div>
+            <TextField label="Google Form Link" value={editFields.formLink} onChange={(v) => setEditFields((p) => ({ ...p, formLink: v }))} placeholder="https://docs.google.com/forms/..." />
+          </div>
+
+          {errorMsg && (
+            <p className="px-5 pb-1 text-[13px] font-medium text-amana-danger-500">{errorMsg}</p>
+          )}
+
+          <div className="flex-shrink-0 flex items-center justify-between gap-3 px-5 py-4 border-t border-amana-neutral-200">
+            {editIsDraft ? (
+              <Button variant="danger" disabled={busy} onClick={() => setShowDeleteModal(editJob)}>
+                Delete Listing
+              </Button>
+            ) : (
+              <Button variant="danger" disabled={busy} onClick={() => setShowTakedownModal(editJob)}>
+                Takedown Listing
+              </Button>
+            )}
+            <div className="flex gap-3">
+              {editIsDraft ? (
+                <>
+                  <Button variant="ghost" disabled={!editFields.title || !editFields.description || busy} onClick={() => handleSaveEdit(true)}>
+                    Save Draft
+                  </Button>
+                  <Button variant="primary" size="lg" disabled={!editFields.title || !editFields.description || busy} onClick={() => handleSaveEdit(false)}>
+                    {busy ? 'Publishing...' : 'Publish'}
+                  </Button>
+                </>
               ) : (
-                <div className="w-full text-center py-2.5 bg-amana-sec-6 text-amana-sec-7 rounded-xl font-semibold text-xs cursor-not-allowed">
-                  Closed
-                </div>
+                <Button variant="primary" size="lg" disabled={!editFields.title || !editFields.description || busy} onClick={() => handleSaveEdit(false)}>
+                  {busy ? 'Updating...' : 'Update Listing'}
+                </Button>
               )}
-            </Card>
+            </div>
           </div>
-        ))}
-      </div>
+        </Modal>
+      )}
 
-      <Modal open={showAddModal} onClose={() => setShowAddModal(false)} title="Add New Job">
-        <div className="space-y-4">
-          <div>
-            <Label>Job Title</Label>
-            <Input value={newJob.title} onChange={(e) => setNewJob({ ...newJob, title: e.target.value })} placeholder="e.g. Senior Consultant" />
+      {showTakedownModal && (
+        <Modal title="Takedown Job Listing" onClose={() => setShowTakedownModal(null)} maxWidth="max-w-md">
+          <div className="p-5 flex flex-col gap-4">
+            <p className="text-sm text-amana-neutral-400">
+              Are you sure you want to takedown <strong className="text-amana-neutral-500">{showTakedownModal.title}</strong>?
+              This will close the listing and remove it from active job boards.
+            </p>
+            <div className="flex justify-end gap-3 pt-2">
+              <Button variant="danger" size="lg" onClick={() => handleTakedown(showTakedownModal)}>
+                Yes, Takedown
+              </Button>
+            </div>
           </div>
-          <div>
-            <Label>Job Description</Label>
-            <textarea
-              value={newJob.description}
-              onChange={(e) => setNewJob({ ...newJob, description: e.target.value })}
-              placeholder="Describe the role and responsibilities..."
-              rows={3}
-              className="w-full px-4 py-2.5 bg-white border border-amana-sec-6 rounded-xl outline-none text-sm text-amana-black shadow-sm focus:border-amana-blue focus:ring-2 focus:ring-amana-blue/15 hover:border-amana-sec-7/30 transition-all duration-200 resize-none"
-            />
-          </div>
-          <div>
-            <Label>Key Qualification</Label>
-            <textarea
-              value={newJob.qualifications}
-              onChange={(e) => setNewJob({ ...newJob, qualifications: e.target.value })}
-              placeholder="List key qualifications required..."
-              rows={3}
-              className="w-full px-4 py-2.5 bg-white border border-amana-sec-6 rounded-xl outline-none text-sm text-amana-black shadow-sm focus:border-amana-blue focus:ring-2 focus:ring-amana-blue/15 hover:border-amana-sec-7/30 transition-all duration-200 resize-none"
-            />
-          </div>
-          <div>
-            <Label>Google Form Link</Label>
-            <Input value={newJob.formLink} onChange={(e) => setNewJob({ ...newJob, formLink: e.target.value })} placeholder="https://docs.google.com/forms/..." />
-          </div>
-          <div className="flex gap-3 pt-2">
-            <Button variant="secondary" className="flex-1" onClick={() => setShowAddModal(false)}>Cancel</Button>
-            <Button variant="primary" className="flex-1" onClick={handleAddJob}>Publish Job</Button>
-          </div>
-        </div>
-      </Modal>
+        </Modal>
+      )}
 
-      <Modal open={!!showTakedownModal} onClose={() => setShowTakedownModal(null)} title="Takedown Job Listing">
-        <p className="text-sm text-amana-sec-7 mb-6">
-          Are you sure you want to takedown <strong className="text-amana-black">{showTakedownModal?.title}</strong>?
-          This will close the listing and remove it from active job boards.
-        </p>
-        <div className="flex gap-3">
-          <Button variant="secondary" className="flex-1" onClick={() => setShowTakedownModal(null)}>Cancel</Button>
-          <Button variant="danger" className="flex-1" onClick={() => showTakedownModal && handleTakedown(showTakedownModal)}>Yes, Takedown</Button>
-        </div>
-      </Modal>
-    </PageLayout>
+      {showDeleteModal && (
+        <Modal title="Delete Job Listing" onClose={() => setShowDeleteModal(null)} maxWidth="max-w-md">
+          <div className="p-5 flex flex-col gap-4">
+            <p className="text-sm text-amana-neutral-400">
+              Are you sure you want to delete <strong className="text-amana-neutral-500">{showDeleteModal.title}</strong>?
+              This will permanently remove the listing.
+            </p>
+            <div className="flex justify-end gap-3 pt-2">
+              <Button variant="danger" size="lg" onClick={() => handleDelete(showDeleteModal)}>
+                Delete
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+    </>
   );
 }

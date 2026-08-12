@@ -1,8 +1,17 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
-import SidebarUser from '../../components/Sidebar/SidebarUser/Sidebaruser';
-import { PageLayout, Card, CardSection, Button, Modal, FileUpload, Input, Label } from '../../components/ui';
+import { useEffect, useState, type FormEvent } from 'react';
+import { useRouter } from 'next/navigation';
+import { AnimatePresence } from 'framer-motion';
+import { FileText, Upload } from 'lucide-react';
+import PageTopBar from '../../components/layout/PageTopBar';
+import SectionCard from '../../components/layout/SectionCard';
+import Button from '../../components/forms/Button';
+import TextField from '../../components/forms/TextField';
+import UploadBox from '../../components/forms/UploadBox';
+import Modal from '../../components/feedback/Modal';
+import { cn } from '@/app/utils/cn';
+import { isEmployeeRole } from '@/lib/roles';
 
 interface Certification {
   id: string;
@@ -11,27 +20,164 @@ interface Certification {
   fileName: string;
 }
 
+interface Assessment {
+  id: string;
+  name: string;
+  done: boolean;
+}
+
+function DocumentUploadModal({
+  title,
+  subtitle,
+  fieldLabel,
+  fieldValue,
+  onFieldChange,
+  file,
+  filePlaceholder,
+  onFileSelect,
+  submitLabel,
+  submitDisabled = false,
+  onSubmit,
+  onDelete,
+  onClose,
+}: {
+  title: string;
+  subtitle: string;
+  fieldLabel?: string;
+  fieldValue?: string;
+  onFieldChange?: (value: string) => void;
+  file: File | null;
+  filePlaceholder: string;
+  onFileSelect: (file: File | null) => void;
+  submitLabel: string;
+  submitDisabled?: boolean;
+  onSubmit: (e: FormEvent) => void;
+  onDelete?: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <Modal title={title} onClose={onClose} maxWidth="max-w-xl" className="max-h-[90vh]">
+      <form onSubmit={onSubmit} className="flex-1 min-h-0 flex flex-col">
+        <div className="flex-1 min-h-0 overflow-y-auto scroll-smooth p-5 flex flex-col gap-4">
+          <p className="text-[14px] text-amana-neutral-400 -mt-2">{subtitle}</p>
+          {fieldLabel && onFieldChange && (
+            <TextField label={fieldLabel} required value={fieldValue ?? ''} onChange={onFieldChange} placeholder={fieldLabel} />
+          )}
+          <UploadBox file={file} placeholder={filePlaceholder} onFileSelect={onFileSelect} />
+        </div>
+        <div className={cn('flex-shrink-0 flex px-5 py-4 border-t border-amana-neutral-200', onDelete ? 'items-center gap-3' : 'justify-end')}>
+          {onDelete && (
+            <Button type="button" variant="danger" size="lg" className="flex-1" onClick={onDelete}>
+              Delete
+            </Button>
+          )}
+          <Button type="submit" variant="primary" size="lg" disabled={submitDisabled} className={onDelete ? 'flex-1' : 'w-full max-w-[280px]'}>
+            {submitLabel}
+          </Button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
 export default function CareerHubPage() {
-  const [hasTakenAssessment, setHasTakenAssessment] = useState(false);
-  const [isAssessmentModalOpen, setIsAssessmentModalOpen] = useState(false);
-  const [cvFile, setCvFile] = useState<{ name: string; url: string } | null>({
-    name: 'CV_User_Latest.pdf',
-    url: '',
-  });
-  const cvInputRef = useRef<HTMLInputElement>(null);
-  const [certifications, setCertifications] = useState<Certification[]>([
-    { id: '1', title: 'Certification IT Engineer', fileUrl: '', fileName: 'Certification_it_engineer.pdf' },
-    { id: '2', title: 'Certification Matlab Course', fileUrl: '', fileName: 'Certification_matlab.pdf' },
-  ]);
+  const router = useRouter();
+  const [assessments, setAssessments] = useState<Assessment[]>([]);
+
+  const [cvFile, setCvFile] = useState<{ name: string; url: string } | null>(null);
+  const [isCvModalOpen, setIsCvModalOpen] = useState(false);
+  const [selectedCvFile, setSelectedCvFile] = useState<File | null>(null);
+
+  const [certifications, setCertifications] = useState<Certification[]>([]);
   const [isCertModalOpen, setIsCertModalOpen] = useState(false);
   const [editingCertId, setEditingCertId] = useState<string | null>(null);
   const [certTitleInput, setCertTitleInput] = useState('');
   const [selectedCertFile, setSelectedCertFile] = useState<File | null>(null);
   const [previewPdf, setPreviewPdf] = useState<{ title: string; url: string } | null>(null);
+  const [idRole, setIdRole] = useState('');
+  const [loading, setLoading] = useState(true);
 
-  const handleCompleteAssessment = () => {
-    setHasTakenAssessment(true);
-    setIsAssessmentModalOpen(false);
+  const uploadFile = async (file: File): Promise<string> => {
+    const fd = new FormData();
+    fd.append('file', file);
+    const res = await fetch('/api/upload', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (!res.ok || !data.url) throw new Error(data.error || 'Upload gagal');
+    return data.url;
+  };
+
+  const loadCertifications = async () => {
+    try {
+      const res = await fetch('/api/certificates', { cache: 'no-store' });
+      if (res.ok) {
+        const data = await res.json();
+        setCertifications(
+          (data.list ?? []).map((c: { idSertifikat: string; judul: string; fileURL?: string | null; fileName?: string | null }) => ({
+            id: c.idSertifikat,
+            title: c.judul,
+            fileUrl: c.fileURL ?? '',
+            fileName: c.fileName ?? 'document.pdf',
+          }))
+        );
+      }
+    } catch {}
+  };
+
+  const loadInitial = async () => {
+    try {
+      const meRes = await fetch('/api/me', { cache: 'no-store' });
+      if (meRes.ok) {
+        const me = await meRes.json();
+        const url = me.user?.cvURL;
+        if (url) setCvFile({ name: url.split('/').pop() ?? 'CV.pdf', url });
+        if (me.user?.idRole) setIdRole(me.user.idRole);
+      }
+      const asmRes = await fetch('/api/assessments/open', { cache: 'no-store' });
+      if (asmRes.ok) {
+        const d = await asmRes.json();
+        const open = d.assessment as { idAssessment: string; judul: string } | null;
+        const taken = !!d.submission;
+        if (open) {
+          setAssessments([{ id: open.idAssessment, name: open.judul, done: taken }]);
+        }
+      }
+      await loadCertifications();
+    } catch {}
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    (async () => {
+      await loadInitial();
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const openCvModal = () => {
+    setSelectedCvFile(null);
+    setIsCvModalOpen(true);
+  };
+
+  const handleCvSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!selectedCvFile) return;
+    setLoading(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', selectedCvFile);
+      const res = await fetch('/api/me/cv', { method: 'PATCH', body: fd });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.fileURL) {
+        alert(data?.error || 'Gagal menyimpan CV');
+        return;
+      }
+      setCvFile({ name: selectedCvFile.name, url: data.fileURL });
+      setIsCvModalOpen(false);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Gagal upload CV');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const openAddCertModal = () => {
@@ -48,163 +194,223 @@ export default function CareerHubPage() {
     setIsCertModalOpen(true);
   };
 
-  const handleSaveCertification = (e: React.FormEvent) => {
+  const handleSaveCertification = async (e: FormEvent) => {
     e.preventDefault();
-    if (!certTitleInput.trim()) { alert('Title Must Be Filled!'); return; }
-    const fileUrl = selectedCertFile ? URL.createObjectURL(selectedCertFile) : '';
-    const fileName = selectedCertFile ? selectedCertFile.name : 'document.pdf';
-    if (editingCertId) {
-      setCertifications((prev) =>
-        prev.map((item) => item.id === editingCertId ? { ...item, title: certTitleInput, ...(selectedCertFile && { fileUrl, fileName }) } : item)
-      );
-    } else {
-      setCertifications((prev) => [...prev, { id: Date.now().toString(), title: certTitleInput, fileUrl, fileName }]);
+    if (!certTitleInput.trim()) {
+      alert('Title must be filled!');
+      return;
+    }
+    try {
+      const fileName = selectedCertFile ? selectedCertFile.name : 'document.pdf';
+      let fileURL = '';
+      if (selectedCertFile) fileURL = await uploadFile(selectedCertFile);
+
+      if (editingCertId) {
+        const res = await fetch(`/api/certificates/${editingCertId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ judul: certTitleInput, fileName, ...(fileURL && { fileURL }) }),
+        });
+        if (!res.ok) return alert('Gagal update sertifikat');
+        setCertifications((prev) =>
+          prev.map((item) => item.id === editingCertId ? { ...item, title: certTitleInput, fileName, ...(fileURL ? { fileUrl: fileURL } : {}) } : item)
+        );
+      } else {
+        const res = await fetch('/api/certificates', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ judul: certTitleInput, fileName, fileURL }),
+        });
+        const data = await res.json();
+        if (!res.ok) return alert('Gagal menambah sertifikat');
+        setCertifications((prev) => [
+          ...prev,
+          { id: data.certificate.idSertifikat, title: certTitleInput, fileUrl: fileURL, fileName },
+        ]);
+      }
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Terjadi kesalahan jaringan');
+      return;
     }
     setIsCertModalOpen(false);
   };
 
-  const handleDeleteCertification = (id: string) => {
-    if (window.confirm('Are you sure to delete this certification?')) {
+  const handleDeleteCertification = async (id: string) => {
+    if (window.confirm('Are you sure you want to delete this certification?')) {
+      const res = await fetch(`/api/certificates/${id}`, { method: 'DELETE' });
+      if (!res.ok) return alert('Gagal menghapus sertifikat');
       setCertifications((prev) => prev.filter((item) => item.id !== id));
       setIsCertModalOpen(false);
+      setPreviewPdf(null);
     }
   };
 
   const handleViewPdf = (title: string, url: string) => {
-    if (!url) { alert(`Opening PDF Simulation: ${title}`); return; }
+    if (!url) {
+      alert(`Opening PDF Simulation: ${title}`);
+      return;
+    }
     setPreviewPdf({ title, url });
   };
 
+  if (loading) {
+    return (
+      <div className="w-full h-full flex items-center justify-center">
+        <p className="text-[16px] text-amana-neutral-400">Loading...</p>
+      </div>
+    );
+  }
+
   return (
-    <PageLayout sidebar={<SidebarUser />}>
+    <>
+      <div className="w-full h-full flex flex-col gap-3">
+        <PageTopBar showGreeting section="Career Hub" page="Career Hub" />
 
-      <Card padding="lg" className="mb-6 animate-fade-in delay-100">
-        <CardSection title="Competency Assessment Test">
-          <div className="p-4 rounded-xl bg-amana-white border border-amana-sec-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div>
-              {hasTakenAssessment ? (
-                <div className="flex items-center gap-2 text-amana-sec-8 font-semibold text-sm sm:text-base">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <span>You have taken your assessment test!</span>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2 text-amana-sec-5 font-semibold text-sm sm:text-base">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <span>Please take your assessment test!</span>
-                </div>
-              )}
-            </div>
-            <Button
-              variant={hasTakenAssessment ? 'secondary' : 'primary'}
-              onClick={() => hasTakenAssessment ? setHasTakenAssessment(false) : setIsAssessmentModalOpen(true)}
-            >
-              {hasTakenAssessment ? 'Reset Status' : 'Take Assessment'}
-            </Button>
-          </div>
-        </CardSection>
-      </Card>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card padding="lg" className="flex flex-col justify-between animate-fade-in delay-200">
-          <div>
-            <CardSection title="Latest CV">
-              <div className="border-2 border-dashed border-amana-sec-6 rounded-2xl p-6 flex flex-col items-center justify-center min-h-[200px] bg-amana-white hover:border-amana-blue/30 transition-all duration-200">
-                <img src="/icon/BCarrerHub.png" alt="CV Icon" className="w-14 h-14 object-contain mb-3" />
-                <p className="font-semibold text-amana-black text-center text-sm">{cvFile ? cvFile.name : 'No CV Uploaded'}</p>
-                <p className="text-xs text-amana-sec-7 mt-1 font-light">Format PDF (Max 5MB)</p>
-              </div>
-            </CardSection>
-          </div>
-          <div className="flex gap-3 mt-6">
-            <Button variant="secondary" className="flex-1" onClick={() => cvFile && handleViewPdf('Latest CV', cvFile.url)}>View</Button>
-            <Button variant="primary" className="flex-1" onClick={() => cvInputRef.current?.click()}>Update</Button>
-          </div>
-          <input type="file" ref={cvInputRef} onChange={(e) => { const f = e.target.files?.[0]; if (f && f.type === 'application/pdf') { setCvFile({ name: f.name, url: URL.createObjectURL(f) }); } else if (f) { alert('Harap unggah file berformat .pdf!'); } }} accept="application/pdf" className="hidden" />
-        </Card>
-
-        <Card padding="lg" className="flex flex-col justify-between animate-fade-in delay-300">
-          <div>
-            <CardSection title="Latest Certification">
-              <div className="flex flex-col gap-3 max-h-[200px] overflow-y-auto pr-1">
-                {certifications.map((cert) => (
-                  <div key={cert.id} className="flex items-center justify-between p-3 border border-amana-sec-6 rounded-xl bg-amana-white hover:border-amana-blue/20 hover:shadow-sm transition-all duration-200">
-                    <div className="flex items-center gap-3 overflow-hidden mr-2">
-                      <img src="/icon/BCarrerHub.png" alt="Cert" className="w-5 h-5 flex-shrink-0" />
-                      <span className="font-semibold text-sm truncate text-amana-black">{cert.title}</span>
+        {isEmployeeRole(idRole) && (
+          <SectionCard title="Assessment Test">
+            {assessments.length === 0 ? (
+              <p className="text-[16px] text-amana-neutral-400 text-center py-1.5">
+                There are currently no assessment test that needs to be done.
+              </p>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {assessments.map((a) => (
+                  <div key={a.id} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                    <span className="flex-1 text-[16px] text-amana-neutral-500 truncate">{a.name}</span>
+                    <div
+                      className={`flex-1 flex items-center justify-center rounded-full px-5 py-1.5 text-center text-[14px] font-medium text-amana-neutral-100 ${
+                        a.done ? 'bg-amana-success-500' : 'bg-amana-danger-500'
+                      }`}
+                    >
+                      {a.done ? 'Done' : 'Not Done'}
                     </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <Button variant="ghost" onClick={() => handleViewPdf(cert.title, cert.fileUrl)}>View</Button>
-                      <Button variant="secondary" onClick={() => openUpdateCertModal(cert)}>Update</Button>
-                    </div>
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      className="sm:w-[139px] flex-shrink-0"
+                      onClick={() => router.push(a.done ? '/user/careerhub/result' : '/user/assessment')}
+                    >
+                      {a.done ? 'View Result' : 'Take Test'}
+                    </Button>
                   </div>
                 ))}
               </div>
-            </CardSection>
-          </div>
-          <div className="mt-6 border-t border-amana-sec-6 pt-4 flex justify-end">
-            <Button variant="secondary" onClick={openAddCertModal}>+ Add</Button>
-          </div>
-        </Card>
-      </div>
+            )}
+          </SectionCard>
+        )}
 
-      <Modal open={isCertModalOpen} onClose={() => setIsCertModalOpen(false)} title={editingCertId ? 'Update Certification' : 'Upload Certification'}>
-        <form onSubmit={handleSaveCertification} className="space-y-5">
-          <div>
-            <Label>Certification Title</Label>
-            <Input type="text" required placeholder="Certification Title" value={certTitleInput} onChange={(e) => setCertTitleInput(e.target.value)} />
-          </div>
-          <div>
-            <Label>Certification Document (.pdf)</Label>
-            <FileUpload file={selectedCertFile} onChange={setSelectedCertFile} placeholder="Drag Certification PDF Here" hint="or Click to Select File" />
-          </div>
-          <div className="flex items-center justify-between pt-3">
-            {editingCertId ? (
-              <Button variant="secondary" onClick={() => handleDeleteCertification(editingCertId)}>Delete</Button>
-            ) : <div />}
-            <div className="flex gap-3">
-              <Button variant="ghost" onClick={() => setIsCertModalOpen(false)}>Cancel</Button>
-              <Button type="submit">{editingCertId ? 'Save Changes' : 'Upload'}</Button>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          <SectionCard title="Latest Curriculum Vitae (CV)" subtitle="Update your latest CV in this tab!" scroll>
+            {cvFile ? (
+              <div className="border border-amana-primary-500 rounded-[5px] overflow-hidden h-56 mb-4">
+                <iframe src={cvFile.url} className="w-full h-full" title={cvFile.name} />
+              </div>
+            ) : (
+              <div
+                onClick={openCvModal}
+                className="group border border-amana-primary-500 rounded-[5px] flex flex-col items-center justify-center h-56 gap-2.5 bg-amana-neutral-100 hover:bg-amana-primary-100 transition-colors duration-200 mb-4 cursor-pointer"
+              >
+                <Upload className="w-11 h-11 text-amana-primary-500" strokeWidth={1.5} />
+                <p className="text-[16px] text-center text-amana-neutral-400 group-hover:text-amana-primary-500 transition-colors duration-200">
+                  Click &ldquo;Add&rdquo; to upload your CV!
+                </p>
+              </div>
+            )}
+            <div className="flex justify-end mt-auto">
+              <Button variant="primary" size="md" onClick={openCvModal}>
+                {cvFile ? 'Update CV' : 'Add CV'}
+              </Button>
             </div>
-          </div>
-        </form>
-      </Modal>
+          </SectionCard>
 
-      <Modal open={isAssessmentModalOpen} onClose={() => setIsAssessmentModalOpen(false)} title="Competency Assessment">
-        <p className="text-sm text-amana-sec-7-5 mb-6 font-light">Simulation Assessment Test</p>
-        <div className="flex justify-end gap-3">
-          <Button variant="ghost" onClick={() => setIsAssessmentModalOpen(false)}>Cancel</Button>
-          <Button variant="primary" onClick={handleCompleteAssessment}>Finish Test</Button>
-        </div>
-      </Modal>
-
-      {previewPdf && (
-        <div className="fixed inset-0 z-50 bg-amana-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-3xl h-[80vh] rounded-2xl flex flex-col relative overflow-hidden shadow-2xl animate-scale-in">
-            <div className="p-4 border-b border-amana-sec-6 flex items-center justify-between bg-amana-white">
-              <h4 className="font-semibold text-amana-black">{previewPdf.title}</h4>
-              <button onClick={() => setPreviewPdf(null)} className="text-amana-sec-7 hover:text-amana-black transition p-1 hover:bg-amana-sec-6/30 rounded-lg">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            <div className="flex-1 p-4 bg-amana-white">
-              {previewPdf.url ? (
-                <iframe src={previewPdf.url} className="w-full h-full rounded-xl border border-amana-sec-6" title="PDF" />
+          <SectionCard title="Latest Certification" subtitle="Update your latest skills certification in this tab!" scroll>
+            <div className="flex-1 min-h-0 flex flex-col gap-2.5 overflow-y-auto scroll-smooth pr-1 mb-3">
+              {certifications.length === 0 ? (
+                <p className="flex-1 flex items-center justify-center text-[16px] text-amana-neutral-400 text-center">
+                  You have no certificate uploaded, click &ldquo;Add&rdquo; to upload your recent certificate!
+                </p>
               ) : (
-                <div className="w-full h-full flex flex-col items-center justify-center text-amana-sec-7">
-                  <img src="/icon/BCarrerHub.png" alt="Preview" className="w-16 h-16 mb-3 opacity-50" />
-                  <p className="font-semibold text-sm">PDF Preview Simulation</p>
-                </div>
+                certifications.map((cert) => (
+                  <div
+                    key={cert.id}
+                    className="flex items-center justify-between p-3 border border-amana-neutral-300 rounded-[13px] bg-amana-neutral-100"
+                  >
+                    <div className="flex items-center gap-3 overflow-hidden mr-2">
+                      <FileText className="w-5 h-5 flex-shrink-0 text-amana-primary-500" />
+                      <span className="font-semibold text-sm truncate text-amana-neutral-500">{cert.title}</span>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <Button variant="primary" size="sm" onClick={() => handleViewPdf(cert.title, cert.fileUrl)}>
+                        View
+                      </Button>
+                      <Button variant="primary" size="sm" onClick={() => openUpdateCertModal(cert)}>
+                        Update
+                      </Button>
+                    </div>
+                  </div>
+                ))
               )}
             </div>
-          </div>
+            <div className="border-t border-amana-neutral-200 pt-3 flex justify-end">
+              <Button variant="primary" size="md" onClick={openAddCertModal}>
+                + Add Certificate
+              </Button>
+            </div>
+          </SectionCard>
         </div>
-      )}
-    </PageLayout>
+
+        <AnimatePresence>
+          {isCvModalOpen && (
+            <DocumentUploadModal
+              title={cvFile ? 'Update Curriculum Vitae (CV)' : 'Add Curriculum Vitae (CV)'}
+              subtitle="Search or Drag and Drop your Latest CV"
+              file={selectedCvFile}
+              filePlaceholder="Curriculum Vitae Document (.PDF)"
+              onFileSelect={setSelectedCvFile}
+              submitLabel={cvFile ? 'Update' : 'Add CV'}
+              submitDisabled={!selectedCvFile}
+              onSubmit={handleCvSubmit}
+              onClose={() => setIsCvModalOpen(false)}
+            />
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {isCertModalOpen && (
+            <DocumentUploadModal
+              title={editingCertId ? 'View Certificate' : 'Add Certificate'}
+              subtitle={editingCertId ? 'View, Update, or Delete your Certification' : 'Search or Drag and Drop your Certificate Document'}
+              fieldLabel="Certificate Name"
+              fieldValue={certTitleInput}
+              onFieldChange={setCertTitleInput}
+              file={selectedCertFile}
+              filePlaceholder="Certificate Document (.PDF)"
+              onFileSelect={setSelectedCertFile}
+              submitLabel={editingCertId ? 'Update' : 'Add Certificate'}
+              onSubmit={handleSaveCertification}
+              onDelete={editingCertId ? () => handleDeleteCertification(editingCertId) : undefined}
+              onClose={() => setIsCertModalOpen(false)}
+            />
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {previewPdf && (
+            <Modal title={previewPdf.title} onClose={() => setPreviewPdf(null)} maxWidth="max-w-3xl" className="h-[80vh]">
+              <div className="flex-1 p-4">
+                {previewPdf.url ? (
+                  <iframe src={previewPdf.url} className="w-full h-full rounded-[13px] border border-amana-neutral-300" title="PDF" />
+                ) : (
+                  <div className="w-full h-full flex flex-col items-center justify-center text-amana-neutral-400">
+                    <FileText className="w-16 h-16 mb-3 opacity-50" strokeWidth={1.25} />
+                    <p className="font-semibold text-sm">PDF Preview Simulation</p>
+                  </div>
+                )}
+              </div>
+            </Modal>
+          )}
+        </AnimatePresence>
+      </div>
+    </>
   );
 }

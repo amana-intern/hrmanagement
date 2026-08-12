@@ -19,10 +19,10 @@ interface TableProps {
 function SortIcon({ active, dir }: { active: boolean; dir: 'asc' | 'desc' }) {
   return (
     <span className="inline-flex flex-col ml-1.5 -space-y-1">
-      <svg className={`w-2.5 h-2.5 ${active && dir === 'asc' ? 'text-amana-white' : 'text-amana-white/40'}`} fill="currentColor" viewBox="0 0 10 6">
+      <svg className={`w-2.5 h-2.5 ${active && dir === 'asc' ? 'text-amana-neutral-100' : 'text-amana-neutral-100/40'}`} fill="currentColor" viewBox="0 0 10 6">
         <path d="M5 0L10 6H0z" />
       </svg>
-      <svg className={`w-2.5 h-2.5 ${active && dir === 'desc' ? 'text-amana-white' : 'text-amana-white/40'}`} fill="currentColor" viewBox="0 0 10 6">
+      <svg className={`w-2.5 h-2.5 ${active && dir === 'desc' ? 'text-amana-neutral-100' : 'text-amana-neutral-100/40'}`} fill="currentColor" viewBox="0 0 10 6">
         <path d="M5 6L0 0h10z" />
       </svg>
     </span>
@@ -32,7 +32,7 @@ function SortIcon({ active, dir }: { active: boolean; dir: 'asc' | 'desc' }) {
 export function TableHeader({ columns, sortKey, sortDir, onSort }: { columns: Column[]; sortKey?: string; sortDir?: 'asc' | 'desc'; onSort?: (key: string) => void }) {
   return (
     <thead>
-      <tr className="bg-gradient-to-r from-amana-blue to-amana-sec-5 text-amana-white text-left">
+      <tr className="bg-gradient-to-r from-amana-primary-500 to-amana-primary-500 text-amana-neutral-100 text-left">
         {columns.map((col) => (
           <th
             key={col.key}
@@ -56,13 +56,13 @@ export function TableHeader({ columns, sortKey, sortDir, onSort }: { columns: Co
 export default function Table({ columns, children, sortKey, sortDir, onSort }: TableProps) {
   return (
     <div
-      className="bg-white rounded-2xl border border-amana-sec-6 shadow-sm overflow-hidden
+      className="bg-white rounded-2xl border border-amana-neutral-200 shadow-sm overflow-hidden
                   hover:shadow-xl transition-shadow duration-300"
     >
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <TableHeader columns={columns} sortKey={sortKey} sortDir={sortDir} onSort={onSort} />
-          <tbody className="divide-y divide-amana-sec-6/60">
+          <tbody className="divide-y divide-amana-neutral-200/60">
             {children}
           </tbody>
         </table>

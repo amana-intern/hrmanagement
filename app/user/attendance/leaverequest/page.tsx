@@ -1,14 +1,14 @@
 'use client';
 
-import { useState } from 'react';
-import SidebarUser from '../../../components/Sidebar/SidebarUser/Sidebaruser';
-import { PageLayout, Card, CardSection, Button, Select, Label } from '../../../components/ui';
-
-const leaveBalanceItems = [
-  { count: '12', label: 'Paid Leave' },
-  { count: '0', label: 'Special Leave' },
-  { count: '0', label: 'Unpaid Leave' },
-];
+import { useEffect, useState } from 'react';
+import { CalendarCheck } from 'lucide-react';
+import PageTopBar from '../../../components/layout/PageTopBar';
+import SectionCard from '../../../components/layout/SectionCard';
+import StatBox from '../../../components/data-display/StatBox';
+import SelectField from '../../../components/forms/SelectField';
+import TextField from '../../../components/forms/TextField';
+import Button from '../../../components/forms/Button';
+import { LEAVE_TYPES } from '@/lib/constants';
 
 const specialLeaveList = [
   'Menstruation pain (Maximum of 2 days)',
@@ -24,85 +24,178 @@ const specialLeaveList = [
   'Emergency accident (depends on company policy)',
 ];
 
+const LEAVE_TYPE_MAP: Record<string, string> = {
+  'Paid Leave': LEAVE_TYPES.PAID,
+  'Special Leave': LEAVE_TYPES.SPECIAL,
+  'Unpaid Leave': LEAVE_TYPES.UNPAID,
+};
+
+const leaveOptions = ['Paid Leave', 'Unpaid Leave', 'Special Leave'];
+
 export default function LeaveRequestPage() {
   const [selectedLeave, setSelectedLeave] = useState('');
   const [selectedSpecialLeave, setSelectedSpecialLeave] = useState('');
+  const [reason, setReason] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+  const [leaveBalance, setLeaveBalance] = useState<number | null>(null);
+  const [specialLeaveUsed, setSpecialLeaveUsed] = useState<number | null>(null);
+  const [unpaidLeaveUsed, setUnpaidLeaveUsed] = useState<number | null>(null);
 
-  const isFormValid = selectedLeave !== '' && (selectedLeave !== 'Special Leave' || selectedSpecialLeave !== '');
+  const loadBalance = async () => {
+    try {
+      const res = await fetch('/api/me', { cache: 'no-store' });
+      if (res.ok) {
+        const data = await res.json();
+        setLeaveBalance(data.user?.leave?.sisaCuti ?? 0);
+        setSpecialLeaveUsed(data.user?.leave?.specialLeaveUsed ?? 0);
+        setUnpaidLeaveUsed(data.user?.leave?.unpaidLeaveUsed ?? 0);
+      }
+    } catch {}
+  };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    (async () => {
+      await loadBalance();
+    })();
+  }, []);
+
+  const leaveBalanceItems = [
+    { count: leaveBalance != null ? String(leaveBalance) : '...', label: 'Paid Leave', caption: 'Remaining Paid Leave Balance(s)' },
+    { count: specialLeaveUsed != null ? String(specialLeaveUsed) : '...', label: 'Special Leave', caption: 'Special Leave used this year' },
+    { count: unpaidLeaveUsed != null ? String(unpaidLeaveUsed) : '...', label: 'Unpaid Leave', caption: 'Unpaid Leave used this year' },
+  ];
+
+  const isFormValid =
+    selectedLeave !== '' &&
+    (selectedLeave !== 'Special Leave' || selectedSpecialLeave !== '') &&
+    startDate !== '' &&
+    endDate !== '';
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isFormValid) return;
-    alert('Leave request submitted successfully!');
+
+    const idJenisCuti = leaveOptions.includes(selectedLeave) ? LEAVE_TYPE_MAP[selectedLeave] : '';
+    const keterangan = selectedLeave === 'Special Leave' ? selectedSpecialLeave : reason;
+
+    setSubmitting(true);
+    setMessage(null);
+
+    const res = await fetch('/api/leave', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tanggalMulai: startDate, tanggalSelesai: endDate, idJenisCuti, keterangan }),
+    });
+
+    const data = await res.json();
+    setSubmitting(false);
+
+    if (res.ok) {
+      setMessage({ ok: true, text: 'Pengajuan cuti berhasil dikirim untuk persetujuan partner.' });
+      setSelectedLeave('');
+      setSelectedSpecialLeave('');
+      setReason('');
+      setStartDate('');
+      setEndDate('');
+      loadBalance();
+    } else {
+      setMessage({ ok: false, text: data.error || 'Gagal mengirim pengajuan.' });
+    }
   };
 
   return (
-    <PageLayout sidebar={<SidebarUser />}>
+    <div className="w-full h-full flex flex-col gap-3">
+      <PageTopBar showGreeting section="Services" page="Request Leave" />
 
-      <Card padding="lg" className="mb-6 animate-fade-in delay-100">
-        <CardSection title="Leave Balance">
-          <div className="grid grid-cols-3 gap-4">
-            {leaveBalanceItems.map((item, idx) => (
-              <div
-                key={idx}
-                className="flex h-24 flex-col items-center justify-center border border-amana-sec-6 rounded-xl bg-amana-white w-full
-                            hover:border-amana-blue/30 hover:shadow-sm hover:-translate-y-0.5 transition-all duration-300"
-              >
-                <span className="text-xl font-semibold text-amana-blue">{item.count}</span>
-                <span className="text-xs font-medium text-amana-sec-7 mt-1">{item.label}</span>
-              </div>
-            ))}
+      <SectionCard title="Leave Balance(s)">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {leaveBalanceItems.map((item, idx) => (
+            <StatBox key={idx} value={item.count} label={item.label} caption={item.caption} />
+          ))}
+        </div>
+      </SectionCard>
+
+      <SectionCard as="form" onSubmit={handleSubmit} scroll>
+        <div className="flex-shrink-0 flex items-center gap-2 pb-1.5 mb-2 border-b border-amana-primary-500">
+          <h3 className="text-[20px] font-semibold text-amana-primary-500">Request Leave</h3>
+          <CalendarCheck className="w-5 h-5 text-amana-primary-500" />
+        </div>
+
+        <div className="mb-4">
+          <SelectField
+            label="Select Leave Option"
+            value={selectedLeave}
+            onChange={(v) => {
+              setSelectedLeave(v);
+              setSelectedSpecialLeave('');
+              setReason('');
+            }}
+            options={leaveOptions}
+            placeholder="Click here to select your leave option..."
+          />
+        </div>
+
+        {selectedLeave === 'Special Leave' && (
+          <div className="mb-4">
+            <SelectField
+              label="Select Special Leave Reason"
+              value={selectedSpecialLeave}
+              onChange={setSelectedSpecialLeave}
+              options={specialLeaveList}
+              placeholder="Click here to select the reason..."
+            />
           </div>
-        </CardSection>
-      </Card>
+        )}
 
-      <form onSubmit={handleSubmit}>
-        <Card padding="lg" className="animate-slide-up delay-200">
-          <CardSection title="Request Leave">
-            <div className="mb-5">
-              <Label>Leave Option</Label>
-              <Select
-                value={selectedLeave}
-                onChange={(e) => {
-                  setSelectedLeave(e.target.value);
-                  if (e.target.value !== 'Special Leave') setSelectedSpecialLeave('');
-                }}
-              >
-                <option value="" disabled>Click here to select your leave option...</option>
-                <option value="Paid Leave">Paid Leave</option>
-                <option value="Special Leave">Special Leave</option>
-                <option value="Unpaid Leave">Unpaid Leave</option>
-              </Select>
-            </div>
+        {(selectedLeave === 'Paid Leave' || selectedLeave === 'Unpaid Leave') && (
+          <div className="mb-4">
+            <TextField
+              label="Reason"
+              value={reason}
+              onChange={setReason}
+              placeholder="Tell us the reason for your leave..."
+            />
+          </div>
+        )}
 
-            <div className={`grid transition-all duration-300 ease-in-out ${selectedLeave === 'Special Leave' ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0 overflow-hidden'}`}>
-              <div className="overflow-hidden">
-                <div className="border border-amana-sec-6 bg-amana-white p-5 rounded-xl">
-                  <h3 className="font-semibold text-amana-blue text-sm mb-3">Special Leave List (Choose one)</h3>
-                  <ul className="flex flex-col gap-2.5 max-h-[260px] overflow-y-auto pr-2 custom-scrollbar">
-                    {specialLeaveList.map((item, idx) => (
-                      <li key={idx} className="flex items-start gap-3">
-                        <input
-                          type="radio"
-                          name="specialLeaveType"
-                          checked={selectedSpecialLeave === item}
-                          onChange={() => setSelectedSpecialLeave(item)}
-                          className="mt-1 accent-amana-blue cursor-pointer flex-shrink-0"
-                        />
-                        <span className="text-amana-black cursor-pointer leading-relaxed font-medium" onClick={() => setSelectedSpecialLeave(item)}>{item}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <TextField
+            label="Start Date"
+            type="date"
+            value={startDate}
+            onChange={setStartDate}
+          />
+          <TextField
+            label="End Date"
+            type="date"
+            value={endDate}
+            onChange={setEndDate}
+          />
+        </div>
 
-            <div className="flex justify-end mt-6 pt-4 border-t border-amana-sec-6">
-              <Button type="submit" disabled={!isFormValid}>Submit</Button>
-            </div>
-          </CardSection>
-        </Card>
-      </form>
-    </PageLayout>
+        {selectedLeave === 'Unpaid Leave' && (
+          <div className={`mb-4 px-4 py-3 rounded-lg border text-[13px] font-medium ${(leaveBalance ?? 0) > 0 ? 'bg-amana-warning-100 border-amana-warning-300 text-amana-warning-500' : 'bg-amana-success-100 border-amana-success-300 text-amana-success-500'}`}>
+            {(leaveBalance ?? 0) > 0
+              ? `Unpaid leave hanya bisa diajukan saat saldo Paid = 0. Saldo Anda masih ${leaveBalance} hari.`
+              : 'Saldo Paid Anda 0, silakan ajukan Unpaid leave.'}
+          </div>
+        )}
+
+        {message && (
+          <div className={`mb-4 px-4 py-2.5 rounded-lg border text-[13px] font-medium ${message.ok ? 'bg-amana-success-100 border-amana-success-300 text-amana-success-500' : 'bg-amana-danger-100 border-amana-danger-300 text-amana-danger-500'}`}>
+            {message.text}
+          </div>
+        )}
+
+        <div className="flex justify-end pt-4 border-t border-amana-neutral-200">
+          <Button type="submit" variant="primary" size="lg" className="w-full max-w-[280px]" disabled={!isFormValid || submitting}>
+            {submitting ? 'Submitting...' : 'Submit'}
+          </Button>
+        </div>
+      </SectionCard>
+    </div>
   );
 }

@@ -15,13 +15,13 @@ const base =
 
 const variants: Record<string, string> = {
   primary:
-    'bg-amana-blue text-white shadow-md shadow-amana-blue/20 hover:shadow-lg hover:shadow-amana-blue/30 hover:-translate-y-0.5 active:translate-y-0 active:shadow-sm',
+    'bg-amana-primary-500 text-white shadow-md shadow-amana-primary-500/20 hover:shadow-lg hover:shadow-amana-primary-500/30 hover:-translate-y-0.5 active:translate-y-0 active:shadow-sm',
   secondary:
-    'border border-amana-blue text-amana-blue hover:bg-amana-blue/5 hover:shadow-md hover:shadow-amana-blue/10 hover:-translate-y-0.5 active:translate-y-0',
+    'border border-amana-primary-500 text-amana-primary-500 hover:bg-amana-primary-500/5 hover:shadow-md hover:shadow-amana-primary-500/10 hover:-translate-y-0.5 active:translate-y-0',
   danger:
-    'bg-amana-sec-5 text-white shadow-md shadow-amana-sec-5/20 hover:shadow-lg hover:shadow-amana-sec-5/30 hover:-translate-y-0.5 active:translate-y-0 active:shadow-sm',
+    'bg-amana-primary-500 text-white shadow-md shadow-amana-primary-500/20 hover:shadow-lg hover:shadow-amana-primary-500/30 hover:-translate-y-0.5 active:translate-y-0 active:shadow-sm',
   ghost:
-    'text-amana-sec-7 hover:text-amana-blue hover:bg-amana-blue/5',
+    'text-amana-neutral-400 hover:text-amana-primary-500 hover:bg-amana-primary-500/5',
 };
 
 export default function Button({
@@ -33,7 +33,7 @@ export default function Button({
   className = '',
 }: ButtonProps) {
   const disabledStyles = disabled
-    ? 'bg-amana-sec-6 text-amana-sec-7 cursor-not-allowed shadow-none hover:shadow-none hover:translate-y-0'
+    ? 'bg-amana-neutral-200 text-amana-neutral-400 cursor-not-allowed shadow-none hover:shadow-none hover:translate-y-0'
     : 'cursor-pointer transition-all duration-200';
 
   return (

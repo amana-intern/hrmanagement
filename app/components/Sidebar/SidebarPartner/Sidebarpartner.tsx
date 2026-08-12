@@ -1,15 +1,23 @@
 'use client';
 
-import SidebarBase from '../SidebarBase';
-import type { SidebarConfig } from '../SidebarBase';
+import SidebarNavBase from '../SidebarNavBase';
+import type { NavGroup } from '../SidebarNavBase';
 
-const items: SidebarConfig = [
-  { type: 'item', href: '/partner/profile', label: 'Profile', iconP: '/icon/PProfile.png', iconB: '/icon/BProfile.png' },
-  { type: 'item', href: '/partner/leaveapproval', label: 'Leave Approval', iconP: '/icon/PAttendance.png', iconB: '/icon/BAttendance.png' },
-  { type: 'item', href: '/partner/contracttracking', label: 'Contract Tracking', iconP: '/icon/PCarrerHub.png', iconB: '/icon/BCarrerHub.png' },
-  { type: 'item', href: '/partner/paymentapproval', label: 'Payment Approval', iconP: '/icon/PPayment.png', iconB: '/icon/BPayment.png' },
+const groups: NavGroup[] = [
+  { title: 'Account', links: [{ href: '/partner/profile', label: 'Profile' }] },
+  {
+    title: 'Employee Record',
+    links: [{ href: '/partner/contracttracking', label: 'Contract Tracking' }],
+  },
+  {
+    title: 'Approvals',
+    links: [
+      { href: '/partner/leaveapproval', label: 'Leave Approval' },
+      { href: '/partner/paymentapproval', label: 'Payment Approval' },
+    ],
+  },
 ];
 
-export default function SidebarPar() {
-  return <SidebarBase items={items} />;
+export default function SidebarPartner() {
+  return <SidebarNavBase groups={groups} />;
 }

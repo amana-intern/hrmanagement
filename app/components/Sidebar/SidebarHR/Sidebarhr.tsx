@@ -1,33 +1,35 @@
 'use client';
 
-import SidebarBase from '../SidebarBase';
-import type { SidebarConfig } from '../SidebarBase';
+import SidebarNavBase from '../SidebarNavBase';
+import type { NavGroup } from '../SidebarNavBase';
 
-const items: SidebarConfig = [
-  { type: 'item', href: '/hr/profile', label: 'Profile', iconP: '/icon/PProfile.png', iconB: '/icon/BProfile.png' },
+const groups: NavGroup[] = [
+  { title: 'Account', links: [{ href: '/hr/profile', label: 'Profile' }] },
   {
-    type: 'dropdown',
-    label: 'Attendance',
-    iconP: '/icon/PAttendance.png',
-    iconB: '/icon/BAttendance.png',
-    items: [
-      { href: '/hr/leaveapproval', label: 'Leave Approval' },
+    title: 'Attendance',
+    links: [
+      { href: '/hr/leaverecord', label: 'Leave Record' },
       { href: '/hr/medicalleave', label: 'Medical Leave Record' },
+      { href: '/hr/blockeddates', label: 'Blocked Dates' },
+      { href: '/user/attendance/leaverequest', label: 'Leave Request' },
+      { href: '/user/attendance/sickleave', label: 'Sick Leave' },
     ],
   },
   {
-    type: 'dropdown',
-    label: 'Career Hub',
-    iconP: '/icon/PCarrerHub.png',
-    iconB: '/icon/BCarrerHub.png',
-    items: [
+    title: 'Payment',
+    links: [{ href: '/user/payment', label: 'Payment Request' }],
+  },
+  {
+    title: 'Career Hub',
+    links: [
       { href: '/hr/contracttracking', label: 'Contract Tracking' },
-      { href: '/hr/talentroster', label: 'Talent Roster' },
+      { href: '/hr/talentroster', label: 'Talent Management' },
       { href: '/hr/joblistings', label: 'Job Listings' },
+      { href: '/user/assessment', label: 'Assessment' },
     ],
   },
 ];
 
 export default function SidebarHR() {
-  return <SidebarBase items={items} />;
+  return <SidebarNavBase groups={groups} />;
 }

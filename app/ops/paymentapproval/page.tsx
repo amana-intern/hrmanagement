@@ -1,76 +1,272 @@
 'use client';
 
-import { useState } from 'react';
-import SidebarOPS from '../../components/Sidebar/SidebarOPS/Sidebarops';
-import { PageLayout, PageTitle, Table, Badge, Button } from '../../components/ui';
+import { useEffect, useMemo, useState } from 'react';
+import PageTopBar from '../../components/layout/PageTopBar';
+import SectionCard from '../../components/layout/SectionCard';
+import SearchPanel from '../../components/data-display/SearchPanel';
+import DataTable from '../../components/data-display/DataTable';
+import type { DataTableColumn } from '../../components/data-display/DataTable';
+import StatusPill from '../../components/data-display/StatusPill';
+import ApprovalActions from '../../components/data-display/ApprovalActions';
+import { SearchTextField, SearchSelectField } from '../../components/forms/SearchFields';
+import Button from '../../components/forms/Button';
+import Modal from '../../components/feedback/Modal';
+import { useFilters } from '@/app/utils/useFilters';
+import PaymentDetailModal, { PaymentDetailRow } from '../../components/PaymentDetailModal';
+import { PAYMENT_KATEGORI } from '@/lib/constants';
 
-interface PaymentRequest {
+interface PayReq {
   id: string;
+  idRequest: string;
   user: string;
   type: string;
   amount: string;
-  date: string;
+  projectID: string;
+  status: string;
+  details: null;
+  action: null;
+  detailRow: PaymentDetailRow;
+}
+
+interface PaymentRaw {
+  idRequest: string;
+  idStatus: string;
+  idKategoriPayment: string;
+  nominal: string | number;
+  projectID: string | null;
+  detail: string | null;
+  createdAt: string | null;
+  attachments?: { fileName?: string | null; fileURL?: string | null; kategori?: string | null }[];
+  karyawan?: { nama?: string | null };
+  masterKategoriPayment?: { namaKategori?: string | null };
+}
+
+function amountLabel(c: PaymentRaw): string {
+  if (c.idKategoriPayment === PAYMENT_KATEGORI.PER_DIEM) {
+    try {
+      const detail = typeof c.detail === 'string' ? JSON.parse(c.detail) : c.detail;
+      const p = Number(detail?.perDiemParticipants);
+      if (Number.isFinite(p) && p > 0) return `${p} peserta`;
+    } catch {}
+    return 'Lihat file';
+  }
+  return `Rp ${Number(c.nominal).toLocaleString('id-ID')}`;
+}
+
+const STATUS_MAP: Record<string, { label: string; color: string }> = {
+  ST_PAY_PENDING_OPS: { label: 'Pending Ops', color: 'bg-amana-warning-500' },
+  ST_PAY_PENDING_PARTNER: { label: 'Waiting Partner', color: 'bg-amana-primary-500' },
+  ST_PAY_REJECTED: { label: 'Rejected', color: 'bg-amana-danger-500' },
+};
+
+const STATUS_OPTIONS = Object.values(STATUS_MAP).map((v) => v.label);
+
+function mapRows(rows: PaymentRaw[]): PayReq[] {
+  return rows.map((c) => ({
+    id: c.idRequest,
+    idRequest: c.idRequest,
+    user: c.karyawan?.nama ?? '-',
+    type: c.masterKategoriPayment?.namaKategori ?? '-',
+    amount: amountLabel(c),
+    projectID: c.projectID ?? '-',
+    status: c.idStatus,
+    details: null,
+    action: null,
+    detailRow: {
+      idRequest: c.idRequest,
+      idKategoriPayment: c.idKategoriPayment,
+      nominal: c.nominal,
+      projectID: c.projectID,
+      detail: c.detail,
+      createdAt: c.createdAt,
+      attachments: c.attachments ?? [],
+      masterKategoriPayment: c.masterKategoriPayment,
+    },
+  }));
+}
+
+interface Filters {
+  search: string;
   status: string;
 }
 
-export default function PaymentApprovalPage() {
-  const [requests, setRequests] = useState<PaymentRequest[]>([
-    { id: 'REQ-001', user: 'Ahmad Fauzi',   type: 'Vendor',     amount: 'Rp 15.000.000', date: '22 Jul 2026', status: 'Pending Ops' },
-    { id: 'REQ-002', user: 'Sari Dewi',     type: 'Individual', amount: 'Rp 3.500.000',  date: '21 Jul 2026', status: 'Pending Ops' },
-    { id: 'REQ-003', user: 'Budi Hartono',  type: 'Per Diem',   amount: 'Rp 8.000.000',  date: '20 Jul 2026', status: 'Pending Partner' },
-    { id: 'REQ-004', user: 'Citra Lestari', type: 'Vendor',     amount: 'Rp 22.000.000', date: '19 Jul 2026', status: 'Pending Ops' },
-    { id: 'REQ-005', user: 'Dimas Prayoga', type: 'Individual', amount: 'Rp 2.000.000',  date: '18 Jul 2026', status: 'Pending Partner' },
-  ]);
+const emptyFilters: Filters = { search: '', status: '' };
 
-  const handleAction = (id: string, action: 'approved' | 'rejected') => {
-    setRequests((prev) =>
-      prev.map((req) =>
-        req.id === id ? { ...req, status: action === 'approved' ? 'Pending Partner' : 'Rejected' } : req
-      )
-    );
+export default function PaymentRequestPage() {
+  const [requests, setRequests] = useState<PayReq[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [processingId, setProcessingId] = useState<string | null>(null);
+  const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+  const [detailRow, setDetailRow] = useState<PaymentDetailRow | null>(null);
+  const { draft, applied, setField, handleSearch, handleReset } = useFilters<Filters>(emptyFilters);
+
+  const load = async () => {
+    const res = await fetch('/api/payment/list?scope=pending', { cache: 'no-store' });
+    if (res.ok) {
+      const data = await res.json();
+      setRequests(mapRows((data.list ?? []) as PaymentRaw[]));
+    } else {
+      const data = await res.json().catch(() => null);
+      setMessage({ ok: false, text: data?.error || 'Gagal memuat data' });
+    }
   };
 
-  const statusVariant = (s: string) =>
-    s === 'Pending Ops' ? 'pending' : s === 'Pending Partner' ? 'info' : s === 'Approved' ? 'approved' : s === 'Scheduled' ? 'success' : 'rejected';
+  useEffect(() => {
+    (async () => {
+      await load();
+      setLoading(false);
+    })();
+  }, []);
 
-  const columns = [
-    { key: 'id', label: 'ID' },
+  const filtered = useMemo(() => {
+    const q = applied.search.trim().toLowerCase();
+    return requests.filter((r) => {
+      const matchSearch =
+        !q ||
+        r.idRequest.toLowerCase().includes(q) ||
+        r.user.toLowerCase().includes(q) ||
+        r.projectID.toLowerCase().includes(q);
+      const matchStatus =
+        !applied.status || (STATUS_MAP[r.status]?.label ?? r.status) === applied.status;
+      return matchSearch && matchStatus;
+    });
+  }, [requests, applied]);
+
+  const handleAction = async (id: string, action: string) => {
+    if (processingId) return; // cegah double-processing
+    if (action === 'reject') {
+      const catatan = window.prompt('Alasan penolakan (wajib diisi):');
+      if (catatan === null) return;
+      if (!catatan.trim()) {
+        setMessage({ ok: false, text: 'Alasan penolakan wajib diisi' });
+        return;
+      }
+      setProcessingId(id);
+      const res2 = await fetch(`/api/payment/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'reject', catatan: catatan.trim() }),
+      });
+      if (res2.ok) {
+        await load();
+        setMessage({ ok: true, text: 'Pengajuan berhasil ditolak.' });
+      } else {
+        const d2 = await res2.json().catch(() => null);
+        setMessage({ ok: false, text: d2?.error || `Gagal memproses (${res2.status})` });
+      }
+      setProcessingId(null);
+      return;
+    }
+    setProcessingId(id);
+    const res = await fetch(`/api/payment/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action }),
+    });
+    if (res.ok) {
+      await load();
+      setMessage({ ok: true, text: 'Pengajuan berhasil diproses.' });
+    } else {
+      const data = await res.json().catch(() => null);
+      setMessage({ ok: false, text: data?.error || `Gagal memproses (${res.status})` });
+    }
+    setProcessingId(null);
+  };
+
+  const renderAction = (r: PayReq) => {
+    if (r.status === 'ST_PAY_PENDING_OPS') {
+      return (
+        <ApprovalActions
+          disabled={processingId === r.id}
+          onApprove={() => handleAction(r.id, 'review_approve')}
+          onReject={() => handleAction(r.id, 'reject')}
+        />
+      );
+    }
+    if (r.status === 'ST_PAY_PENDING_PARTNER') {
+      return <span className="text-[14px] text-amana-neutral-400 italic">Waiting Partner</span>;
+    }
+    return <span className="text-[14px] text-amana-neutral-400 italic">Rejected</span>;
+  };
+
+  const columns: DataTableColumn<PayReq>[] = [
+    { key: 'idRequest', label: 'ID', width: '200px' },
     { key: 'user', label: 'Requester' },
     { key: 'type', label: 'Type' },
-    { key: 'amount', label: 'Amount' },
-    { key: 'date', label: 'Date' },
-    { key: 'status', label: 'Status' },
-    { key: 'action', label: 'Action', align: 'center' as const },
+    { key: 'projectID', label: 'Event/Vendor Name' },
+    {
+      key: 'amount',
+      label: 'Amount',
+      render: (r) => <span className="font-semibold whitespace-nowrap">{r.amount}</span>,
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      render: (r) => (
+        <StatusPill color={STATUS_MAP[r.status]?.color ?? 'bg-amana-neutral-400'}>
+          {STATUS_MAP[r.status]?.label ?? r.status}
+        </StatusPill>
+      ),
+    },
+    {
+      key: 'details',
+      label: 'Details',
+      width: '140px',
+      render: (r) => (
+        <Button variant="primary" size="sm" onClick={() => setDetailRow(r.detailRow)}>
+          View Details
+        </Button>
+      ),
+    },
+    { key: 'action', label: 'Action', width: '240px', render: renderAction },
   ];
 
+  if (loading) {
+    return <div className="w-full flex items-center justify-center py-24">Loading...</div>;
+  }
+
   return (
-    <PageLayout sidebar={<SidebarOPS />}>
-      <div className="animate-slide-up delay-100">
-        <Table columns={columns}>
-          {requests.map((req) => (
-            <tr key={req.id} className="hover:bg-amana-blue/[0.03] transition-colors duration-200">
-              <td className="p-4 font-semibold text-amana-blue">{req.id}</td>
-              <td className="p-4 text-amana-black">{req.user}</td>
-              <td className="p-4 text-amana-sec-7">{req.type}</td>
-              <td className="p-4 font-semibold text-amana-black">{req.amount}</td>
-              <td className="p-4 text-amana-sec-7">{req.date}</td>
-              <td className="p-4"><Badge variant={statusVariant(req.status)}>{req.status}</Badge></td>
-              <td className="p-4 text-center">
-                <div className="min-w-[200px]">
-                  {req.status === 'Pending Ops' ? (
-                    <div className="flex gap-2 justify-center">
-                      <Button variant="primary" onClick={() => handleAction(req.id, 'approved')}>Approve</Button>
-                      <Button variant="secondary" onClick={() => handleAction(req.id, 'rejected')}>Reject</Button>
-                    </div>
-                  ) : (
-                    <span className="text-xs text-amana-sec-7 italic block text-center">-</span>
-                  )}
-                </div>
-              </td>
-            </tr>
-          ))}
-        </Table>
+    <>
+      <div className="w-full h-full flex flex-col gap-3">
+        <PageTopBar showGreeting section="Career Hub" page="Payment Request" />
+
+        <SearchPanel
+          title="Search Payment Request"
+          subtitle="Filter payment requests by ID, requester, event/vendor name, or status."
+          onReset={handleReset}
+          onSearch={handleSearch}
+        >
+          <SearchTextField
+            label="ID / Requester / Event"
+            value={draft.search}
+            onChange={(v) => setField('search', v)}
+            placeholder="Search..."
+          />
+          <SearchSelectField label="Status" value={draft.status} onChange={(v) => setField('status', v)} options={STATUS_OPTIONS} />
+        </SearchPanel>
+
+        <SectionCard title="Payment Request List" subtitle={`${filtered.length} request(s)`} scroll>
+          <DataTable
+            columns={columns}
+            rows={filtered}
+            defaultSortKey="idRequest"
+            emptyMessage="Tidak ada pengajuan."
+          />
+        </SectionCard>
       </div>
-    </PageLayout>
+
+      {message && (
+        <Modal title={message.ok ? 'Berhasil' : 'Gagal'} onClose={() => setMessage(null)} maxWidth="max-w-md">
+          <div className="px-5 py-4 flex flex-col gap-3 bg-amana-neutral-100">
+            <p className="text-[15px] text-amana-neutral-500">{message.text}</p>
+            <Button variant="primary" onClick={() => setMessage(null)}>
+              Close
+            </Button>
+          </div>
+        </Modal>
+      )}
+
+      <PaymentDetailModal open={!!detailRow} row={detailRow} onClose={() => setDetailRow(null)} />
+    </>
   );
 }
