@@ -44,7 +44,7 @@ export async function GET() {
     const employees = await prisma.karyawan.findMany({
       where: {
         user: {
-          idRole: { notIn: [ROLES.PARTNER, ROLES.ADMIN_HR, ROLES.ADMIN_OPS] },
+          idRole: { notIn: [ROLES.PARTNER] },
         },
         OR: [
           { masterGrade: { is: null } },
@@ -100,7 +100,7 @@ export async function GET() {
         tanggalLahir: k.tanggalLahir,
         certificates: (k.sertifikat ?? []).map((s) => ({
           idSertifikat: s.idSertifikat,
-          judul: s.judul ?? 'Sertifikat',
+          judul: s.judul ?? 'Certificate',
           fileName: s.fileName ?? 'document.pdf',
           fileURL: s.fileURL,
         })),
@@ -135,15 +135,16 @@ export async function GET() {
     });
   } catch (e) {
     const status = (e as { status?: number }).status ?? 500;
-    return Response.json({ error: 'Terjadi kesalahan' }, { status });
+    return Response.json({ error: 'Something went wrong' }, { status });
   }
 }
 
 // POST /api/hr/talent-roster — tambah pengguna baru (Karyawan + User).
-// Body: { nama, email, namaRole, namaGrade, department?, tanggalLahir, tanggalMasuk, tanggalBerakhir?, tipeKontrak? }
+// Body: { nama, email, namaRole, akses?, namaGrade, department?, tanggalLahir, tanggalMasuk, tanggalBerakhir?, tipeKontrak? }
 // Grade wajib. Grade "Head"/"Partner" = leader -> role dipaksa ROLE_PARTNER (permission Partner).
-// Selain itu = karyawan -> role bebas teks (custom); jika diisi Partner/Admin HR/Admin OPS ditolak,
-// dan role custom otomatis mendapat permission Employee.
+// Selain itu = karyawan -> role bebas teks (custom) = hanya penanda; akses admin (Admin HR/OPS)
+// HANYA lewat field `akses` ('admin_hr' | 'admin_ops' | kosong). Tanpa `akses` = tanpa akses admin,
+// dan nama Partner/Admin HR/Admin OPS di kolom role ditolak. Role custom otomatis mendapat permission Employee.
 // tipeKontrak: 'KONTRAK' (default) | 'TETAP'. Kontrak (KontrakKaryawan) hanya dibuat
 // jika tipeKontrak 'KONTRAK' dan tanggalBerakhir diisi. Password default: amana123.
 export async function POST(request: Request) {
@@ -154,19 +155,19 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { nama, email, namaRole, namaGrade, department, tanggalLahir, tanggalMasuk, tanggalBerakhir, tipeKontrak, noTelepon } = body || {};
+    const { nama, email, namaRole, akses, namaGrade, department, tanggalLahir, tanggalMasuk, tanggalBerakhir, tipeKontrak, noTelepon } = body || {};
 
     const cleanNama = String(nama ?? '').trim();
     const cleanEmail = String(email ?? '').trim().toLowerCase();
     const cleanTipe = String(tipeKontrak ?? '').trim().toUpperCase() === 'TETAP' ? 'TETAP' : 'KONTRAK';
     const cleanGrade = String(namaGrade ?? '').trim();
-    if (!cleanNama) return Response.json({ error: 'Nama wajib diisi' }, { status: 400 });
-    if (!cleanEmail) return Response.json({ error: 'Email wajib diisi' }, { status: 400 });
-    if (!cleanGrade) return Response.json({ error: 'Grade wajib diisi' }, { status: 400 });
+    if (!cleanNama) return Response.json({ error: 'Name is required' }, { status: 400 });
+    if (!cleanEmail) return Response.json({ error: 'Email is required' }, { status: 400 });
+    if (!cleanGrade) return Response.json({ error: 'Grade is required' }, { status: 400 });
 
     const existing = await prisma.user.findUnique({ where: { email: cleanEmail } });
     if (existing) {
-      return Response.json({ error: 'Email sudah terdaftar' }, { status: 409 });
+      return Response.json({ error: 'Email already registered' }, { status: 409 });
     }
 
     // Resolusi grade: cari by nama, jika belum ada buat baru (GRD### urutan berikutnya).
@@ -197,15 +198,35 @@ export async function POST(request: Request) {
     // Grade Head/Partner = leader -> role selalu Partner (permission Partner).
     const isLeader = gradeName === 'head' || gradeName === 'partner';
 
+    // Akses admin opsional: 'admin_hr' | 'admin_ops' | kosong (tanpa akses admin).
+    const cleanAkses = String(akses ?? '').trim().toLowerCase();
+
     let role: { idRole: string; namaRole: string | null } | null = null;
     if (isLeader) {
+      if (cleanAkses) {
+        return Response.json(
+          { error: 'Grade Head/Partner automatically becomes role Partner and cannot be given admin access.' },
+          { status: 400 }
+        );
+      }
       role = await prisma.role.findUnique({ where: { idRole: ROLES.PARTNER } });
       if (!role) {
-        return Response.json({ error: 'Role Partner tidak ditemukan' }, { status: 500 });
+        return Response.json({ error: 'Partner role not found' }, { status: 500 });
+      }
+    } else if (cleanAkses === 'admin_hr' || cleanAkses === 'admin_ops') {
+      role = await prisma.role.findUnique({
+        where: { idRole: cleanAkses === 'admin_hr' ? ROLES.ADMIN_HR : ROLES.ADMIN_OPS },
+      });
+      if (!role) {
+        return Response.json({ error: 'Admin role not found' }, { status: 500 });
       }
     } else {
+      if (cleanAkses) {
+        return Response.json({ error: 'Invalid access' }, { status: 400 });
+      }
+
       const cleanRole = String(namaRole ?? '').trim();
-      if (!cleanRole) return Response.json({ error: 'Role wajib diisi' }, { status: 400 });
+      if (!cleanRole) return Response.json({ error: 'Role is required' }, { status: 400 });
 
       // Resolusi role: cari by nama (case-insensitive), jika belum ada buat baru (ROLE_<SLUG>).
       role = await prisma.role.findFirst({
@@ -226,17 +247,18 @@ export async function POST(request: Request) {
         role = await prisma.role.create({ data: { idRole: newId, namaRole: cleanRole } });
       }
       if (!role) {
-        return Response.json({ error: 'Role tidak ditemukan' }, { status: 500 });
+        return Response.json({ error: 'Role not found' }, { status: 500 });
       }
 
       // Grade biasa = karyawan -> role Partner/Admin HR/Admin OPS tidak boleh.
+      // Akses admin HANYA melalui field `akses` (bagian Access).
       if (
         role.idRole === ROLES.PARTNER ||
         role.idRole === ROLES.ADMIN_HR ||
         role.idRole === ROLES.ADMIN_OPS
       ) {
         return Response.json(
-          { error: 'Role Partner/Admin HR/Admin OPS hanya untuk grade Head/Partner' },
+          { error: 'Admin access is only granted via the Access field.' },
           { status: 400 }
         );
       }
@@ -264,7 +286,7 @@ export async function POST(request: Request) {
     const tanggalMulai = tanggalMasuk ? new Date(tanggalMasuk) : null;
     const tanggalAkhir = tanggalBerakhir ? new Date(tanggalBerakhir) : null;
     if (tanggalAkhir && tanggalMulai && tanggalAkhir < tanggalMulai) {
-      return Response.json({ error: 'Tanggal berakhir kontrak tidak boleh sebelum tanggal masuk' }, { status: 400 });
+      return Response.json({ error: 'Contract end date cannot be before the start date' }, { status: 400 });
     }
 
     // Generate idKaryawan / idUser: KRY + urutan berikutnya.
@@ -327,6 +349,6 @@ export async function POST(request: Request) {
     );
   } catch (e) {
     const status = (e as { status?: number }).status ?? 500;
-    return Response.json({ error: 'Terjadi kesalahan' }, { status });
+    return Response.json({ error: 'Something went wrong' }, { status });
   }
 }

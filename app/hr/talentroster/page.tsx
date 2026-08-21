@@ -8,23 +8,21 @@ import DataTable from '../../components/data-display/DataTable';
 import type { DataTableColumn } from '../../components/data-display/DataTable';
 import Button from '../../components/forms/Button';
 import Modal from '../../components/feedback/Modal';
+import { DEPARTMENT_LABEL as DEPARTMENT_LABELS } from '@/lib/roles';
 import EmployeeDetailsModal, { AssessmentBadge } from '../../components/data-display/EmployeeDetailsModal';
 import TextField from '../../components/forms/TextField';
 import SelectField from '../../components/forms/SelectField';
 import AssessmentManager from '../../components/hr/AssessmentManager';
 import AssessmentResultView from '../../components/hr/AssessmentResultView';
+import CareerHistoryModal from '../../components/hr/CareerHistoryModal';
+import type { CareerHistoryItem } from '../../components/hr/CareerHistoryModal';
 
 const OPS_GRADES = ['Head', 'Lead/Coordinator', 'Senior Officer', 'Officer', 'Junior Officer'];
 const NON_OPS_GRADES = ['Partner', 'Principal', 'Senior Specialist', 'Specialist', 'Senior Associate', 'Associate', 'Senior Analyst', 'Analyst'];
 const LEADER_GRADES = ['Head', 'Partner'];
-const BASE_NON_EMPLOYEE_ROLES = ['partner', 'admin hr', 'admin ops'];
 const CONTRACT_TYPE_OPTIONS = ['Contract', 'Permanent'];
-const DEPARTMENT_LABELS: Record<string, string> = {
-  health: 'Health & Wellbeing',
-  digital: 'Digital & Finance',
-  education: 'Education & HR',
-  ops: 'Operations',
-};
+const ACCESS_OPTIONS = ['admin_hr', 'admin_ops'];
+const ACCESS_LABELS: Record<string, string> = { admin_hr: 'Admin HR', admin_ops: 'Admin OPS' };
 
 interface Certificate {
   idSertifikat: string;
@@ -86,6 +84,9 @@ export default function TalentRosterPage() {
   const [assessmentModal, setAssessmentModal] = useState<Employee | null>(null);
   const [certModal, setCertModal] = useState<Employee | null>(null);
   const [detailsModal, setDetailsModal] = useState<Employee | null>(null);
+  const [historyModal, setHistoryModal] = useState<Employee | null>(null);
+  const [careerHistory, setCareerHistory] = useState<CareerHistoryItem[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
   const [view, setView] = useState<'roster' | 'assessment' | 'kelola'>('roster');
 
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
@@ -104,6 +105,7 @@ export default function TalentRosterPage() {
     tipeKontrak: '',
   });
   const [customGrade, setCustomGrade] = useState('');
+  const [addAccess, setAddAccess] = useState('');
 
   const [deleteModal, setDeleteModal] = useState<Employee | null>(null);
   const [deletingUser, setDeletingUser] = useState(false);
@@ -112,6 +114,7 @@ export default function TalentRosterPage() {
   const [editModal, setEditModal] = useState<Employee | null>(null);
   const [editForm, setEditForm] = useState({ department: '', grade: '', roleLabel: '' });
   const [customEditGrade, setCustomEditGrade] = useState('');
+  const [editAccess, setEditAccess] = useState('');
   const [savingEdit, setSavingEdit] = useState(false);
   const [editMsg, setEditMsg] = useState('');
 
@@ -174,33 +177,33 @@ export default function TalentRosterPage() {
 
   const handleAddUser = async () => {
     if (!newUser.nama.trim() || !newUser.email.trim()) {
-      setAddUserMsg('Nama & Email wajib diisi');
+      setAddUserMsg('Name & Email are required');
       return;
     }
     if (!newUser.department) {
-      setAddUserMsg('Department wajib diisi');
+      setAddUserMsg('Department is required');
       return;
     }
     const gradeVal = newUser.grade === '__other__' ? customGrade.trim() : newUser.grade.trim();
     if (!newUser.grade.trim()) {
-      setAddUserMsg('Grade wajib diisi');
+      setAddUserMsg('Grade is required');
       return;
     }
     if (newUser.grade === '__other__' && !gradeVal) {
-      setAddUserMsg('Custom Grade wajib diisi');
+      setAddUserMsg('Custom Grade is required');
       return;
     }
     const roleName = isLeaderGrade ? 'Partner' : newUser.namaRole.trim();
     if (!roleName) {
-      setAddUserMsg('Role wajib diisi');
+      setAddUserMsg('Role is required');
       return;
     }
-    if (!isLeaderGrade && BASE_NON_EMPLOYEE_ROLES.includes(roleName.toLowerCase())) {
-      setAddUserMsg('Role Partner/Admin HR/Admin OPS hanya untuk grade Head/Partner');
+    if (!isLeaderGrade && ['partner', 'admin hr', 'admin ops'].includes(roleName.toLowerCase())) {
+      setAddUserMsg('Admin access is only granted via the Access field.');
       return;
     }
     if (!newUser.tipeKontrak) {
-      setAddUserMsg('Contract Type wajib diisi');
+      setAddUserMsg('Contract Type is required');
       return;
     }
     setAddingUser(true);
@@ -214,6 +217,7 @@ export default function TalentRosterPage() {
           email: newUser.email,
           noTelepon: newUser.noTelepon || undefined,
           namaRole: roleName,
+          akses: isLeaderGrade ? undefined : addAccess || undefined,
           namaGrade: gradeVal || undefined,
           department: newUser.department || undefined,
           tanggalLahir: newUser.tanggalLahir || undefined,
@@ -224,33 +228,48 @@ export default function TalentRosterPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setAddUserMsg(data?.error || 'Gagal menambah pengguna');
+        setAddUserMsg(data?.error || 'Failed to add user');
         return;
       }
       setNewUser({ nama: '', email: '', noTelepon: '', namaRole: '', grade: '', department: '', tanggalLahir: '', tanggalMasuk: '', tanggalBerakhir: '', tipeKontrak: '' });
       setCustomGrade('');
+      setAddAccess('');
       const res2 = await fetch('/api/hr/talent-roster', { cache: 'no-store' });
       if (res2.ok) {
         const d2 = await res2.json();
         setEmployees((d2.list ?? []) as Employee[]);
       }
       setIsAddUserOpen(false);
-      alert(`Talent "${newUser.nama}" berhasil ditambahkan. Password: "${data.password}"`);
+      alert(`Talent "${newUser.nama}" added successfully. Password: "${data.password}"`);
       setAddUserMsg('');
     } catch {
-      setAddUserMsg('Terjadi kesalahan jaringan');
+      setAddUserMsg('Network error');
     } finally {
       setAddingUser(false);
     }
   };
 
+  const handleOpenCareerHistory = async (e: Employee) => {
+    setHistoryModal(e);
+    setCareerHistory([]);
+    setLoadingHistory(true);
+    try {
+      const res = await fetch(`/api/hr/talent-roster/${e.idKaryawan}/history`, { cache: 'no-store' });
+      if (res.ok) {
+        const data = await res.json();
+        setCareerHistory((data.list ?? []) as CareerHistoryItem[]);
+      }
+    } catch {
+      setCareerHistory([]);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
   const handleOpenEdit = (e: Employee) => {
-    setEditForm({
-      department: e.department && e.department !== '-' ? e.department : '',
-      grade: e.grade && e.grade !== '-' ? e.grade : '',
-      roleLabel: e.roleLabel && e.roleLabel !== '-' ? e.roleLabel : '',
-    });
+    setEditForm({ department: '', grade: '', roleLabel: '' });
     setCustomEditGrade('');
+    setEditAccess(e.roleLabel === 'Admin HR' ? 'admin_hr' : e.roleLabel === 'Admin OPS' ? 'admin_ops' : '');
     setEditMsg('');
     setEditModal(e);
   };
@@ -258,18 +277,22 @@ export default function TalentRosterPage() {
   const handleSaveEdit = async () => {
     if (!editModal) return;
     if (!editForm.department) {
-      setEditMsg('Department wajib diisi');
+      setEditMsg('Department is required');
       return;
     }
     const gradeVal = editForm.grade === '__other__' ? customEditGrade.trim() : editForm.grade.trim();
     if (!gradeVal) {
-      setEditMsg('Grade wajib diisi');
+      setEditMsg('Grade is required');
       return;
     }
     const isLeader = LEADER_GRADES.includes(gradeVal.toLowerCase());
     const roleVal = isLeader ? 'Partner' : editForm.roleLabel.trim();
     if (!roleVal) {
-      setEditMsg('Role wajib diisi');
+      setEditMsg('Role is required');
+      return;
+    }
+    if (!isLeader && ['partner', 'admin hr', 'admin ops'].includes(roleVal.toLowerCase())) {
+      setEditMsg('Admin access is only granted via the Access field.');
       return;
     }
     setSavingEdit(true);
@@ -282,11 +305,12 @@ export default function TalentRosterPage() {
           department: editForm.department,
           namaGrade: gradeVal,
           namaRole: roleVal,
+          akses: isLeader ? undefined : editAccess || undefined,
         }),
       });
       const data = await res.json();
       if (!res.ok) {
-        setEditMsg(data?.error || 'Gagal menyimpan perubahan');
+        setEditMsg(data?.error || 'Failed to save changes');
         return;
       }
       const res2 = await fetch('/api/hr/talent-roster', { cache: 'no-store' });
@@ -297,7 +321,7 @@ export default function TalentRosterPage() {
       setEditModal(null);
       setEditMsg('');
     } catch {
-      setEditMsg('Terjadi kesalahan jaringan');
+      setEditMsg('Network error');
     } finally {
       setSavingEdit(false);
     }
@@ -311,7 +335,7 @@ export default function TalentRosterPage() {
       const res = await fetch(`/api/hr/talent-roster/${deleteModal.idKaryawan}`, { method: 'DELETE' });
       const data = await res.json();
       if (!res.ok) {
-        setDeleteMsg(data?.error || 'Gagal menghapus karyawan');
+        setDeleteMsg(data?.error || 'Failed to delete employee');
         return;
       }
       const res2 = await fetch('/api/hr/talent-roster', { cache: 'no-store' });
@@ -322,7 +346,7 @@ export default function TalentRosterPage() {
       setDeleteModal(null);
       setDeleteMsg('');
     } catch {
-      setDeleteMsg('Terjadi kesalahan jaringan');
+      setDeleteMsg('Network error');
     } finally {
       setDeletingUser(false);
     }
@@ -463,11 +487,11 @@ export default function TalentRosterPage() {
                   </Button>
                 }
               >
-                <DataTable key="roster" columns={rosterColumns} rows={rosterRows} defaultSortKey="nama" emptyMessage="Tidak ada karyawan." />
+                <DataTable key="roster" columns={rosterColumns} rows={rosterRows} defaultSortKey="nama" emptyMessage="No employees found." />
               </SectionCard>
             ) : (
               <SectionCard title="Employee Assessment" subtitle={`${assessmentRows.length} employee(s)`} scroll>
-                <DataTable key="assessment" columns={assessmentColumns} rows={assessmentRows} defaultSortKey="nama" emptyMessage="Belum ada karyawan yang mengisi assessment." />
+                <DataTable key="assessment" columns={assessmentColumns} rows={assessmentRows} defaultSortKey="nama" emptyMessage="No employees have completed the assessment yet." />
               </SectionCard>
             )}
           </>
@@ -488,6 +512,16 @@ export default function TalentRosterPage() {
           }}
           onClose={() => setDetailsModal(null)}
           onViewAssessment={() => setAssessmentModal(detailsModal)}
+          onViewCareerHistory={() => handleOpenCareerHistory(detailsModal)}
+        />
+      )}
+
+      {historyModal && (
+        <CareerHistoryModal
+          employeeName={historyModal.nama}
+          history={careerHistory}
+          loading={loadingHistory}
+          onClose={() => setHistoryModal(null)}
         />
       )}
 
@@ -498,7 +532,7 @@ export default function TalentRosterPage() {
               <AssessmentResultView categories={categories} assessment={assessmentModal.assessment} />
             ) : (
               <p className="text-sm text-amana-neutral-400">
-                {assessmentName ? `Belum mengisi ${assessmentName}.` : 'Belum ada data assessment.'}
+                {assessmentName ? `Not yet completed: ${assessmentName}.` : 'No assessment data available.'}
               </p>
             )}
           </div>
@@ -525,7 +559,7 @@ export default function TalentRosterPage() {
       )}
 
       {isAddUserOpen && (
-        <Modal title="Add New Talent" onClose={() => { setIsAddUserOpen(false); setAddUserMsg(''); setCustomGrade(''); }} maxWidth="max-w-3xl" className="max-h-[90vh]">
+        <Modal title="Add New Talent" onClose={() => { setIsAddUserOpen(false); setAddUserMsg(''); setCustomGrade(''); setAddAccess(''); }} maxWidth="max-w-3xl" className="max-h-[90vh]">
           <div className="flex-1 min-h-0 overflow-y-auto scroll-smooth p-5 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
             <TextField label="Talent Email" value={newUser.email} onChange={(v) => setNewUser((p) => ({ ...p, email: v }))} placeholder="e.g.: name@company" />
             <TextField label="Talent Name" value={newUser.nama} onChange={(v) => setNewUser((p) => ({ ...p, nama: v }))} placeholder="Full Name" />
@@ -569,6 +603,21 @@ export default function TalentRosterPage() {
               {isLeaderGrade && <p className="pt-1.5 text-[12px] text-amana-neutral-400">Grade Head/Partner automatically becomes role Partner.</p>}
             </div>
 
+            <div>
+              <SelectField
+                label="Access (Optional)"
+                value={addAccess}
+                onChange={setAddAccess}
+                options={ACCESS_OPTIONS}
+                labels={ACCESS_LABELS}
+                disabled={isLeaderGrade}
+                placeholder="None (no admin access)"
+              />
+              <p className="pt-1.5 text-[12px] text-amana-neutral-400">
+                {isLeaderGrade ? 'Leaders are automatically role Partner.' : 'Admin access is only granted here.'}
+              </p>
+            </div>
+
             <SelectField
               label="Contract Type"
               value={newUser.tipeKontrak}
@@ -588,7 +637,7 @@ export default function TalentRosterPage() {
           )}
 
           <div className="flex-shrink-0 flex justify-end gap-3 px-5 py-4 border-t border-amana-neutral-200">
-            <Button variant="ghost" onClick={() => { setIsAddUserOpen(false); setAddUserMsg(''); setCustomGrade(''); }}>
+            <Button variant="ghost" onClick={() => { setIsAddUserOpen(false); setAddUserMsg(''); setCustomGrade(''); setAddAccess(''); }}>
               Cancel
             </Button>
             <Button variant="primary" size="lg" disabled={addingUser} onClick={handleAddUser}>
@@ -633,16 +682,36 @@ export default function TalentRosterPage() {
             </div>
 
             <div>
-              <TextField
-                label="Role"
-                value={LEADER_GRADES.includes((editForm.grade === '__other__' ? customEditGrade : editForm.grade).toLowerCase()) ? 'Partner' : editForm.roleLabel}
-                onChange={(v) => setEditForm((p) => ({ ...p, roleLabel: v }))}
-                disabled={LEADER_GRADES.includes((editForm.grade === '__other__' ? customEditGrade : editForm.grade).toLowerCase())}
-                placeholder="e.g.: Software Engineer, Data Analyst"
-              />
-              {LEADER_GRADES.includes((editForm.grade === '__other__' ? customEditGrade : editForm.grade).toLowerCase()) && (
-                <p className="pt-1.5 text-[12px] text-amana-neutral-400">Grade Head/Partner automatically becomes role Partner.</p>
+              {LEADER_GRADES.includes((editForm.grade === '__other__' ? customEditGrade : editForm.grade).toLowerCase()) ? (
+                <>
+                  <TextField label="Role" value="Partner" onChange={() => {}} disabled />
+                  <p className="pt-1.5 text-[12px] text-amana-neutral-400">Grade Head/Partner automatically becomes role Partner.</p>
+                </>
+              ) : (
+                <TextField
+                  label="Role"
+                  value={editForm.roleLabel}
+                  onChange={(v) => setEditForm((p) => ({ ...p, roleLabel: v }))}
+                  placeholder="e.g.: Software Engineer, Data Analyst"
+                />
               )}
+            </div>
+
+            <div>
+              <SelectField
+                label="Access (Optional)"
+                value={editAccess}
+                onChange={setEditAccess}
+                options={ACCESS_OPTIONS}
+                labels={ACCESS_LABELS}
+                disabled={LEADER_GRADES.includes((editForm.grade === '__other__' ? customEditGrade : editForm.grade).toLowerCase())}
+                placeholder="None (no admin access)"
+              />
+              <p className="pt-1.5 text-[12px] text-amana-neutral-400">
+                {LEADER_GRADES.includes((editForm.grade === '__other__' ? customEditGrade : editForm.grade).toLowerCase())
+                  ? 'Leaders are automatically role Partner.'
+                  : 'Admin access is only granted here.'}
+              </p>
             </div>
           </div>
 
@@ -662,7 +731,7 @@ export default function TalentRosterPage() {
               Delete
             </Button>
             <div className="flex gap-3">
-              <Button variant="ghost" onClick={() => { setEditModal(null); setEditMsg(''); setCustomEditGrade(''); }}>
+              <Button variant="ghost" onClick={() => { setEditModal(null); setEditMsg(''); setCustomEditGrade(''); setEditAccess(''); }}>
                 Cancel
               </Button>
               <Button variant="primary" size="lg" disabled={savingEdit} onClick={handleSaveEdit}>

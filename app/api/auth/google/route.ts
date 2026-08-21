@@ -13,7 +13,7 @@ export async function POST(request: Request) {
   try {
     if (!googleClientId || !domain) {
       return Response.json(
-        { error: 'Konfigurasi Google belum lengkap. Hubungi administrator.' },
+        { error: 'Google configuration is incomplete. Contact the administrator.' },
         { status: 500 }
       );
     }
@@ -21,7 +21,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { token } = body || {};
     if (!token || typeof token !== 'string') {
-      return Response.json({ error: 'Token Google tidak ditemukan' }, { status: 400 });
+      return Response.json({ error: 'Google token not found' }, { status: 400 });
     }
 
     const ticket = await client.verifyIdToken({
@@ -30,7 +30,7 @@ export async function POST(request: Request) {
     });
     const payload = ticket.getPayload();
     if (!payload || !payload.email) {
-      return Response.json({ error: 'Token Google tidak valid' }, { status: 401 });
+      return Response.json({ error: 'Google token invalid' }, { status: 401 });
     }
 
     const email = payload.email.toLowerCase();
@@ -38,7 +38,7 @@ export async function POST(request: Request) {
     // Lapis keamanan domain: email harus diverifikasi Google & milik domain perusahaan.
     if (!payload.email_verified || payload.hd !== domain || !email.endsWith(`@${domain}`)) {
       return Response.json(
-        { error: `Akses ditolak. Harap gunakan email @${domain}` },
+        { error: `Access denied. Please use an @${domain} email` },
         { status: 403 }
       );
     }
@@ -56,7 +56,7 @@ export async function POST(request: Request) {
     // Opsi A: email @domain valid tapi belum terdaftar -> tolak, arahkan ke HR.
     if (!user) {
       return Response.json(
-        { error: 'Email Anda belum terdaftar di sistem. Hubungi HR untuk diaktifkan.' },
+        { error: 'Your email is not registered in the system. Contact HR to activate it.' },
         { status: 403 }
       );
     }
@@ -66,7 +66,7 @@ export async function POST(request: Request) {
     if (googleSub) {
       if (user.googleSub && user.googleSub !== googleSub) {
         return Response.json(
-          { error: 'Akun Google tidak cocok dengan akun yang terdaftar. Hubungi HR.' },
+          { error: 'Your Google account does not match the registered account. Contact HR.' },
           { status: 403 }
         );
       }
@@ -131,7 +131,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('Google auth error:', error);
     return Response.json(
-      { error: 'Autentikasi gagal atau token kadaluarsa' },
+      { error: 'Authentication failed or token expired' },
       { status: 401 }
     );
   }

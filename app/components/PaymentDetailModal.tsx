@@ -3,6 +3,8 @@
 import { ReactNode, useState } from 'react';
 import Modal from './feedback/Modal';
 import { PAYMENT_KATEGORI } from '@/lib/constants';
+import { DEPARTMENT_LABEL } from '@/lib/roles';
+import { formatDateWIB } from '@/app/utils/formatDate';
 
 interface Attachment {
   fileName?: string | null;
@@ -19,6 +21,7 @@ export interface PaymentDetailRow {
   createdAt?: string | null;
   attachments?: Attachment[];
   masterKategoriPayment?: { namaKategori?: string | null } | null;
+  karyawan?: { nama?: string | null; department?: string | null } | null;
 }
 
 interface PaymentDetailModalProps {
@@ -42,7 +45,7 @@ function AttachmentLink({ file, label, onPreview }: { file?: Attachment | null; 
     return (
       <div className="py-2.5 border-b border-amana-neutral-200 last:border-0">
         <p className="text-xs font-medium text-amana-neutral-500 mb-0.5">{label}</p>
-        <p className="text-sm text-amana-neutral-400 italic">Tidak ada lampiran</p>
+        <p className="text-sm text-amana-neutral-400 italic">No attachments</p>
       </div>
     );
   }
@@ -56,7 +59,7 @@ function AttachmentLink({ file, label, onPreview }: { file?: Attachment | null; 
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
         </svg>
-        Lihat {file.fileName || label}
+        View {file.fileName || label}
       </button>
     </div>
   );
@@ -73,8 +76,7 @@ function formatTanggal(v?: string) {
   const parts = v.split('-');
   if (parts.length === 3) {
     const d = new Date(`${v}T00:00:00`);
-    if (!Number.isNaN(d.getTime()))
-      return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+    if (!Number.isNaN(d.getTime())) return formatDateWIB(d);
   }
   return v;
 }
@@ -93,15 +95,19 @@ export default function PaymentDetailModal({ row, open, onClose }: PaymentDetail
   const att = row.attachments ?? [];
   const findAtt = (key: string) => att.find((a) => a.kategori === key) ?? null;
   const pax = (v: unknown) => (v === undefined || v === null || v === '' ? undefined : String(v));
+  const practiceGroup = pax(detail.practiceGroup);
+  const deptLabel = row.karyawan?.department
+    ? DEPARTMENT_LABEL[row.karyawan.department] ?? row.karyawan.department
+    : '';
+  const deptPracticeGroup = `${deptLabel}${practiceGroup ? ` / ${practiceGroup}` : ''}` || undefined;
   const handlePreview = (f: Attachment) => {
-    if (f.fileURL) setPreview({ url: f.fileURL, name: f.fileName || 'Lampiran' });
+    if (f.fileURL) setPreview({ url: f.fileURL, name: f.fileName || 'Attachment' });
   };
 
   let body: ReactNode;
   if (kategori === PAYMENT_KATEGORI.VENDOR) {
     body = (
       <>
-        <Field label="Vendor Name" value={pax(detail.vendorName)} />
         <Field label="NPWP Vendor" value={pax(detail.vendorNpwp)} />
         <Field label="Payment Amount" value={formatRp(row.nominal)} />
         <Field label="Due Date" value={formatTanggal(pax(detail.vendorDueDate))} />
@@ -111,7 +117,6 @@ export default function PaymentDetailModal({ row, open, onClose }: PaymentDetail
   } else if (kategori === PAYMENT_KATEGORI.INDIVIDUAL) {
     body = (
       <>
-        <Field label="Name of Activity" value={pax(detail.indActivity)} />
         <Field label="Name of the Honor Receiver" value={pax(detail.indReceiver)} />
         <Field label="Their Role in This Event" value={pax(detail.individualRole)} />
         <Field label="Bank Account Name" value={pax(detail.indBankName)} />
@@ -125,7 +130,6 @@ export default function PaymentDetailModal({ row, open, onClose }: PaymentDetail
   } else {
     body = (
       <>
-        <Field label="Name of Event" value={pax(detail.perDiemEvent)} />
         <Field label="Number of Participants" value={pax(detail.perDiemParticipants)} />
         <AttachmentLink file={findAtt('perdiem-file')} label="File with Participant Details" onPreview={handlePreview} />
       </>
@@ -135,8 +139,16 @@ export default function PaymentDetailModal({ row, open, onClose }: PaymentDetail
   return (
     <>
       {open && (
-        <Modal title={`Detail Pengajuan - ${row.idRequest}`} onClose={onClose} maxWidth="max-w-2xl" className="max-h-[92vh]">
+        <Modal title={`Request Detail - ${row.idRequest}`} onClose={onClose} maxWidth="max-w-2xl" className="max-h-[92vh]">
           <div className="px-5 py-2 max-h-[70vh] overflow-y-auto bg-amana-neutral-100">
+            <Field label="Requester" value={row.karyawan?.nama} />
+            <Field
+              label="Department / Practice Group"
+              value={deptPracticeGroup}
+            />
+            <Field label="Role" value={pax(detail.role)} />
+            <Field label="Partner" value={pax(detail.partner)} />
+            <Field label="Payment Under" value={pax(detail.paymentUnder)} />
             <Field label="To Whom" value={row.masterKategoriPayment?.namaKategori ?? row.idKategoriPayment} />
             <Field label="Event / Vendor Name" value={row.projectID} />
             {body}

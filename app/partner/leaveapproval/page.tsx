@@ -13,14 +13,9 @@ import Button from '../../components/forms/Button';
 import Modal from '../../components/feedback/Modal';
 import { statusColor } from '@/app/utils/statusColor';
 import { useFilters } from '@/app/utils/useFilters';
+import { formatDateTimeWIB, formatDateWIB } from '@/app/utils/formatDate';
 import { DEPARTMENT_OPTIONS, getAllGradeOptions } from '@/app/utils/orgStructure';
-
-const DEPARTMENT_LABEL: Record<string, string> = {
-  ops: 'Operations',
-  health: 'Health and Wellbeing',
-  education: 'Education and HR',
-  digital: 'Digital and Finance',
-};
+import { DEPARTMENT_LABEL } from '@/lib/roles';
 
 interface LeaveReq {
   id: string;
@@ -30,9 +25,13 @@ interface LeaveReq {
   grade: string;
   type: string;
   dates: string;
+  submitted: string;
+  submittedTs: number;
   status: string;
   action: null;
   jenis: 'cuti' | 'sakit';
+  reason: string;
+  duration: number | null;
 }
 
 const STATUS_MAP: Record<string, { label: string }> = {
@@ -49,8 +48,11 @@ interface LeaveRaw {
   idStatus: string;
   tanggalMulai: string;
   tanggalSelesai: string;
+  tanggalPengajuan?: string | null;
   karyawan?: { nama?: string | null; department?: string | null; masterGrade?: { namaGrade?: string | null } | null };
   masterJenisCuti?: { namaJenis?: string | null };
+  keterangan?: string | null;
+  jumlahHari?: number | null;
 }
 
 function mapRows(rows: LeaveRaw[]): LeaveReq[] {
@@ -61,10 +63,14 @@ function mapRows(rows: LeaveRaw[]): LeaveReq[] {
     department: (c.karyawan?.department && DEPARTMENT_LABEL[c.karyawan.department]) || c.karyawan?.department || '-',
     grade: c.karyawan?.masterGrade?.namaGrade ?? '-',
     type: c.masterJenisCuti?.namaJenis ?? 'Leave',
-    dates: `${new Date(c.tanggalMulai).toLocaleDateString('id-ID')} - ${new Date(c.tanggalSelesai).toLocaleDateString('id-ID')}`,
+    dates: `${formatDateWIB(c.tanggalMulai)} - ${formatDateWIB(c.tanggalSelesai)}`,
+    submitted: formatDateTimeWIB(c.tanggalPengajuan),
+    submittedTs: c.tanggalPengajuan ? new Date(c.tanggalPengajuan).getTime() : 0,
     status: c.idStatus,
     action: null,
     jenis: 'cuti',
+    reason: c.keterangan?.trim() || '-',
+    duration: c.jumlahHari ?? null,
   }));
 }
 
@@ -72,23 +78,36 @@ interface SickRaw {
   idIzinSakit: string;
   tanggalMulai?: string | null;
   tanggalSelesai?: string | null;
+  createdAt?: string | null;
   gejala?: string | null;
   karyawan?: { nama?: string | null; department?: string | null; masterGrade?: { namaGrade?: string | null } | null };
 }
 
 function mapSickRows(rows: SickRaw[]): LeaveReq[] {
-  return rows.map((s) => ({
-    id: s.idIzinSakit,
-    idCuti: s.idIzinSakit,
-    name: s.karyawan?.nama ?? '-',
-    department: (s.karyawan?.department && DEPARTMENT_LABEL[s.karyawan.department]) || s.karyawan?.department || '-',
-    grade: s.karyawan?.masterGrade?.namaGrade ?? '-',
-    type: 'Sick Leave',
-    dates: `${s.tanggalMulai ? new Date(s.tanggalMulai).toLocaleDateString('id-ID') : '-'} - ${s.tanggalSelesai ? new Date(s.tanggalSelesai).toLocaleDateString('id-ID') : '-'}`,
-    status: 'ST_MED_PENDING',
-    action: null,
-    jenis: 'sakit',
-  }));
+  return rows.map((s) => {
+    const start = s.tanggalMulai ? new Date(s.tanggalMulai) : null;
+    const end = s.tanggalSelesai ? new Date(s.tanggalSelesai) : null;
+    const duration =
+      start && end && !Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime())
+        ? Math.max(Math.round((end.getTime() - start.getTime()) / 86400000) + 1, 0)
+        : null;
+    return {
+      id: s.idIzinSakit,
+      idCuti: s.idIzinSakit,
+      name: s.karyawan?.nama ?? '-',
+      department: (s.karyawan?.department && DEPARTMENT_LABEL[s.karyawan.department]) || s.karyawan?.department || '-',
+      grade: s.karyawan?.masterGrade?.namaGrade ?? '-',
+      type: 'Sick Leave',
+      dates: `${s.tanggalMulai ? formatDateWIB(s.tanggalMulai) : '-'} - ${s.tanggalSelesai ? formatDateWIB(s.tanggalSelesai) : '-'}`,
+      submitted: formatDateTimeWIB(s.createdAt ?? s.tanggalMulai),
+      submittedTs: s.createdAt ? new Date(s.createdAt).getTime() : s.tanggalMulai ? new Date(s.tanggalMulai).getTime() : 0,
+      status: 'ST_MED_PENDING',
+      action: null,
+      jenis: 'sakit',
+      reason: s.gejala?.trim() || '-',
+      duration,
+    };
+  });
 }
 
 interface Filters {
@@ -105,6 +124,7 @@ export default function PartnerLeaveApprovalPage() {
   const [requests, setRequests] = useState<LeaveReq[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+  const [detailRow, setDetailRow] = useState<LeaveReq | null>(null);
   const { draft, applied, setField, handleSearch, handleReset } = useFilters<Filters>(emptyFilters);
   const gradeOptions = useMemo(() => getAllGradeOptions(), []);
   const typeOptions = useMemo(() => Array.from(new Set(requests.map((r) => r.type))).sort(), [requests]);
@@ -115,10 +135,10 @@ export default function PartnerLeaveApprovalPage() {
       const data = await res.json();
       const cuti = mapRows((data.list ?? []) as LeaveRaw[]);
       const sick = mapSickRows((data.sickList ?? []) as SickRaw[]);
-      setRequests([...cuti, ...sick].sort((a, b) => new Date(b.dates.slice(0, 10)).getTime() - new Date(a.dates.slice(0, 10)).getTime()));
+      setRequests([...cuti, ...sick].sort((a, b) => b.submittedTs - a.submittedTs));
     } else {
       const data = await res.json().catch(() => ({}));
-      setMessage({ ok: false, text: data?.error ?? 'Gagal memuat data' });
+      setMessage({ ok: false, text: data?.error ?? 'Failed to load data' });
     }
   };
 
@@ -144,10 +164,10 @@ export default function PartnerLeaveApprovalPage() {
   const handleAction = async (id: string, action: 'approve' | 'reject') => {
     let catatan: string | null = null;
     if (action === 'reject') {
-      catatan = window.prompt('Alasan penolakan (wajib diisi):');
+      catatan = window.prompt('Rejection reason (required):');
       if (catatan === null) return;
       if (!catatan.trim()) {
-        setMessage({ ok: false, text: 'Alasan penolakan wajib diisi' });
+        setMessage({ ok: false, text: 'Rejection reason is required' });
         return;
       }
     }
@@ -158,10 +178,10 @@ export default function PartnerLeaveApprovalPage() {
     });
     if (res.ok) {
       await load();
-      setMessage({ ok: true, text: action === 'approve' ? 'Pengajuan cuti berhasil disetujui.' : 'Pengajuan cuti berhasil ditolak.' });
+      setMessage({ ok: true, text: action === 'approve' ? 'Leave request approved.' : 'Leave request rejected.' });
     } else {
       const data = await res.json().catch(() => ({}));
-      setMessage({ ok: false, text: data?.error ?? 'Gagal memproses pengajuan' });
+      setMessage({ ok: false, text: data?.error ?? 'Failed to process request' });
     }
   };
 
@@ -190,11 +210,20 @@ export default function PartnerLeaveApprovalPage() {
   };
 
   const columns: DataTableColumn<LeaveReq>[] = [
+    { key: 'submitted', label: 'Submitted', sortValue: (r) => r.submittedTs },
     { key: 'name', label: 'Name', width: '200px' },
     { key: 'department', label: 'Department' },
     { key: 'grade', label: 'Grade' },
     { key: 'type', label: 'Leave Type' },
-    { key: 'dates', label: 'Dates' },
+    {
+      key: 'id',
+      label: 'Detail',
+      render: (r) => (
+        <Button variant="primary" size="sm" onClick={() => setDetailRow(r)}>
+          Detail
+        </Button>
+      ),
+    },
     {
       key: 'status',
       label: 'Status',
@@ -214,7 +243,7 @@ export default function PartnerLeaveApprovalPage() {
   return (
     <>
       <div className="w-full h-full flex flex-col gap-3">
-        <PageTopBar showGreeting section="Career Hub" page="Leave Approval" />
+        <PageTopBar showGreeting section="Approvals" page="Leave Approval" />
 
         <SearchPanel
           title="Search Leave Approval"
@@ -239,18 +268,68 @@ export default function PartnerLeaveApprovalPage() {
             columns={columns}
             rows={filtered}
             defaultSortKey="name"
-            emptyMessage="Tidak ada pengajuan."
+            emptyMessage="No requests found."
           />
         </SectionCard>
       </div>
 
       {message && (
-        <Modal title={message.ok ? 'Berhasil' : 'Gagal'} onClose={() => setMessage(null)} maxWidth="max-w-md">
+        <Modal title={message.ok ? 'Success' : 'Failed'} onClose={() => setMessage(null)} maxWidth="max-w-md">
           <div className="px-5 py-4 flex flex-col gap-3 bg-amana-neutral-100">
             <p className="text-[15px] text-amana-neutral-500">{message.text}</p>
             <Button variant="primary" onClick={() => setMessage(null)}>
               Close
             </Button>
+          </div>
+        </Modal>
+      )}
+
+      {detailRow && (
+        <Modal title="Leave Detail" onClose={() => setDetailRow(null)} maxWidth="max-w-lg">
+          <div className="px-5 py-4 flex flex-col gap-3 bg-amana-neutral-100">
+            <div className="flex flex-wrap gap-x-10 gap-y-3">
+              <div>
+                <p className="text-xs font-semibold text-amana-neutral-400 uppercase tracking-wide">Employee</p>
+                <p className="text-[15px] text-amana-neutral-500">{detailRow.name}</p>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-amana-neutral-400 uppercase tracking-wide">Department</p>
+                <p className="text-[15px] text-amana-neutral-500">{detailRow.department}</p>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-amana-neutral-400 uppercase tracking-wide">Grade</p>
+                <p className="text-[15px] text-amana-neutral-500">{detailRow.grade}</p>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-amana-neutral-400 uppercase tracking-wide">Leave Type</p>
+                <p className="text-[15px] text-amana-neutral-500">{detailRow.type}</p>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-amana-neutral-400 uppercase tracking-wide">Date Range</p>
+                <p className="text-[15px] text-amana-neutral-500">{detailRow.dates}</p>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-amana-neutral-400 uppercase tracking-wide">Total Days</p>
+                <p className="text-[15px] text-amana-neutral-500">{detailRow.duration != null ? `${detailRow.duration} day(s)` : '-'}</p>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-amana-neutral-400 uppercase tracking-wide">Submitted</p>
+                <p className="text-[15px] text-amana-neutral-500">{detailRow.submitted}</p>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-amana-neutral-400 uppercase tracking-wide">Status</p>
+                <p className="text-[15px] text-amana-neutral-500">{STATUS_MAP[detailRow.status]?.label ?? detailRow.status}</p>
+              </div>
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-amana-neutral-400 uppercase tracking-wide">Reason</p>
+              <p className="text-[15px] text-amana-neutral-500">{detailRow.reason}</p>
+            </div>
+            <div className="flex justify-end">
+              <Button variant="primary" onClick={() => setDetailRow(null)}>
+                Close
+              </Button>
+            </div>
           </div>
         </Modal>
       )}

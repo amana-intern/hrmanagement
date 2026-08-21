@@ -20,15 +20,20 @@ export default function PageTopBar({
   useEffect(() => {
     const update = () => {
       const now = new Date();
-      const weekday = now.toLocaleDateString('en-GB', { weekday: 'long' });
-      const day = now.getDate();
-      const month = now.toLocaleDateString('en-GB', { month: 'long' });
-      const year = now.getFullYear();
-      let hours = now.getHours();
-      const minutes = now.getMinutes().toString().padStart(2, '0');
-      const ampm = hours >= 12 ? 'PM' : 'AM';
-      hours = hours % 12 || 12;
-      setDateLabel(`${weekday}, ${day} ${month} ${year} - ${hours}.${minutes} ${ampm}`);
+      const datePart = now.toLocaleDateString('en-GB', {
+        timeZone: 'Asia/Jakarta',
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      });
+      const timePart = now.toLocaleTimeString('en-US', {
+        timeZone: 'Asia/Jakarta',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+      });
+      setDateLabel(`${datePart} - ${timePart}`);
       const h = now.getHours();
       setGreeting(h < 12 ? 'Good Morning!' : h < 17 ? 'Good Afternoon!' : 'Good Evening!');
     };

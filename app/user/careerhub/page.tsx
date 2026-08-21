@@ -11,7 +11,7 @@ import TextField from '../../components/forms/TextField';
 import UploadBox from '../../components/forms/UploadBox';
 import Modal from '../../components/feedback/Modal';
 import { cn } from '@/app/utils/cn';
-import { isEmployeeRole } from '@/lib/roles';
+import { useRole, isAdminRole } from '@/app/utils/useRole';
 
 interface Certification {
   id: string;
@@ -82,6 +82,8 @@ function DocumentUploadModal({
 
 export default function CareerHubPage() {
   const router = useRouter();
+  const role = useRole();
+  const isAdmin = isAdminRole(role);
   const [assessments, setAssessments] = useState<Assessment[]>([]);
 
   const [cvFile, setCvFile] = useState<{ name: string; url: string } | null>(null);
@@ -94,7 +96,6 @@ export default function CareerHubPage() {
   const [certTitleInput, setCertTitleInput] = useState('');
   const [selectedCertFile, setSelectedCertFile] = useState<File | null>(null);
   const [previewPdf, setPreviewPdf] = useState<{ title: string; url: string } | null>(null);
-  const [idRole, setIdRole] = useState('');
   const [loading, setLoading] = useState(true);
 
   const uploadFile = async (file: File): Promise<string> => {
@@ -102,7 +103,7 @@ export default function CareerHubPage() {
     fd.append('file', file);
     const res = await fetch('/api/upload', { method: 'POST', body: fd });
     const data = await res.json();
-    if (!res.ok || !data.url) throw new Error(data.error || 'Upload gagal');
+    if (!res.ok || !data.url) throw new Error(data.error || 'Upload failed');
     return data.url;
   };
 
@@ -130,7 +131,6 @@ export default function CareerHubPage() {
         const me = await meRes.json();
         const url = me.user?.cvURL;
         if (url) setCvFile({ name: url.split('/').pop() ?? 'CV.pdf', url });
-        if (me.user?.idRole) setIdRole(me.user.idRole);
       }
       const asmRes = await fetch('/api/assessments/open', { cache: 'no-store' });
       if (asmRes.ok) {
@@ -168,13 +168,13 @@ export default function CareerHubPage() {
       const res = await fetch('/api/me/cv', { method: 'PATCH', body: fd });
       const data = await res.json().catch(() => null);
       if (!res.ok || !data?.fileURL) {
-        alert(data?.error || 'Gagal menyimpan CV');
+        alert(data?.error || 'Failed to save CV');
         return;
       }
       setCvFile({ name: selectedCvFile.name, url: data.fileURL });
       setIsCvModalOpen(false);
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Gagal upload CV');
+      alert(err instanceof Error ? err.message : 'Failed to upload CV');
     } finally {
       setLoading(false);
     }
@@ -211,7 +211,7 @@ export default function CareerHubPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ judul: certTitleInput, fileName, ...(fileURL && { fileURL }) }),
         });
-        if (!res.ok) return alert('Gagal update sertifikat');
+        if (!res.ok) return alert('Failed to update certificate');
         setCertifications((prev) =>
           prev.map((item) => item.id === editingCertId ? { ...item, title: certTitleInput, fileName, ...(fileURL ? { fileUrl: fileURL } : {}) } : item)
         );
@@ -222,14 +222,14 @@ export default function CareerHubPage() {
           body: JSON.stringify({ judul: certTitleInput, fileName, fileURL }),
         });
         const data = await res.json();
-        if (!res.ok) return alert('Gagal menambah sertifikat');
+        if (!res.ok) return alert('Failed to add certificate');
         setCertifications((prev) => [
           ...prev,
           { id: data.certificate.idSertifikat, title: certTitleInput, fileUrl: fileURL, fileName },
         ]);
       }
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Terjadi kesalahan jaringan');
+      alert(err instanceof Error ? err.message : 'Network error');
       return;
     }
     setIsCertModalOpen(false);
@@ -238,7 +238,7 @@ export default function CareerHubPage() {
   const handleDeleteCertification = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this certification?')) {
       const res = await fetch(`/api/certificates/${id}`, { method: 'DELETE' });
-      if (!res.ok) return alert('Gagal menghapus sertifikat');
+      if (!res.ok) return alert('Failed to delete certificate');
       setCertifications((prev) => prev.filter((item) => item.id !== id));
       setIsCertModalOpen(false);
       setPreviewPdf(null);
@@ -264,10 +264,9 @@ export default function CareerHubPage() {
   return (
     <>
       <div className="w-full h-full flex flex-col gap-3">
-        <PageTopBar showGreeting section="Career Hub" page="Career Hub" />
+        <PageTopBar showGreeting section={isAdmin ? 'Career Hub' : 'Employee'} page="Career Hub" />
 
-        {isEmployeeRole(idRole) && (
-          <SectionCard title="Assessment Test">
+        <SectionCard title="Assessment Test">
             {assessments.length === 0 ? (
               <p className="text-[16px] text-amana-neutral-400 text-center py-1.5">
                 There are currently no assessment test that needs to be done.
@@ -297,7 +296,6 @@ export default function CareerHubPage() {
               </div>
             )}
           </SectionCard>
-        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
           <SectionCard title="Latest Curriculum Vitae (CV)" subtitle="Update your latest CV in this tab!" scroll>

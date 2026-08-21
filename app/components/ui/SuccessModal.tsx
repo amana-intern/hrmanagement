@@ -12,7 +12,7 @@ interface SuccessModalProps {
 export default function SuccessModal({
   open,
   onClose,
-  title = 'Berhasil!',
+  title = 'Success!',
   message,
   autoCloseMs = 4000,
   dismissLabel = 'OK',

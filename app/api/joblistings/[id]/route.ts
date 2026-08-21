@@ -27,7 +27,7 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
     return Response.json({ ok: true, lowongan });
   } catch (e) {
     const status = (e as { status?: number }).status ?? 500;
-    return Response.json({ error: 'Terjadi kesalahan' }, { status });
+    return Response.json({ error: 'Something went wrong' }, { status });
   }
 }
 
@@ -43,6 +43,6 @@ export async function DELETE(request: NextRequest, ctx: { params: Promise<{ id: 
     return Response.json({ ok: true });
   } catch (e) {
     const status = (e as { status?: number }).status ?? 500;
-    return Response.json({ error: 'Terjadi kesalahan' }, { status });
+    return Response.json({ error: 'Something went wrong' }, { status });
   }
 }

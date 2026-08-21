@@ -116,11 +116,11 @@ export default function CompetencyAssessmentResultPage() {
         ) : (
           <div className="flex-1 min-h-0 flex flex-col items-center justify-center gap-4">
             <p className="text-[16px] text-amana-neutral-400">
-              {openAssessment ? `Belum mengisi ${openAssessment.judul || 'assessment'}.` : 'Belum ada hasil assessment.'}
+              {openAssessment ? `Not yet completed: ${openAssessment.judul || 'assessment'}.` : 'No assessment results available.'}
             </p>
             <div className="flex justify-center">
               <Button variant="primary" size="lg" onClick={() => router.push('/user/assessment')}>
-                Isi Assessment
+                Take Assessment
               </Button>
             </div>
           </div>

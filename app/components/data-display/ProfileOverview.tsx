@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Check, PowerOff, Trash2 } from 'lucide-react';
 import PageTopBar from '../layout/PageTopBar';
+import NotificationBell from '../ui/NotificationBell';
 import Button from '../forms/Button';
 import Collapse from '../layout/Collapse';
 import StatBox, { type Stat } from './StatBox';
@@ -299,17 +300,20 @@ export default function ProfileOverview({
           showGreeting={showGreeting}
           right={
             <span className="flex flex-col items-end gap-1">
-              {showLogout && (
-                <Button
-                  variant="primary"
-                  size="sm"
-                  onClick={handleLogout}
-                  disabled={loggingOut}
-                >
-                  <PowerOff className="w-4 h-4" />
-                  {loggingOut ? 'Logging out...' : 'Logout'}
-                </Button>
-              )}
+              <span className="flex items-center gap-2">
+                <NotificationBell />
+                {showLogout && (
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={handleLogout}
+                    disabled={loggingOut}
+                  >
+                    <PowerOff className="w-4 h-4" />
+                    {loggingOut ? 'Logging out...' : 'Logout'}
+                  </Button>
+                )}
+              </span>
               <span className="text-[16px] font-semibold text-amana-primary-500">{pageLabel}</span>
             </span>
           }

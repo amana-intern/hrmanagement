@@ -5,6 +5,7 @@ import { Button, Modal, Table, Badge, Input, Select, Label } from '../ui';
 import SuccessModal from '../ui/SuccessModal';
 import { ASSESSMENT_LEVELS, ASSESSMENT_FIELDS } from '@/lib/assessment-template';
 import { ASSESSMENT_STATUS } from '@/lib/constants';
+import { formatDateWIB } from '@/app/utils/formatDate';
 
 interface Question {
   idPertanyaan: string;
@@ -39,7 +40,7 @@ function statusVariant(s: string) {
 // Kelola assessment (daftar, buat, buka/tutup, detail). Dipakai di dalam Talent Roster.
 async function fetchAssessments(): Promise<Assessment[]> {
   const res = await fetch('/api/hr/assessments', { cache: 'no-store' });
-  if (!res.ok) throw new Error('Gagal memuat assessment');
+  if (!res.ok) throw new Error('Failed to load assessments');
   return (await res.json()).list ?? [];
 }
 
@@ -65,7 +66,7 @@ export default function AssessmentManager() {
         setAssessments(await fetchAssessments());
         setError('');
       } catch {
-        setError('Gagal memuat assessment');
+        setError('Failed to load assessments');
       }
       setLoading(false);
     })();
@@ -76,7 +77,7 @@ export default function AssessmentManager() {
       setAssessments(await fetchAssessments());
       setError('');
     } catch {
-      setError('Gagal memuat assessment');
+      setError('Failed to load assessments');
     }
   };
 
@@ -105,23 +106,23 @@ export default function AssessmentManager() {
     });
     if (res.ok) {
       await load();
-      setSuccessMsg(`Assessment "${a.judul}" berhasil di${open ? 'buka' : 'tutup'}`);
+      setSuccessMsg(`Assessment "${a.judul}" ${open ? 'opened' : 'closed'} successfully`);
     } else {
       const d = await res.json().catch(() => null);
-      alert(d?.error || 'Gagal mengubah status');
+      alert(d?.error || 'Failed to update status');
     }
     setProcessing(false);
   };
 
   const handleCreate = async () => {
-    if (!judul.trim()) return alert('Judul wajib diisi');
+    if (!judul.trim()) return alert('Title is required');
     const cats = draftCategories
       .filter((c) => c.namaKategori.trim() !== '')
       .map((c) => ({
         namaKategori: c.namaKategori,
         questions: c.questions.filter((q) => q.teks.trim() !== ''),
       }));
-    if (cats.length === 0) return alert('Minimal 1 kategori bidang');
+    if (cats.length === 0) return alert('At least 1 field category is required');
 
     setProcessing(true);
     const res = await fetch('/api/hr/assessments', {
@@ -138,11 +139,11 @@ export default function AssessmentManager() {
     });
     const d = await res.json().catch(() => null);
     setProcessing(false);
-    if (!res.ok) return alert(d?.error || 'Gagal membuat assessment');
+    if (!res.ok) return alert(d?.error || 'Failed to create assessment');
 
     setCreateOpen(false);
     await load();
-    setSuccessMsg(`Assessment "${judul}" berhasil dibuat`);
+    setSuccessMsg(`Assessment "${judul}" created successfully`);
   };
 
   const updateCategory = (idx: number, field: keyof DraftCategory, value: string | DraftQuestion[]) => {
@@ -150,10 +151,10 @@ export default function AssessmentManager() {
   };
 
   const columns = [
-    { key: 'judul', label: 'Judul' },
+    { key: 'judul', label: 'Title' },
     { key: 'status', label: 'Status', align: 'center' as const },
-    { key: 'periode', label: 'Periode' },
-    { key: 'peserta', label: 'Peserta', align: 'center' as const },
+    { key: 'periode', label: 'Period' },
+    { key: 'peserta', label: 'Participants', align: 'center' as const },
     { key: 'action', label: 'Action', align: 'center' as const },
   ];
 
@@ -162,7 +163,7 @@ export default function AssessmentManager() {
   return (
     <>
       <div className="flex items-center justify-between mb-4 animate-fade-down">
-        <h2 className="text-xl font-bold text-amana-primary-500">Kelola Competency Assessment</h2>
+        <h2 className="text-xl font-bold text-amana-primary-500">Manage Competency Assessments</h2>
         <Button variant="primary" onClick={openCreateModal}>+ Create Assessment</Button>
       </div>
 
@@ -181,8 +182,8 @@ export default function AssessmentManager() {
               <Badge variant={statusVariant(a.idStatus)}>{a.statusLabel}</Badge>
             </td>
             <td className="p-4 text-amana-neutral-400 text-xs">
-              {a.tanggalBuka ? new Date(a.tanggalBuka).toLocaleDateString('id-ID') : '-'}
-              {a.tanggalTutup ? ` — ${new Date(a.tanggalTutup).toLocaleDateString('id-ID')}` : ''}
+              {a.tanggalBuka ? formatDateWIB(a.tanggalBuka) : '-'}
+              {a.tanggalTutup ? ` — ${formatDateWIB(a.tanggalTutup)}` : ''}
             </td>
             <td className="p-4 text-center text-amana-neutral-500 font-semibold">{a.totalPeserta}</td>
             <td className="p-4 text-center">
@@ -191,7 +192,7 @@ export default function AssessmentManager() {
                 disabled={processing}
                 onClick={() => handleToggle(a)}
               >
-                {a.idStatus === ASSESSMENT_STATUS.OPEN ? 'Tutup' : 'Buka'}
+                {a.idStatus === ASSESSMENT_STATUS.OPEN ? 'Close' : 'Open'}
               </Button>
             </td>
           </tr>
@@ -199,7 +200,7 @@ export default function AssessmentManager() {
         {assessments.length === 0 && (
           <tr>
             <td colSpan={5} className="p-6 text-center text-amana-neutral-400 text-sm">
-              Belum ada assessment. Klik &quot;Buat Assessment&quot; untuk membuat.
+              No assessments yet. Click &quot;Create Assessment&quot; to get started.
             </td>
           </tr>
         )}
@@ -210,39 +211,39 @@ export default function AssessmentManager() {
       <Modal open={createOpen} onClose={() => setCreateOpen(false)} title="Create Assessment">
         <div className="space-y-4">
           <div>
-            <Label>Judul</Label>
-            <Input value={judul} onChange={(e) => setJudul(e.target.value)} placeholder="Contoh: Competency Assessment 2026" />
+            <Label>Title</Label>
+            <Input value={judul} onChange={(e) => setJudul(e.target.value)} placeholder="e.g.: Competency Assessment 2026" />
           </div>
           <div>
-            <Label>Deskripsi (opsional)</Label>
-            <Input value={deskripsi} onChange={(e) => setDeskripsi(e.target.value)} placeholder="Deskripsi singkat" />
+            <Label>Description (optional)</Label>
+            <Input value={deskripsi} onChange={(e) => setDeskripsi(e.target.value)} placeholder="Short description" />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label>Tanggal Buka</Label>
+              <Label>Open Date</Label>
               <Input type="date" value={tanggalBuka} onChange={(e) => setTanggalBuka(e.target.value)} />
             </div>
             <div>
-              <Label>Tanggal Tutup</Label>
+              <Label>Close Date</Label>
               <Input type="date" value={tanggalTutup} onChange={(e) => setTanggalTutup(e.target.value)} />
             </div>
           </div>
           <div>
-            <Label>Status saat dibuat</Label>
+            <Label>Status on creation</Label>
             <Select value={openOnCreate ? 'open' : 'closed'} onChange={(e) => setOpenOnCreate(e.target.value === 'open')}>
-              <option value="open">Langsung Buka</option>
-              <option value="closed">Tutup (draft)</option>
+              <option value="open">Open now</option>
+              <option value="closed">Closed (draft)</option>
             </Select>
           </div>
 
           <div className="border-t border-amana-neutral-200 pt-4">
             <div className="flex items-center justify-between mb-2">
-              <Label className="mb-0">Bidang & Kompetensi</Label>
+              <Label className="mb-0">Fields & Competencies</Label>
               <button
                 onClick={() => setDraftCategories((p) => [...p, { namaKategori: '', questions: [{ teks: '' }] }])}
                 className="text-xs font-semibold text-amana-primary-500 hover:underline bg-transparent border-none cursor-pointer"
               >
-                + Tambah Bidang
+                + Add Field
               </button>
             </div>
 
@@ -252,10 +253,10 @@ export default function AssessmentManager() {
                   <Input
                     value={cat.namaKategori}
                     onChange={(e) => updateCategory(ci, 'namaKategori', e.target.value)}
-                    placeholder="Nama Bidang"
+                    placeholder="Field name"
                     className="flex-1"
                   />
-                  <Button variant="ghost" onClick={() => setDraftCategories((p) => p.filter((_, i) => i !== ci))}>Hapus</Button>
+                  <Button variant="ghost" onClick={() => setDraftCategories((p) => p.filter((_, i) => i !== ci))}>Delete</Button>
                 </div>
                 {cat.questions.map((q, qi) => (
                   <div key={qi} className="flex gap-2 items-center mb-1.5">
@@ -270,7 +271,7 @@ export default function AssessmentManager() {
                           )
                         )
                       }
-                      placeholder="Kompetensi (pertanyaan)"
+                      placeholder="Competency (question)"
                       className="flex-1"
                     />
                     <button
@@ -280,7 +281,7 @@ export default function AssessmentManager() {
                         )
                       }
                       className="text-amana-neutral-400 hover:text-rose-500 bg-transparent border-none cursor-pointer"
-                      aria-label="Hapus kompetensi"
+                      aria-label="Delete competency"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -296,7 +297,7 @@ export default function AssessmentManager() {
                   }
                   className="text-xs font-semibold text-amana-primary-500 hover:underline bg-transparent border-none cursor-pointer mt-1"
                 >
-                  + Tambah Kompetensi
+                  + Add Competency
                 </button>
               </div>
             ))}
@@ -305,7 +306,7 @@ export default function AssessmentManager() {
           <div className="flex justify-end gap-3 pt-3">
             <Button variant="ghost" onClick={() => setCreateOpen(false)}>Cancel</Button>
             <Button variant="primary" disabled={processing} onClick={handleCreate}>
-              {processing ? 'Menyimpan...' : 'Simpan'}
+              {processing ? 'Saving...' : 'Save'}
             </Button>
           </div>
         </div>
@@ -319,8 +320,8 @@ export default function AssessmentManager() {
             <div className="flex gap-2 items-center">
               <Badge variant={statusVariant(viewAssessment.idStatus)}>{viewAssessment.statusLabel}</Badge>
               <span className="text-xs text-amana-neutral-400">
-                {viewAssessment.totalPeserta} peserta ·{' '}
-                {viewAssessment.categories.length} bidang
+                {viewAssessment.totalPeserta} participants ·{' '}
+                {viewAssessment.categories.length} fields
               </span>
             </div>
             {viewAssessment.categories.map((cat) => (
@@ -336,7 +337,7 @@ export default function AssessmentManager() {
               </div>
             ))}
             <div className="p-3 rounded-xl bg-amana-primary-200/10 border border-amana-neutral-200">
-              <p className="text-xs font-semibold text-amana-neutral-400 mb-1">Tingkat kemahiran</p>
+              <p className="text-xs font-semibold text-amana-neutral-400 mb-1">Proficiency levels</p>
               <div className="space-y-0.5">
                 {ASSESSMENT_LEVELS.map((l) => (
                   <p key={l.level} className="text-xs text-amana-neutral-400">

@@ -29,9 +29,16 @@ interface EmployeeDetailsModalProps {
   onClose: () => void;
   onRemove?: () => void;
   onViewAssessment?: () => void;
+  onViewCareerHistory?: () => void;
 }
 
-export default function EmployeeDetailsModal({ employee, onClose, onRemove, onViewAssessment }: EmployeeDetailsModalProps) {
+export default function EmployeeDetailsModal({
+  employee,
+  onClose,
+  onRemove,
+  onViewAssessment,
+  onViewCareerHistory,
+}: EmployeeDetailsModalProps) {
   return (
     <Modal title="Employee Details" onClose={onClose} maxWidth="max-w-4xl" className="max-h-[90vh]">
       <div className="flex-1 min-h-0 overflow-y-auto scroll-smooth p-5 flex flex-col lg:flex-row gap-4">
@@ -86,9 +93,26 @@ export default function EmployeeDetailsModal({ employee, onClose, onRemove, onVi
               )}
             </div>
 
-          <h4 className="flex-shrink-0 text-[18px] font-semibold not-italic text-amana-primary-500 pb-1.5 mb-3 border-b border-amana-primary-500">
-            Certificates
-          </h4>
+            <h4 className="flex-shrink-0 text-[18px] font-semibold not-italic text-amana-primary-500 pb-1.5 mb-3 border-b border-amana-primary-500">
+              Career History
+            </h4>
+            <div className="flex-shrink-0 flex items-center gap-[10px] pb-3 mb-3 border-b border-amana-neutral-300">
+              <span className="flex-1 min-w-0 text-[16px] text-amana-neutral-500"></span>
+              {onViewCareerHistory && (
+                <Button
+                  variant="primary"
+                  size="sm"
+                  className="w-[224px] h-[29.75px] rounded-[5px] px-[19.51px] py-[4.88px] gap-[9.75px] flex-shrink-0"
+                  onClick={onViewCareerHistory}
+                >
+                  View
+                </Button>
+              )}
+            </div>
+
+            <h4 className="flex-shrink-0 text-[18px] font-semibold not-italic text-amana-primary-500 pb-1.5 mb-3 border-b border-amana-primary-500">
+              Certificates
+            </h4>
           <div className="flex-1 min-h-0 overflow-y-auto scroll-smooth flex flex-col gap-2.5">
             {employee.certificates.length > 0 ? (
               employee.certificates.map((cert, i) => (

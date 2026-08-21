@@ -47,7 +47,7 @@ export default function PartnerContractTrackingPage() {
         );
       } else {
         const data = await res.json().catch(() => null);
-        setMessage({ ok: false, text: data?.error || 'Gagal memuat data' });
+        setMessage({ ok: false, text: data?.error || 'Failed to load data' });
       }
       setLoading(false);
     })();
@@ -64,15 +64,15 @@ export default function PartnerContractTrackingPage() {
     const data = await res.json().catch(() => null);
     setProcessingId(null);
     if (!res.ok) {
-      setMessage({ ok: false, text: data?.error || 'Gagal memproses aksi' });
+      setMessage({ ok: false, text: data?.error || 'Failed to process action' });
       return;
     }
     setMessage({
       ok: true,
       text:
         action === 'renewal'
-          ? 'Permintaan renewal telah dikirim ke HR & Karyawan.'
-          : 'Permintaan offboarding telah dikirim ke HR & Karyawan.',
+          ? 'Renewal request has been sent to HR & the employee.'
+          : 'Offboarding request has been sent to HR & the employee.',
     });
   };
 
@@ -110,10 +110,10 @@ export default function PartnerContractTrackingPage() {
 
   return (
     <>
-      <ContractTrackingPage contracts={contracts} actionsColumn={actionsColumn} />
+      <ContractTrackingPage contracts={contracts} actionsColumn={actionsColumn} section="Employee Record" />
 
       {message && (
-        <Modal title={message.ok ? 'Berhasil' : 'Gagal'} onClose={() => setMessage(null)} maxWidth="max-w-md">
+        <Modal title={message.ok ? 'Success' : 'Failed'} onClose={() => setMessage(null)} maxWidth="max-w-md">
           <div className="px-5 py-4 flex flex-col gap-3 bg-amana-neutral-100">
             <p className="text-[15px] text-amana-neutral-500">{message.text}</p>
             <Button variant="primary" onClick={() => setMessage(null)}>

@@ -1,4 +1,8 @@
-export const DEPARTMENT_OPTIONS = ['Operations', 'Health and Wellbeing', 'Education and HR', 'Digital and Finance'] as const;
+import { DEPARTMENT_LABEL } from '@/lib/roles';
+
+// Opsi filter department memakai label penuh (bukan key), agar cocok dengan
+// nilai department yang sudah di-map saat render di halaman cuti/sakit.
+export const DEPARTMENT_OPTIONS = Object.values(DEPARTMENT_LABEL);
 
 export type Department = (typeof DEPARTMENT_OPTIONS)[number];
 

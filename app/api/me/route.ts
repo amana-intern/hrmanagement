@@ -2,7 +2,7 @@ import { requireAuth } from '@/lib/dal';
 import { buildGradeLabel, DEPARTMENT_LABEL, ROLES, ROLE_LABEL, type Role } from '@/lib/roles';
 import { prisma } from '@/lib/prisma';
 import { computeLeaveBalance } from '@/lib/leave';
-import { LEAVE_TYPES, LEAVE_STATUS } from '@/lib/constants';
+import { LEAVE_TYPES, LEAVE_STATUS, PAYMENT_STATUS } from '@/lib/constants';
 
 export async function GET() {
   try {
@@ -19,8 +19,12 @@ export async function GET() {
       else if (role === ROLES.ADMIN_OPS) displayGrade = 'Operations';
     }
 
-    // Row 2: "role - department". Contoh "Employee - Health". Kalau department kosong, tampil role saja.
-    const rolesDivisi = departmentLabel ? `${roleLabel} - ${departmentLabel}` : roleLabel;
+    // Row 2: "department - grade". Contoh "Health & Wellbeing - Analyst".
+    // Kalau tidak ada department (admin), tampil grade saja.
+    const rolesDivisi =
+      departmentLabel && displayGrade && displayGrade !== 'No Grade'
+        ? `${departmentLabel} - ${displayGrade}`
+        : (departmentLabel ?? displayGrade);
 
     // Statistik dinamis dari database (dari /api/me => selalu up-to-date).
     let sisaCuti = null;
@@ -37,43 +41,77 @@ export async function GET() {
     if (auth.idKaryawan) {
       const id = auth.idKaryawan;
       const startOfYear = new Date(new Date().getFullYear(), 0, 1);
-      const [balance, pendingLeaveCount, sickCount, payCount, certCount, talent, specialUsed, unpaidUsed] =
-        await Promise.all([
-          computeLeaveBalance(id),
-          prisma.pengajuanCuti.count({ where: { idKaryawan: id, idStatus: 'ST_LEAVE_PENDING' } }),
-          prisma.izinSakit.count({ where: { idKaryawan: id } }),
-          prisma.paymentRequest.count({
-            where: { idKaryawan: id, idStatus: { in: ['ST_PAY_PENDING_OPS', 'ST_PAY_PENDING_PARTNER'] } },
-          }),
-          prisma.sertifikatKaryawan.count({ where: { idKaryawan: id } }),
-          prisma.talentProfile.findUnique({ where: { idKaryawan: id } }),
-          prisma.pengajuanCuti.count({
-            where: {
-              idKaryawan: id,
-              idJenisCuti: LEAVE_TYPES.SPECIAL,
-              idStatus: LEAVE_STATUS.APPROVED,
-              tanggalMulai: { gte: startOfYear },
-            },
-          }),
-          prisma.pengajuanCuti.count({
-            where: {
-              idKaryawan: id,
-              idJenisCuti: LEAVE_TYPES.UNPAID,
-              idStatus: LEAVE_STATUS.APPROVED,
-              tanggalMulai: { gte: startOfYear },
-            },
-          }),
-        ]);
+      const [balance, talent, specialUsed, unpaidUsed] = await Promise.all([
+        computeLeaveBalance(id),
+        prisma.talentProfile.findUnique({ where: { idKaryawan: id } }),
+        prisma.pengajuanCuti.count({
+          where: {
+            idKaryawan: id,
+            idJenisCuti: LEAVE_TYPES.SPECIAL,
+            idStatus: LEAVE_STATUS.APPROVED,
+            tanggalMulai: { gte: startOfYear },
+          },
+        }),
+        prisma.pengajuanCuti.count({
+          where: {
+            idKaryawan: id,
+            idJenisCuti: LEAVE_TYPES.UNPAID,
+            idStatus: LEAVE_STATUS.APPROVED,
+            tanggalMulai: { gte: startOfYear },
+          },
+        }),
+      ]);
       sisaCuti = balance.sisa;
       accrued = balance.accrued;
       carryOver = balance.carryOver;
-      pendingLeaves = pendingLeaveCount;
-      sickLeaves = sickCount;
-      pendingPayments = payCount;
-      certificates = certCount;
       specialLeaveUsed = specialUsed;
       unpaidLeaveUsed = unpaidUsed;
       cvURL = talent?.fileCVURL ?? null;
+    }
+
+    // Statistik approval-scope sesuai role (bukan hanya milik sendiri).
+    if (role === ROLES.ADMIN_OPS) {
+      const id = auth.idKaryawan ?? '';
+      const [pay, leave, sick, cert] = await Promise.all([
+        prisma.paymentRequest.count({
+          where: { idStatus: { in: [PAYMENT_STATUS.PENDING_OPS, PAYMENT_STATUS.PENDING_PARTNER] } },
+        }),
+        prisma.pengajuanCuti.count({ where: { idKaryawan: id, idStatus: LEAVE_STATUS.PENDING } }),
+        prisma.izinSakit.count(),
+        prisma.sertifikatKaryawan.count(),
+      ]);
+      pendingPayments = pay;
+      pendingLeaves = leave;
+      sickLeaves = sick;
+      certificates = cert;
+    } else if (role === ROLES.PARTNER) {
+      const dept = auth.department === 'ops' ? 'ops' : auth.department ?? undefined;
+      const [pay, leave, sick, cert] = await Promise.all([
+        prisma.paymentRequest.count({ where: { idStatus: PAYMENT_STATUS.PENDING_PARTNER } }),
+        prisma.pengajuanCuti.count({
+          where: { idStatus: LEAVE_STATUS.PENDING, karyawan: { department: dept } },
+        }),
+        prisma.izinSakit.count({ where: { karyawan: { department: dept } } }),
+        prisma.sertifikatKaryawan.count({ where: { karyawan: { department: dept } } }),
+      ]);
+      pendingPayments = pay;
+      pendingLeaves = leave;
+      sickLeaves = sick;
+      certificates = cert;
+    } else if (auth.idKaryawan) {
+      const id = auth.idKaryawan;
+      const [pay, leave, sick, cert] = await Promise.all([
+        prisma.paymentRequest.count({
+          where: { idKaryawan: id, idStatus: { in: [PAYMENT_STATUS.PENDING_OPS, PAYMENT_STATUS.PENDING_PARTNER] } },
+        }),
+        prisma.pengajuanCuti.count({ where: { idKaryawan: id, idStatus: LEAVE_STATUS.PENDING } }),
+        prisma.izinSakit.count({ where: { idKaryawan: id } }),
+        prisma.sertifikatKaryawan.count({ where: { idKaryawan: id } }),
+      ]);
+      pendingPayments = pay;
+      pendingLeaves = leave;
+      sickLeaves = sick;
+      certificates = cert;
     }
 
     return Response.json({

@@ -57,7 +57,7 @@ export async function GET() {
     return Response.json({ list: result });
   } catch (e) {
     const status = (e as { status?: number }).status ?? 500;
-    return Response.json({ error: 'Terjadi kesalahan' }, { status });
+    return Response.json({ error: 'Something went wrong' }, { status });
   }
 }
 
@@ -72,14 +72,14 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { idKaryawan, tanggalMulai, tanggalBerakhir } = body || {};
     if (!idKaryawan || !tanggalMulai || !tanggalBerakhir) {
-      return Response.json({ error: 'idKaryawan, tanggalMulai, tanggalBerakhir wajib diisi' }, { status: 400 });
+      return Response.json({ error: 'idKaryawan, start date, and end date are required' }, { status: 400 });
     }
 
     const karyawan = await prisma.karyawan.findUnique({
       where: { idKaryawan },
       include: { kontrakKaryawan: { orderBy: { tanggalMulai: 'asc' } } },
     });
-    if (!karyawan) return Response.json({ error: 'Karyawan tidak ditemukan' }, { status: 404 });
+    if (!karyawan) return Response.json({ error: 'Employee not found' }, { status: 404 });
 
     // Periode terakhir (kontrak terbaru) => sumber carry-over.
     const previous = karyawan.kontrakKaryawan.length
@@ -120,6 +120,6 @@ export async function POST(request: NextRequest) {
     return Response.json({ ok: true, contract });
   } catch (e) {
     const status = (e as { status?: number }).status ?? 500;
-    return Response.json({ error: 'Terjadi kesalahan' }, { status });
+    return Response.json({ error: 'Something went wrong' }, { status });
   }
 }

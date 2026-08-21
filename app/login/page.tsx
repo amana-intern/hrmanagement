@@ -39,13 +39,13 @@ export default function LoginPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || 'Login gagal');
+        setError(data.error || 'Login failed');
         setLoading(false);
         return;
       }
       router.push(resolveHome(data.user));
     } catch {
-      setError('Terjadi kesalahan koneksi');
+      setError('Connection error');
       setLoading(false);
     }
   };
@@ -53,7 +53,7 @@ export default function LoginPage() {
   const handleGoogleSuccess = async (credentialResponse: { credential?: string }) => {
     const token = credentialResponse.credential;
     if (!token) {
-      setError('Token Google tidak ditemukan, coba lagi.');
+      setError('Google token not found, please try again.');
       return;
     }
     setError('');
@@ -66,13 +66,13 @@ export default function LoginPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || 'Login gagal');
+        setError(data.error || 'Login failed');
         setLoading(false);
         return;
       }
       router.push(resolveHome(data.user));
     } catch {
-      setError('Terjadi kesalahan koneksi');
+      setError('Connection error');
       setLoading(false);
     }
   };
@@ -150,18 +150,18 @@ export default function LoginPage() {
                 <GoogleOAuthProvider clientId={googleClientId}>
                   <GoogleLogin
                     onSuccess={handleGoogleSuccess}
-                    onError={() => setError('Login Google gagal')}
+                    onError={() => setError('Google login failed')}
                     hosted_domain={domain}
                   />
                 </GoogleOAuthProvider>
               </div>
               <p className="text-[11px] text-amana-neutral-400 text-center mt-3">
-                Gunakan akun @{domain} Anda untuk masuk.
+                Sign in using your @{domain} account.
               </p>
             </>
           ) : (
             <p className="text-[11px] text-amana-neutral-400 text-center mt-5">
-              Google Sign-In akan aktif setelah konfigurasi oleh administrator.
+              Google Sign-In will be enabled after configuration by the administrator.
             </p>
           )}
         </div>

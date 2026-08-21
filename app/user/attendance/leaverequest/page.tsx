@@ -9,6 +9,7 @@ import SelectField from '../../../components/forms/SelectField';
 import TextField from '../../../components/forms/TextField';
 import Button from '../../../components/forms/Button';
 import { LEAVE_TYPES } from '@/lib/constants';
+import { useRole, isAdminRole } from '@/app/utils/useRole';
 
 const specialLeaveList = [
   'Menstruation pain (Maximum of 2 days)',
@@ -33,6 +34,8 @@ const LEAVE_TYPE_MAP: Record<string, string> = {
 const leaveOptions = ['Paid Leave', 'Unpaid Leave', 'Special Leave'];
 
 export default function LeaveRequestPage() {
+  const role = useRole();
+  const isAdmin = isAdminRole(role);
   const [selectedLeave, setSelectedLeave] = useState('');
   const [selectedSpecialLeave, setSelectedSpecialLeave] = useState('');
   const [reason, setReason] = useState('');
@@ -74,6 +77,14 @@ export default function LeaveRequestPage() {
     startDate !== '' &&
     endDate !== '';
 
+  const requestedDays = (() => {
+    if (!startDate || !endDate) return null;
+    const s = new Date(`${startDate}T00:00:00`);
+    const e = new Date(`${endDate}T00:00:00`);
+    if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime()) || e < s) return null;
+    return Math.round((e.getTime() - s.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+  })();
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isFormValid) return;
@@ -94,7 +105,7 @@ export default function LeaveRequestPage() {
     setSubmitting(false);
 
     if (res.ok) {
-      setMessage({ ok: true, text: 'Pengajuan cuti berhasil dikirim untuk persetujuan partner.' });
+      setMessage({ ok: true, text: 'Leave request submitted for partner approval.' });
       setSelectedLeave('');
       setSelectedSpecialLeave('');
       setReason('');
@@ -102,13 +113,13 @@ export default function LeaveRequestPage() {
       setEndDate('');
       loadBalance();
     } else {
-      setMessage({ ok: false, text: data.error || 'Gagal mengirim pengajuan.' });
+      setMessage({ ok: false, text: data.error || 'Failed to submit request.' });
     }
   };
 
   return (
     <div className="w-full h-full flex flex-col gap-3">
-      <PageTopBar showGreeting section="Services" page="Request Leave" />
+      <PageTopBar showGreeting section={isAdmin ? 'Attendance' : 'Services'} page={isAdmin ? 'Leave Request' : 'Request Leave'} />
 
       <SectionCard title="Leave Balance(s)">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -176,11 +187,17 @@ export default function LeaveRequestPage() {
           />
         </div>
 
+        {selectedLeave === 'Paid Leave' && requestedDays != null && leaveBalance != null && requestedDays > leaveBalance && (
+          <div className="mb-4 px-4 py-3 rounded-lg border text-[13px] font-medium bg-amana-danger-100 border-amana-danger-300 text-amana-danger-500">
+            The number of days ({requestedDays}) exceeds your remaining Paid Leave balance ({leaveBalance} days). The request will be rejected.
+          </div>
+        )}
+
         {selectedLeave === 'Unpaid Leave' && (
           <div className={`mb-4 px-4 py-3 rounded-lg border text-[13px] font-medium ${(leaveBalance ?? 0) > 0 ? 'bg-amana-warning-100 border-amana-warning-300 text-amana-warning-500' : 'bg-amana-success-100 border-amana-success-300 text-amana-success-500'}`}>
             {(leaveBalance ?? 0) > 0
-              ? `Unpaid leave hanya bisa diajukan saat saldo Paid = 0. Saldo Anda masih ${leaveBalance} hari.`
-              : 'Saldo Paid Anda 0, silakan ajukan Unpaid leave.'}
+              ? `Unpaid leave can only be submitted when your Paid balance is 0. You still have ${leaveBalance} days.`
+              : 'Your Paid balance is 0; please submit an Unpaid leave.'}
           </div>
         )}
 

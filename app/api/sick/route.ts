@@ -25,17 +25,17 @@ export async function POST(request: NextRequest) {
     const file = form.get('file');
 
     if (!tanggalMulai || !tanggalSelesai) {
-      return Response.json({ error: 'Tanggal mulai & selesai wajib diisi' }, { status: 400 });
+      return Response.json({ error: 'Start & end dates are required' }, { status: 400 });
     }
 
     let buktiSakitURL: string | null = null;
     if (file instanceof File && file.size > 0) {
       const ext = path.extname(file.name).toLowerCase();
       if (!ALLOWED_EXT.includes(ext)) {
-        return Response.json({ error: 'Format tidak didukung (pdf/jpg/png)' }, { status: 400 });
+        return Response.json({ error: 'Unsupported format (pdf/jpg/png)' }, { status: 400 });
       }
       if (file.size > MAX_BYTES) {
-        return Response.json({ error: 'Ukuran file melebihi 5MB' }, { status: 400 });
+        return Response.json({ error: 'File size exceeds 5MB' }, { status: 400 });
       }
       await mkdir(UPLOAD_DIR, { recursive: true });
       const safeName = `sk-${Date.now()}${ext}`;
@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
     return Response.json({ ok: true, sick }, { status: 201 });
   } catch (e) {
     const status = (e as { status?: number }).status ?? 500;
-    return Response.json({ error: 'Terjadi kesalahan' }, { status });
+    return Response.json({ error: 'Something went wrong' }, { status });
   }
 }
 
@@ -78,6 +78,6 @@ export async function GET() {
     return Response.json({ list });
   } catch (e) {
     const status = (e as { status?: number }).status ?? 500;
-    return Response.json({ error: 'Terjadi kesalahan' }, { status });
+    return Response.json({ error: 'Something went wrong' }, { status });
   }
 }

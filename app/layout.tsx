@@ -23,7 +23,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="id" data-scroll-behavior="smooth">
+    <html lang="en" data-scroll-behavior="smooth">
       {/* Masukin variabel font-nya ke body, dan tambahin class font-sans */}
       <body className={`${beVietnamPro.variable} font-sans antialiased`}>
         {/* Satu MotionConfig untuk seluruh app agar animasi Framer Motion konsisten */}

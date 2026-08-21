@@ -16,7 +16,7 @@ export async function GET() {
     return Response.json({ list });
   } catch (e) {
     const status = (e as { status?: number }).status ?? 500;
-    return Response.json({ error: 'Terjadi kesalahan' }, { status });
+    return Response.json({ error: 'Something went wrong' }, { status });
   }
 }
 
@@ -32,22 +32,22 @@ export async function POST(request: Request) {
     const { tanggal, tanggalAkhir, alasan } = body || {};
 
     if (!tanggal) {
-      return Response.json({ error: 'Tanggal wajib diisi' }, { status: 400 });
+      return Response.json({ error: 'Date is required' }, { status: 400 });
     }
 
     const start = parseDateOnly(tanggal);
     if (!start) {
-      return Response.json({ error: 'Format tanggal tidak valid' }, { status: 400 });
+      return Response.json({ error: 'Invalid date format' }, { status: 400 });
     }
 
     let end: Date | null = null;
     if (tanggalAkhir) {
       end = parseDateOnly(tanggalAkhir);
       if (!end) {
-        return Response.json({ error: 'Format tanggal akhir tidak valid' }, { status: 400 });
+        return Response.json({ error: 'Invalid end date format' }, { status: 400 });
       }
       if (end < start) {
-        return Response.json({ error: 'Tanggal akhir tidak boleh lebih awal dari tanggal mulai' }, { status: 400 });
+        return Response.json({ error: 'End date cannot be earlier than start date' }, { status: 400 });
       }
     }
 
@@ -62,9 +62,9 @@ export async function POST(request: Request) {
 
     if (hit) {
       const existing = hit.tanggalAkhir
-        ? `${hit.tanggal?.toLocaleDateString('id-ID')} s/d ${hit.tanggalAkhir.toLocaleDateString('id-ID')}`
-        : (hit.tanggal?.toLocaleDateString('id-ID') ?? '');
-      return Response.json({ error: `Rentang tanggal tumpang-tindih dengan blokir: ${existing}.` }, { status: 409 });
+        ? `${hit.tanggal?.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })} - ${hit.tanggalAkhir.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}`
+        : (hit.tanggal?.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) ?? '');
+      return Response.json({ error: `Date range overlaps with blocked dates: ${existing}.` }, { status: 409 });
     }
 
     const created = await prisma.tanggalBlokir.create({
@@ -79,6 +79,6 @@ export async function POST(request: Request) {
     return Response.json({ ok: true, item: created }, { status: 201 });
   } catch (e) {
     const status = (e as { status?: number }).status ?? 500;
-    return Response.json({ error: 'Terjadi kesalahan' }, { status });
+    return Response.json({ error: 'Something went wrong' }, { status });
   }
 }

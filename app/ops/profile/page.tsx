@@ -51,7 +51,7 @@ export default function OPSProfilePage() {
     title: 'Operations Dashboard',
     stats: [
       stat(me?.stats.sickLeaves ?? 0, 'Sick Leave', 'Sick leave record(s) this year'),
-      stat(me?.stats.certificates ?? 0, 'Certificates', 'Certificates uploaded by employees'),
+      stat('-', 'Certificates', 'Only HR can view certificate statistics'),
     ],
     updates: [
       'Coordinate payment scheduling to keep fund flow on time',

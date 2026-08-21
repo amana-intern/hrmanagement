@@ -39,7 +39,7 @@ export async function GET(request: Request) {
     return Response.json({ list: result });
   } catch (e) {
     const status = (e as { status?: number }).status ?? 500;
-    return Response.json({ error: 'Terjadi kesalahan' }, { status });
+    return Response.json({ error: 'Something went wrong' }, { status });
   }
 }
 
@@ -54,7 +54,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { namaPosisi, deskripsi, googleFormURL, idStatus } = body || {};
     if (!namaPosisi || !deskripsi) {
-      return Response.json({ error: 'namaPosisi & deskripsi wajib diisi' }, { status: 400 });
+      return Response.json({ error: 'Position name & description are required' }, { status: 400 });
     }
 
     const status = idStatus === 'DRAFT' ? 'DRAFT' : 'OPEN';
@@ -72,6 +72,6 @@ export async function POST(request: Request) {
     return Response.json({ ok: true, lowongan }, { status: 201 });
   } catch (e) {
     const status = (e as { status?: number }).status ?? 500;
-    return Response.json({ error: 'Terjadi kesalahan' }, { status });
+    return Response.json({ error: 'Something went wrong' }, { status });
   }
 }

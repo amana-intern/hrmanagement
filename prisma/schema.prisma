@@ -106,6 +106,7 @@ model Karyawan {
   assessmentSubmissions AssessmentSubmission[]
   hrTodos         HrTodo[]
   notifications   Notification[]
+  karyawanHistory KaryawanHistory[]
 }
 
 model SertifikatKaryawan {
@@ -143,6 +144,7 @@ model IzinSakit {
   gejala                 String?                 @db.VarChar
   buktiSakitURL          String?                 @db.VarChar
   idKategoriPenyakit     String?                 @db.VarChar
+  createdAt              DateTime                @default(now()) @db.Timestamp()
   karyawan               Karyawan?               @relation(fields: [idKaryawan], references: [idKaryawan])
   masterKategoriPenyakit MasterKategoriPenyakit? @relation(fields: [idKategoriPenyakit], references: [idKategori])
 }
@@ -309,4 +311,15 @@ model TanggalBlokir {
   tanggalAkhir DateTime? @db.Date
   alasan       String?   @db.VarChar
   createdAt    DateTime? @default(now()) @db.Timestamp()
+}
+
+model KaryawanHistory {
+  idHistory   String    @id @db.VarChar
+  idKaryawan  String?   @db.VarChar
+  tipe        String?   @db.VarChar
+  nilaiLama   String?   @db.VarChar
+  nilaiBaru   String?   @db.VarChar
+  diubahOleh  String?   @db.VarChar
+  createdAt   DateTime? @default(now()) @db.Timestamp()
+  karyawan    Karyawan? @relation(fields: [idKaryawan], references: [idKaryawan])
 }

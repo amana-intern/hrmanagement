@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
       const detailStr = form.get('detail')?.toString() ?? null;
 
       if (!projectID || !nominalStr || !idKategoriPayment) {
-        return Response.json({ error: 'ProjectID, nominal, dan kategori wajib diisi' }, { status: 400 });
+        return Response.json({ error: 'ProjectID, nominal, and category are required' }, { status: 400 });
       }
 
       // Simpan file lampiran (field name = kategori, mis. vendor-invoice / ind-ktp).
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
         const ext = path.extname(value.name).toLowerCase();
         if (!ALLOWED_EXT.includes(ext)) continue;
         if (value.size > MAX_BYTES)
-          return Response.json({ error: 'Ukuran file melebihi 5MB' }, { status: 400 });
+          return Response.json({ error: 'File size exceeds 5MB' }, { status: 400 });
         const safeName = `pay-${Date.now()}-${Math.random().toString(36).slice(2, 7)}${ext}`;
         const bytes = Buffer.from(await value.arrayBuffer());
         await writeFile(path.join(UPLOAD_DIR, safeName), bytes);
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
 
       const nominal = Number(nominalStr);
       if (!Number.isFinite(nominal)) {
-        return Response.json({ error: 'Nominal tidak valid' }, { status: 400 });
+        return Response.json({ error: 'Invalid nominal' }, { status: 400 });
       }
 
       const payment = await prisma.paymentRequest.create({
@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { projectID, nominal, idKategoriPayment, catatan } = body || {};
     if (!projectID || !nominal || !idKategoriPayment) {
-      return Response.json({ error: 'ProjectID, nominal, dan kategori wajib diisi' }, { status: 400 });
+      return Response.json({ error: 'ProjectID, nominal, and category are required' }, { status: 400 });
     }
     const payment = await prisma.paymentRequest.create({
       data: {
@@ -96,6 +96,6 @@ export async function POST(request: NextRequest) {
     return Response.json({ ok: true, payment }, { status: 201 });
   } catch (e) {
     const status = (e as { status?: number }).status ?? 500;
-    return Response.json({ error: 'Terjadi kesalahan' }, { status });
+    return Response.json({ error: 'Something went wrong' }, { status });
   }
 }

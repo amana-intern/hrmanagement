@@ -9,15 +9,10 @@ import type { DataTableColumn } from '../../components/data-display/DataTable';
 import { SearchTextField, SearchSelectField } from '../../components/forms/SearchFields';
 import Button from '../../components/forms/Button';
 import { useFilters } from '@/app/utils/useFilters';
+import { formatDateTimeWIB } from '@/app/utils/formatDate';
 import { DEPARTMENT_OPTIONS, getAllGradeOptions } from '@/app/utils/orgStructure';
 import { downloadTSV, copyTSV } from '@/lib/sheets';
-
-const DEPARTMENT_LABEL: Record<string, string> = {
-  ops: 'Operations',
-  health: 'Health and Wellbeing',
-  education: 'Education and HR',
-  digital: 'Digital and Finance',
-};
+import { DEPARTMENT_LABEL } from '@/lib/roles';
 
 interface SickLog {
   id: string;
@@ -27,6 +22,7 @@ interface SickLog {
   startDate: string;
   endDate: string;
   submitted: string;
+  submittedTs: number;
   duration: number;
   gejala: string;
   buktiSakitURL: string | null;
@@ -37,6 +33,7 @@ interface RawSick {
   karyawan?: { nama?: string | null; department?: string | null; masterGrade?: { namaGrade?: string | null } | null };
   tanggalMulai?: string | null;
   tanggalSelesai?: string | null;
+  createdAt?: string | null;
   gejala?: string | null;
   buktiSakitURL?: string | null;
 }
@@ -80,7 +77,8 @@ export default function MedicalLeavePage() {
               grade: l.karyawan?.masterGrade?.namaGrade ?? '-',
               startDate,
               endDate,
-              submitted: l.tanggalMulai ? new Date(l.tanggalMulai).toLocaleDateString('id-ID') : '-',
+              submitted: formatDateTimeWIB(l.createdAt ?? l.tanggalMulai),
+              submittedTs: l.createdAt ? new Date(l.createdAt).getTime() : l.tanggalMulai ? new Date(l.tanggalMulai).getTime() : 0,
               duration,
               gejala: l.gejala ?? '-',
               buktiSakitURL: l.buktiSakitURL ?? null,
@@ -144,18 +142,18 @@ export default function MedicalLeavePage() {
 
   const handleCopySheets = async () => {
     const ok = await copyTSV(buildTSV());
-    alert(ok ? 'Tersalin ke clipboard. Paste di Google Sheets (Ctrl+V).' : 'Gagal menyalin ke clipboard.');
+    alert(ok ? 'Copied to clipboard. Paste into Google Sheets (Ctrl+V).' : 'Failed to copy to clipboard.');
   };
 
   const columns: DataTableColumn<SickLog>[] = [
-    { key: 'name', label: 'Name', width: '200px' },
-    { key: 'department', label: 'Department' },
-    { key: 'grade', label: 'Grade' },
     {
       key: 'submitted',
       label: 'Submitted',
-      sortValue: (r) => (r.startDate ? new Date(r.startDate).getTime() : 0),
+      sortValue: (r) => r.submittedTs,
     },
+    { key: 'name', label: 'Name', width: '200px' },
+    { key: 'department', label: 'Department' },
+    { key: 'grade', label: 'Grade' },
     { key: 'duration', label: 'Duration', render: (r) => `${r.duration} Day(s)` },
     { key: 'gejala', label: 'Sickness Type' },
     {
@@ -220,7 +218,7 @@ export default function MedicalLeavePage() {
 
         <SectionCard title="Export Data" scroll className="h-[260px]">
           <p className="text-[14px] text-amana-neutral-400">
-            Export data cuti dalam format TSV dan siap diupload dengan Google Spreadsheet.
+            Export leave data as TSV ready to upload to Google Spreadsheet.
           </p>
           <div className="flex-1" />
           <div className="flex justify-end gap-3 pt-2 flex-shrink-0">

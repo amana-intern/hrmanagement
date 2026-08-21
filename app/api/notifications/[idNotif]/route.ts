@@ -16,6 +16,6 @@ export async function PATCH(_request: Request, ctx: { params: Promise<{ idNotif:
     return Response.json({ ok: true });
   } catch (e) {
     const status = (e as { status?: number }).status ?? 500;
-    return Response.json({ error: 'Terjadi kesalahan' }, { status });
+    return Response.json({ error: 'Something went wrong' }, { status });
   }
 }

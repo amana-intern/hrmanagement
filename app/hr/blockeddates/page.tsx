@@ -7,6 +7,7 @@ import DataTable from '../../components/data-display/DataTable';
 import type { DataTableColumn } from '../../components/data-display/DataTable';
 import Button from '../../components/forms/Button';
 import TextField from '../../components/forms/TextField';
+import { formatDateWIB } from '@/app/utils/formatDate';
 
 interface BlockedDate {
   id: string;
@@ -15,7 +16,7 @@ interface BlockedDate {
   alasan: string | null;
 }
 
-const fmt = (v: string | null) => (v ? new Date(v).toLocaleDateString('id-ID', { timeZone: 'UTC' }) : '');
+const fmt = (v: string | null) => (v ? formatDateWIB(v) : '');
 
 export default function BlockedDatesPage() {
   const [rows, setRows] = useState<BlockedDate[]>([]);
@@ -41,7 +42,7 @@ export default function BlockedDatesPage() {
       );
       setError('');
     } else {
-      setError('Gagal memuat data');
+      setError('Failed to load data');
     }
   };
 
@@ -53,11 +54,11 @@ export default function BlockedDatesPage() {
   }, []);
 
   const blockLabel = (row: BlockedDate) =>
-    row.tanggalAkhir ? `${fmt(row.tanggal)} s/d ${fmt(row.tanggalAkhir)}` : fmt(row.tanggal);
+    row.tanggalAkhir ? `${fmt(row.tanggal)} - ${fmt(row.tanggalAkhir)}` : fmt(row.tanggal);
 
   const handleAdd = async () => {
-    if (!newDate) return alert('Pilih tanggal terlebih dahulu');
-    if (newEndDate && newEndDate < newDate) return alert('Tanggal akhir harus setelah atau sama dengan tanggal mulai');
+    if (!newDate) return alert('Please select a date first');
+    if (newEndDate && newEndDate < newDate) return alert('End date must be after or equal to start date');
     setSaving(true);
     setError('');
     const res = await fetch('/api/hr/blocked-dates', {
@@ -67,7 +68,7 @@ export default function BlockedDatesPage() {
     });
     const data = await res.json().catch(() => null);
     setSaving(false);
-    if (!res.ok) return alert(data?.error || 'Gagal memblokir tanggal');
+    if (!res.ok) return alert(data?.error || 'Failed to block date');
     setNewDate('');
     setNewEndDate('');
     setNewReason('');
@@ -75,9 +76,9 @@ export default function BlockedDatesPage() {
   };
 
   const handleDelete = async (row: BlockedDate) => {
-    if (!window.confirm(`Hapus blokir ${blockLabel(row)}?`)) return;
+    if (!window.confirm(`Delete blocked date ${blockLabel(row)}?`)) return;
     const res = await fetch(`/api/hr/blocked-dates/${row.id}`, { method: 'DELETE' });
-    if (!res.ok) return alert('Gagal menghapus');
+    if (!res.ok) return alert('Failed to delete');
     await load();
   };
 
@@ -85,6 +86,7 @@ export default function BlockedDatesPage() {
     {
       key: 'tanggal',
       label: 'Date',
+      render: (r) => blockLabel(r),
       sortValue: (r) => (r.tanggal ? new Date(r.tanggal).getTime() : 0),
     },
     { key: 'alasan', label: 'Reason' },
@@ -128,7 +130,7 @@ export default function BlockedDatesPage() {
           columns={columns}
           rows={rows}
           defaultSortKey="tanggal"
-          emptyMessage="Belum ada tanggal diblokir."
+          emptyMessage="No blocked dates yet."
         />
       </SectionCard>
     </div>

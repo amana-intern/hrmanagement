@@ -15,10 +15,17 @@ export async function GET(request: Request) {
     if (isEmployeeRole(auth.idRole)) {
       where.idKaryawan = auth.idKaryawan ?? undefined;
     } else if (auth.idRole === ROLES.ADMIN_OPS) {
-      // Board OPS Payment Request: PENDING_OPS + PENDING_PARTNER (Waiting Partner) + REJECTED
+      // Board OPS Payment Request: semua status — item yang sudah diproses tetap tampil sebagai riwayat
       if (scope === 'pending') {
         where.idStatus = {
-          in: [PAYMENT_STATUS.PENDING_OPS, PAYMENT_STATUS.PENDING_PARTNER, PAYMENT_STATUS.REJECTED],
+          in: [
+            PAYMENT_STATUS.PENDING_OPS,
+            PAYMENT_STATUS.PENDING_PARTNER,
+            PAYMENT_STATUS.REJECTED,
+            PAYMENT_STATUS.APPROVED,
+            PAYMENT_STATUS.SCHEDULED,
+            PAYMENT_STATUS.PAID,
+          ],
         };
       }
       // Board OPS Payment Scheduler: APPROVED + SCHEDULED + PAID (item tetap tampil)
@@ -28,9 +35,15 @@ export async function GET(request: Request) {
         };
       }
     } else if (auth.idRole === ROLES.PARTNER) {
-      // Board Partner: PENDING_PARTNER + APPROVED + REJECTED (item tetap tampil)
+      // Board Partner: semua status sampai lunas — item tetap tampil sebagai riwayat
       where.idStatus = {
-        in: [PAYMENT_STATUS.PENDING_PARTNER, PAYMENT_STATUS.APPROVED, PAYMENT_STATUS.REJECTED],
+        in: [
+          PAYMENT_STATUS.PENDING_PARTNER,
+          PAYMENT_STATUS.APPROVED,
+          PAYMENT_STATUS.REJECTED,
+          PAYMENT_STATUS.SCHEDULED,
+          PAYMENT_STATUS.PAID,
+        ],
       };
     }
 
@@ -48,6 +61,6 @@ export async function GET(request: Request) {
     return Response.json({ list });
   } catch (e) {
     const status = (e as { status?: number }).status ?? 500;
-    return Response.json({ error: 'Terjadi kesalahan' }, { status });
+    return Response.json({ error: 'Something went wrong' }, { status });
   }
 }

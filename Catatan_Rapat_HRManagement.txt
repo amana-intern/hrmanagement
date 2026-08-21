@@ -1,0 +1,134 @@
+================================================================================
+                    CATATAN RAPAT & DOKUMENTASI SISTEM HRMANAGEMENT
+================================================================================
+Tanggal      : Jumat, 21 Agustus 2026
+Topik        : Demonstrasi Sistem, Status Fitur Terbaru, dan Arsitektur Email Notifikasi
+Sistem       : HR Management System (HRMS)
+Teknologi    : Next.js 16 (App Router), TypeScript, Tailwind CSS v4, Prisma ORM, PostgreSQL
+================================================================================
+
+1. GAMBARAN UMUM & STRUKTUR ROLES SISTEM
+--------------------------------------------------------------------------------
+Sistem HRManagement menerapkan Multi-Role Access Control (RBAC) dengan 4 tingkat hak akses:
+
+a. Employee (ROLE_EMPLOYEE)
+   - Mengajukan cuti dan izin sakit.
+   - Mengajukan klaim biaya/reimbursement (payment request).
+   - Mengisi lembar mandiri asesmen kinerja/kompetensi.
+   - Melihat lowongan kerja internal (Career Hub) dan data profil pribadi/sertifikat.
+
+b. Partner / Pillar Lead (ROLE_PARTNER)
+   - Melakukan persetujuan (approval) tingkat pertama untuk cuti dan reimbursement tim.
+   - Memantau status kontrak dan anggota tim di bawah pilar/departemennya.
+
+c. Admin OPS / Finance (ROLE_ADMIN_OPS)
+   - Melakukan verifikasi tingkat akhir untuk pembayaran/reimbursement.
+   - Mengelola penjadwalan pencairan dana (payment scheduler) dan status lunas.
+
+d. Admin HR (ROLE_ADMIN_HR)
+   - Mengelola master data karyawan (Talent Roster), pembuatan akun, dan sertifikat.
+   - Memantau masa berlaku kontrak, peringatan perpanjangan/offboarding.
+   - Mengatur tanggal blokir pengajuan cuti (blocked dates).
+   - Mengelola modul asesmen kinerja dan publikasi lowongan kerja internal.
+
+
+2. SKEMA DEMONSTRASI SISTEM (ALUR DEMO BERURUTAN)
+--------------------------------------------------------------------------------
+Alur demonstrasi dirancang mengikuti alur hidup (lifecycle) pengajuan operasional:
+
+[Tahap 1: Login & Pengenalan Multi-Role]
+  - Buka halaman Login (/login).
+  - Tunjukkan opsi masuk via Akun Internal (Email/Password) dan Google Sign-In.
+  - Jelaskan secara singkat 4 peran (Role) utama dalam sistem.
+
+[Tahap 2: Sisi Employee / Karyawan (/user/*)]
+  - Login sebagai Karyawan.
+  - Profil (/user/profile): Lihat sisa kuota cuti tahunan dan data sertifikat.
+  - Pengajuan Cuti (/user/attendance/leaverequest): Buat pengajuan cuti baru & cek validasi kuota.
+  - Pengajuan Izin Sakit (/user/attendance/sickleave): Unggah surat sakit & deskripsi gejala.
+  - Reimbursement (/user/payment): Pengajuan klaim biaya dinas beserta upload lampiran nota.
+  - Asesmen (/user/assessment): Pengisian formulir evaluasi mandiri.
+  - Career Hub (/user/careerhub): Eksplorasi peluang karir internal.
+
+[Tahap 3: Sisi Partner / Pillar Lead (/partner/*)]
+  - Login sebagai Partner (Atasan).
+  - Persetujuan Cuti (/partner/leaveapproval): Review pengajuan cuti, cek alasan & total hari, lalu Approve/Reject.
+  - Persetujuan Payment (/partner/paymentapproval): Review & verifikasi awal pengajuan reimbursement tim.
+  - Monitoring Kontrak (/partner/contracttracking): Pantau status kontrak tim di bawah departemennya.
+
+[Tahap 4: Sisi Admin OPS / Finance (/ops/*)]
+  - Login sebagai Admin OPS.
+  - Verifikasi Keuangan (/ops/paymentapproval): Verifikasi akhir pengajuan yang telah disetujui Partner.
+  - Jadwal Pembayaran (/ops/paymentscheduler): Atur tanggal jadwal pencairan dana dan ubah status menjadi Lunas (Paid).
+
+[Tahap 5: Sisi Admin HR (/hr/*)]
+  - Login sebagai Admin HR.
+  - Talent Roster (/hr/talentroster): Pengelolaan data karyawan, histori mutasi, tambah karyawan baru, upload CV/sertifikat.
+  - Tracking Kontrak & Offboarding (/hr/contracttracking): Pantau kontrak yang akan berakhir dan pemicu proses renewal/offboarding.
+  - Rekapitulasi Cuti & Sakit (/hr/leaverecord & /hr/medicalleave): Pemantauan seluruh absensi secara terpusat.
+  - Tanggal Blokir Cuti (/hr/blockeddates): Penguncian tanggal operasional penting.
+  - Kelola Asesmen & Lowongan (/hr/assessments & /hr/joblistings): Pembuatan template asesmen dan publikasi lowongan kerja.
+
+[Tahap 6: Otomasi & Integrasi System]
+  - Notifikasi Real-time In-App (Icon Bell) & Email Notifikasi.
+  - Cron Job & Google Chat AI (/api/cron/birthday): Pengiriman otomatis ucapan ulang tahun dengan pesan personal via Gemini AI.
+
+
+3. ALASAN PENGGUNAAN RESEND & BELUM MENGGUNAKAN GOOGLE OAUTH DOMAIN PERUSAHAAN
+--------------------------------------------------------------------------------
+a. Kendala Akses Administrator Google Workspace (Faktor Utama):
+   Pengiriman email otomatis tersentralisasi (server-to-server) menggunakan akun
+   domain perusahaan (@domainperusahaan.com) melalui Gmail API membutuhkan fitur
+   Domain-Wide Delegation (DWD) pada Google Service Account. Pengaturan DWD ini
+   WAJIB dikonfigurasi langsung melalui Google Workspace Admin Console (admin.google.com)
+   oleh Super Admin. Tanpa akses tersebut, pengiriman email background otomatis
+   tidak dapat dieksekusi.
+
+b. Perbedaan Peruntukan Teknologi (Transactional Email vs Gmail API):
+   Gmail API dirancang untuk interaksi pengguna individual dan memiliki batasan
+   kuota harian (rate limit) yang ketat. Pengiriman email otomatis sistem lewat
+   Gmail berisiko dianggap spam. Resend diciptakan khusus untuk Transactional Email API
+   dengan reputasi deliverability yang tinggi.
+
+c. Pengelolaan Keamanan & Aksesibilitas:
+   Menggunakan Resend jauh lebih aman dan praktis (cukup dengan API Key). Notifikasi
+   tetap dapat dikirim atas nama domain perusahaan (misal: noreply@amana.id) tanpa
+   memerlukan akses langsung ke akun email pribadi atau inbox pengguna.
+
+
+4. PENJELASAN 4 FITUR / PROGRES TERBARU
+--------------------------------------------------------------------------------
+1) Tombol Detail pada Halaman Leave Approval (Partner)
+   - Deskripsi: Penambahan tombol "Detail" pada tabel persetujuan cuti. Ketika
+     ditekan, sistem memunculkan section yang menampilkan seluruh keterangan tabel
+     utama ditambahi Alasan/Catatan Pengajuan Cuti dan Total Hari Cuti.
+   - Status: Selesai (Done), tampilan antarmuka saat ini menggunakan layout
+     sementara (placeholder UI) yang siap disesuaikan kembali jika diperlukan.
+
+2) Logika Pembaruan Kontrak (Renewal) & Offboarding
+   - Deskripsi: Sistem memiliki logika otomatisasi (Cron Job) untuk mengecek tanggal
+     berakhirnya kontrak karyawan (H-90, H-60, H-30). Sistem akan memicu notifikasi
+     in-app dan email ke HR, Partner, dan Karyawan untuk menindaklanjuti proses
+     perpanjangan kontrak atau offboarding.
+   - Status: Selesai (Done) pada sisi logic backend dan trigger notifikasi. URL
+     form kelengkapan offboarding/renewal saat ini menggunakan placeholder.
+
+3) Histori Perubahan Data Karyawan (Career History / Audit Trail)
+   - Deskripsi: Fitur pencatatan rekam jejak digital. Setiap perubahan data penting
+     karyawan (grade, departemen, status) disimpan otomatis mencakup siapa yang
+     mengubah, waktu perubahan, serta nilai lama dan baru.
+   - Status: Selesai (Done) pada sisi database schema dan REST API backend. Tinggal
+     menghubungkan (integration) ke tampilan antarmuka (Frontend UI).
+
+4) Notifikasi Otomatis via Email (Resend & Kebutuhan Akses DNS amana.id)
+   - Deskripsi: Logika pengiriman email otomatis berbasis aksi (action-driven) sudah
+     berjalan. Penggunaan Resend dipilih sebagai penyedia layanan pengiriman email.
+   - Kebutuhan DNS amana.id: Agar email pengirim resmi (noreply@amana.id) dapat terverifikasi
+     dengan sempurna, dibutuhkan konfigurasi record DNS (SPF, DKIM, dan DMARC) pada
+     pengelola domain amana.id.
+   - Tujuan DNS: Memastikan semua email notifikasi sistem langsung masuk ke
+     INBOX UTAMA penerima dan tidak terdeteksi sebagai SPAM/Junk.
+
+================================================================================
+Catatan Rapat di-generate otomatis untuk dokumentasi proyek HRManagement.
+================================================================================

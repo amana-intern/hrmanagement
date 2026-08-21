@@ -86,7 +86,7 @@ export default function JobListingsPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
-    if (!res.ok) throw new Error('Gagal memperbarui lowongan');
+    if (!res.ok) throw new Error('Failed to update job listing');
   };
 
   const handleAddJob = async (asDraft: boolean) => {
@@ -105,13 +105,13 @@ export default function JobListingsPage() {
         }),
       });
       if (!res.ok) {
-        setErrorMsg('Gagal menambahkan lowongan');
+        setErrorMsg('Failed to add job listing');
         return;
       }
       await load();
       setNewJob({ title: '', description: '', formLink: '' });
       setShowAddModal(false);
-      setSuccessMsg(asDraft ? `Lowongan "${newJob.title}" disimpan sebagai draft` : `Lowongan "${newJob.title}" berhasil dipublikasikan`);
+      setSuccessMsg(asDraft ? `Job listing "${newJob.title}" saved as draft` : `Job listing "${newJob.title}" published successfully`);
     } finally {
       setBusy(false);
     }
@@ -131,9 +131,9 @@ export default function JobListingsPage() {
       });
       await load();
       setEditJob(null);
-      setSuccessMsg(asDraft ? `Lowongan "${editFields.title}" disimpan sebagai draft` : `Lowongan "${editFields.title}" berhasil dipublikasikan`);
+      setSuccessMsg(asDraft ? `Job listing "${editFields.title}" saved as draft` : `Job listing "${editFields.title}" published successfully`);
     } catch {
-      setErrorMsg('Gagal memperbarui lowongan');
+      setErrorMsg('Failed to update job listing');
     } finally {
       setBusy(false);
     }
@@ -145,20 +145,20 @@ export default function JobListingsPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ idStatus: 'CLOSED' }),
     });
-    if (!res.ok) return alert('Gagal menutup lowongan');
+    if (!res.ok) return alert('Failed to close job listing');
     setShowTakedownModal(null);
     setEditJob(null);
     await load();
-    setSuccessMsg(`Lowongan "${job.title}" berhasil ditutup`);
+    setSuccessMsg(`Job listing "${job.title}" closed successfully`);
   };
 
   const handleDelete = async (job: Job) => {
     const res = await fetch(`/api/joblistings/${job.id}`, { method: 'DELETE' });
-    if (!res.ok) return alert('Gagal menghapus lowongan');
+    if (!res.ok) return alert('Failed to delete job listing');
     setShowDeleteModal(null);
     setEditJob(null);
     await load();
-    setSuccessMsg(`Lowongan "${job.title}" berhasil dihapus`);
+    setSuccessMsg(`Job listing "${job.title}" deleted successfully`);
   };
 
   const openEdit = (job: Job) => {
@@ -198,7 +198,7 @@ export default function JobListingsPage() {
   return (
     <>
       <div className="w-full h-full flex flex-col gap-3">
-        <PageTopBar showGreeting section="Career Hub" page="Job Listing" />
+        <PageTopBar showGreeting section="Career Hub" page="Job Listings" />
 
         <QuickSearchBox
           title="Filter Job Listing"
@@ -227,7 +227,7 @@ export default function JobListingsPage() {
           {errorMsg && (
             <p className="pb-2 text-[13px] font-medium text-amana-danger-500">{errorMsg}</p>
           )}
-          <DataTable columns={columns} rows={filtered} defaultSortKey="title" emptyMessage="Belum ada lowongan." />
+          <DataTable columns={columns} rows={filtered} defaultSortKey="title" emptyMessage="No job listings yet." />
         </SectionCard>
       </div>
 

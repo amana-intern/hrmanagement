@@ -23,6 +23,28 @@ function timeAgo(iso: string | null): string {
   return `${Math.floor(h / 24)} hari lalu`;
 }
 
+// Render teks pesan; segmen URL (https://...) dijadikan link yang bisa diklik.
+function renderMessage(text: string | null) {
+  if (!text) return null;
+  const parts = text.split(/(https?:\/\/\S+)/g);
+  return parts.map((part, i) =>
+    /^https?:\/\//.test(part) ? (
+      <a
+        key={i}
+        href={part}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={(e) => e.stopPropagation()}
+        className="text-amana-primary-500 underline break-all"
+      >
+        {part}
+      </a>
+    ) : (
+      <span key={i}>{part}</span>
+    )
+  );
+}
+
 // NotificationBell — lonceng notifikasi di header (semua role).
 // Data dari /api/notifications, polling tiap 30 detik.
 export default function NotificationBell() {
@@ -134,7 +156,7 @@ export default function NotificationBell() {
                       />
                       <div className="min-w-0">
                         <p className="text-sm font-semibold text-amana-neutral-500">{n.judul}</p>
-                        <p className="text-xs text-amana-neutral-400 mt-0.5 break-words">{n.pesan}</p>
+                        <p className="text-xs text-amana-neutral-400 mt-0.5 break-words">{renderMessage(n.pesan)}</p>
                         <p className="text-[10px] text-amana-neutral-400/70 mt-1">{timeAgo(n.createdAt)}</p>
                       </div>
                     </div>

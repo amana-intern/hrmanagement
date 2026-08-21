@@ -12,6 +12,7 @@ import Button from '../../components/forms/Button';
 import Modal from '../../components/feedback/Modal';
 import { useFilters } from '@/app/utils/useFilters';
 import PaymentDetailModal, { PaymentDetailRow } from '../../components/PaymentDetailModal';
+import { formatDateTimeWIB } from '@/app/utils/formatDate';
 import { PAYMENT_KATEGORI } from '@/lib/constants';
 
 interface PayReq {
@@ -21,6 +22,7 @@ interface PayReq {
   type: string;
   amount: string;
   projectID: string;
+  submitted: string;
   status: string;
   details: null;
   action: null;
@@ -36,7 +38,7 @@ interface PaymentRaw {
   detail: string | null;
   createdAt: string | null;
   attachments?: { fileName?: string | null; fileURL?: string | null; kategori?: string | null }[];
-  karyawan?: { nama?: string | null };
+  karyawan?: { nama?: string | null; department?: string | null };
   masterKategoriPayment?: { namaKategori?: string | null };
 }
 
@@ -45,9 +47,9 @@ function amountLabel(c: PaymentRaw): string {
     try {
       const detail = typeof c.detail === 'string' ? JSON.parse(c.detail) : c.detail;
       const p = Number(detail?.perDiemParticipants);
-      if (Number.isFinite(p) && p > 0) return `${p} peserta`;
+      if (Number.isFinite(p) && p > 0) return `${p} participant(s)`;
     } catch {}
-    return 'Lihat file';
+    return 'View file';
   }
   return `Rp ${Number(c.nominal).toLocaleString('id-ID')}`;
 }
@@ -68,6 +70,7 @@ function mapRows(rows: PaymentRaw[]): PayReq[] {
     type: c.masterKategoriPayment?.namaKategori ?? '-',
     amount: amountLabel(c),
     projectID: c.projectID ?? '-',
+    submitted: formatDateTimeWIB(c.createdAt),
     status: c.idStatus,
     details: null,
     action: null,
@@ -80,6 +83,7 @@ function mapRows(rows: PaymentRaw[]): PayReq[] {
       createdAt: c.createdAt,
       attachments: c.attachments ?? [],
       masterKategoriPayment: c.masterKategoriPayment,
+      karyawan: c.karyawan,
     },
   }));
 }
@@ -107,7 +111,7 @@ export default function PaymentSchedulerPage() {
       setRequests(mapRows((data.list ?? []) as PaymentRaw[]));
     } else {
       const data = await res.json().catch(() => null);
-      setMessage({ ok: false, text: data?.error || 'Gagal memuat data' });
+      setMessage({ ok: false, text: data?.error || 'Failed to load data' });
     }
   };
 
@@ -144,14 +148,14 @@ export default function PaymentSchedulerPage() {
       await load();
       const text =
         action === 'schedule'
-          ? 'Jadwal pembayaran berhasil diatur.'
+          ? 'Payment schedule set.'
           : action === 'paid'
-            ? 'Pembayaran berhasil ditandai lunas.'
-            : 'Pengajuan berhasil diproses.';
+            ? 'Payment marked as paid.'
+            : 'Request processed.';
       setMessage({ ok: true, text });
     } else {
       const data = await res.json().catch(() => null);
-      setMessage({ ok: false, text: data?.error || `Gagal memproses (${res.status})` });
+      setMessage({ ok: false, text: data?.error || `Failed to process (${res.status})` });
     }
     setProcessingId(null);
   };
@@ -193,6 +197,7 @@ export default function PaymentSchedulerPage() {
   };
 
   const columns: DataTableColumn<PayReq>[] = [
+    { key: 'submitted', label: 'Submitted', sortValue: (r) => (r.submitted === '-' ? 0 : 1) },
     { key: 'idRequest', label: 'ID', width: '200px' },
     { key: 'user', label: 'Requester' },
     { key: 'type', label: 'Type' },
@@ -231,7 +236,7 @@ export default function PaymentSchedulerPage() {
   return (
     <>
       <div className="w-full h-full flex flex-col gap-3">
-        <PageTopBar showGreeting section="Career Hub" page="Payment Scheduler" />
+        <PageTopBar showGreeting section="Payment" page="Payment Scheduler" />
 
         <SearchPanel
           title="Search Payment Schedule"
@@ -253,13 +258,13 @@ export default function PaymentSchedulerPage() {
             columns={columns}
             rows={filtered}
             defaultSortKey="idRequest"
-            emptyMessage="Tidak ada data."
+            emptyMessage="No data."
           />
         </SectionCard>
       </div>
 
       {message && (
-        <Modal title={message.ok ? 'Berhasil' : 'Gagal'} onClose={() => setMessage(null)} maxWidth="max-w-md">
+        <Modal title={message.ok ? 'Success' : 'Failed'} onClose={() => setMessage(null)} maxWidth="max-w-md">
           <div className="px-5 py-4 flex flex-col gap-3 bg-amana-neutral-100">
             <p className="text-[15px] text-amana-neutral-500">{message.text}</p>
             <Button variant="primary" onClick={() => setMessage(null)}>

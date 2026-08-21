@@ -23,7 +23,7 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ id: str
         categories: { include: { questions: { orderBy: { urutan: 'asc' } } } },
       },
     });
-    if (!assessment) return Response.json({ error: 'Assessment tidak ditemukan' }, { status: 404 });
+    if (!assessment) return Response.json({ error: 'Assessment not found' }, { status: 404 });
 
     const submissions = await prisma.assessmentSubmission.findMany({
       where: { idAssessment: id },
@@ -85,6 +85,6 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ id: str
     });
   } catch (e) {
     const status = (e as { status?: number }).status ?? 500;
-    return Response.json({ error: 'Terjadi kesalahan' }, { status });
+    return Response.json({ error: 'Something went wrong' }, { status });
   }
 }

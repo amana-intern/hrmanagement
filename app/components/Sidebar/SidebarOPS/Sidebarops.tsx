@@ -22,7 +22,7 @@ const groups: NavGroup[] = [
   },
   {
     title: 'Career Hub',
-    links: [{ href: '/user/assessment', label: 'Assessment' }],
+    links: [{ href: '/user/careerhub', label: 'Career Hub' }],
   },
 ];
 

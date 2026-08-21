@@ -30,9 +30,7 @@ export default function SelectField({
           disabled={disabled}
           className="w-full appearance-none border border-amana-neutral-300 rounded-[13px] px-3 py-2.5 pr-9 text-[16px] text-amana-neutral-500 bg-amana-neutral-100 transition-colors duration-200 focus:outline-none focus:border-amana-primary-500 disabled:text-amana-neutral-300 disabled:cursor-not-allowed"
         >
-          <option value="" disabled>
-            {placeholder}
-          </option>
+          <option value="">{placeholder}</option>
           {options.map((o) => (
             <option key={o} value={o}>
               {labels ? labels[o] ?? o : o}

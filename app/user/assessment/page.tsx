@@ -24,6 +24,7 @@ export default function AssessmentPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [openAssessment, setOpenAssessment] = useState<OpenAssessment | null>(null);
+  const [submission, setSubmission] = useState<{ idSubmission: string } | null>(null);
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [technicalSkills, setTechnicalSkills] = useState('');
@@ -48,6 +49,7 @@ export default function AssessmentPage() {
         if (open.ok) {
           const d = await open.json();
           setOpenAssessment(d.assessment);
+          setSubmission(d.submission);
         }
       } catch {}
       setLoading(false);
@@ -57,7 +59,7 @@ export default function AssessmentPage() {
   const handleSubmit = async () => {
     if (!openAssessment) return;
     if (!technicalSkills.trim() || !selfDevelopmentAreas.trim()) {
-      alert('Technical skills & Self-development areas wajib diisi.');
+      alert('Technical skills & Self-development areas are required.');
       return;
     }
     setSubmitting(true);
@@ -73,10 +75,10 @@ export default function AssessmentPage() {
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || 'Gagal menyimpan hasil assessment');
+      if (!res.ok) throw new Error(data?.error || 'Failed to save assessment results');
       router.push('/user/careerhub');
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Terjadi kesalahan');
+      alert(err instanceof Error ? err.message : 'Something went wrong');
     } finally {
       setSubmitting(false);
     }
@@ -93,15 +95,42 @@ export default function AssessmentPage() {
   if (!openAssessment) {
     return (
       <div className="w-full h-full flex flex-col gap-3">
-        <PageTopBar showGreeting section="Career Hub" page="Assessment" />
+        <PageTopBar showGreeting section="Career Hub" page="Competency Assessment" />
         <SectionCard className="text-center">
-          <p className="font-semibold text-amana-primary-500 text-[20px] mb-2">Belum ada assessment</p>
-          <p className="text-[14px] text-amana-neutral-400 mb-6">HR belum membuka assessment saat ini.</p>
+          <p className="font-semibold text-amana-primary-500 text-[20px] mb-2">No assessment available</p>
+          <p className="text-[14px] text-amana-neutral-400 mb-6">No assessment is open at the moment.</p>
           <div className="flex justify-center">
             <Button variant="primary" size="lg" onClick={() => router.push('/user/careerhub')}>
-              Kembali ke Career Hub
+              Back to Career Hub
             </Button>
           </div>
+        </SectionCard>
+      </div>
+    );
+  }
+
+  if (submission) {
+    return (
+      <div className="w-full h-full flex flex-col gap-3">
+        <PageTopBar showGreeting section="Career Hub" page="Competency Assessment" />
+        <SectionCard>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+            <span className="flex-1 text-[20px] font-semibold text-amana-neutral-500 truncate">{openAssessment.judul}</span>
+            <div className="flex-1 flex items-center justify-center rounded-full px-5 py-1.5 text-center text-[14px] font-medium text-amana-neutral-100 bg-amana-success-500">
+              Done
+            </div>
+            <div className="flex flex-col sm:flex-row gap-3 sm:justify-end">
+              <Button variant="primary" size="lg" onClick={() => router.push('/user/careerhub/result')}>
+                View Result
+              </Button>
+              <Button variant="ghost" size="lg" onClick={() => router.push('/user/careerhub')}>
+                Back to Career Hub
+              </Button>
+            </div>
+          </div>
+          <p className="text-[14px] text-amana-neutral-400 mt-3">
+            You have completed this assessment. You can view your results or update your CV/certificates in Career Hub.
+          </p>
         </SectionCard>
       </div>
     );
@@ -124,7 +153,7 @@ export default function AssessmentPage() {
                 {(openAssessment.deskripsi ?? '').trim() === 'Self assessment kompetensi seluruh karyawan.'
                   ? 'Self assessment of all employees.'
                   : (openAssessment.deskripsi ?? undefined) ??
-                    'Pilih tingkat kemahiran untuk setiap kompetensi. Kompetensi boleh dilewati (tidak wajib diisi).'}
+                    'Select a proficiency level for each competency. Competencies may be skipped (not required).'}
               </p>
             </div>
             <div className="text-right flex-shrink-0">
@@ -200,7 +229,7 @@ export default function AssessmentPage() {
                     value={technicalSkills}
                     onChange={(e) => setTechnicalSkills(e.target.value)}
                     rows={3}
-                    placeholder="Contoh: Python, SQL, Project Management..."
+                    placeholder="e.g.: Python, SQL, Project Management..."
                     className="w-full border border-amana-neutral-300 rounded-[13px] px-3 py-2.5 text-[16px] text-amana-neutral-500 placeholder:text-amana-neutral-300 bg-amana-neutral-100 transition-colors duration-200 focus:outline-none focus:border-amana-primary-500"
                   />
                 </div>
@@ -212,7 +241,7 @@ export default function AssessmentPage() {
                     value={selfDevelopmentAreas}
                     onChange={(e) => setSelfDevelopmentAreas(e.target.value)}
                     rows={3}
-                    placeholder="Area pengembangan diri yang ingin ditingkatkan..."
+                    placeholder="Self-development areas you want to improve..."
                     className="w-full border border-amana-neutral-300 rounded-[13px] px-3 py-2.5 text-[16px] text-amana-neutral-500 placeholder:text-amana-neutral-300 bg-amana-neutral-100 transition-colors duration-200 focus:outline-none focus:border-amana-primary-500"
                   />
                 </div>

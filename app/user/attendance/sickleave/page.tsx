@@ -6,8 +6,11 @@ import SectionCard from '../../../components/layout/SectionCard';
 import TextField from '../../../components/forms/TextField';
 import UploadBox from '../../../components/forms/UploadBox';
 import Button from '../../../components/forms/Button';
+import { useRole, isAdminRole } from '@/app/utils/useRole';
 
 export default function SickLeavePage() {
+  const role = useRole();
+  const isAdmin = isAdminRole(role);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [symptom, setSymptom] = useState('');
@@ -41,13 +44,13 @@ export default function SickLeavePage() {
       setSymptom('');
       setMedicalFile(null);
     } else {
-      setMessage({ ok: false, text: data.error || 'Gagal mengirim pengajuan.' });
+      setMessage({ ok: false, text: data.error || 'Failed to submit request.' });
     }
   };
 
   return (
     <div className="w-full h-full flex flex-col gap-3">
-      <PageTopBar showGreeting section="Attendance" page="Sick Leave" />
+      <PageTopBar showGreeting section={isAdmin ? 'Attendance' : 'Services'} page={isAdmin ? 'Sick Leave' : 'Request Sick Leave'} />
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-3">
         <SectionCard title="Sick Leave Schedule">

@@ -13,6 +13,7 @@ import Button from '../../components/forms/Button';
 import Modal from '../../components/feedback/Modal';
 import { useFilters } from '@/app/utils/useFilters';
 import PaymentDetailModal, { PaymentDetailRow } from '../../components/PaymentDetailModal';
+import { formatDateTimeWIB } from '@/app/utils/formatDate';
 import { PAYMENT_KATEGORI } from '@/lib/constants';
 
 interface PayReq {
@@ -22,6 +23,7 @@ interface PayReq {
   type: string;
   amount: string;
   projectID: string;
+  submitted: string;
   status: string;
   details: null;
   action: null;
@@ -37,7 +39,7 @@ interface PaymentRaw {
   detail: string | null;
   createdAt: string | null;
   attachments?: { fileName?: string | null; fileURL?: string | null; kategori?: string | null }[];
-  karyawan?: { nama?: string | null };
+  karyawan?: { nama?: string | null; department?: string | null };
   masterKategoriPayment?: { namaKategori?: string | null };
 }
 
@@ -46,9 +48,9 @@ function amountLabel(c: PaymentRaw): string {
     try {
       const detail = typeof c.detail === 'string' ? JSON.parse(c.detail) : c.detail;
       const p = Number(detail?.perDiemParticipants);
-      if (Number.isFinite(p) && p > 0) return `${p} peserta`;
+      if (Number.isFinite(p) && p > 0) return `${p} participant(s)`;
     } catch {}
-    return 'Lihat file';
+    return 'View file';
   }
   return `Rp ${Number(c.nominal).toLocaleString('id-ID')}`;
 }
@@ -57,6 +59,9 @@ const STATUS_MAP: Record<string, { label: string; color: string }> = {
   ST_PAY_PENDING_OPS: { label: 'Pending Ops', color: 'bg-amana-warning-500' },
   ST_PAY_PENDING_PARTNER: { label: 'Waiting Partner', color: 'bg-amana-primary-500' },
   ST_PAY_REJECTED: { label: 'Rejected', color: 'bg-amana-danger-500' },
+  ST_PAY_APPROVED: { label: 'Approved', color: 'bg-amana-success-500' },
+  ST_PAY_SCHEDULED: { label: 'Scheduled', color: 'bg-amana-primary-500' },
+  ST_PAY_PAID: { label: 'Paid', color: 'bg-amana-neutral-400' },
 };
 
 const STATUS_OPTIONS = Object.values(STATUS_MAP).map((v) => v.label);
@@ -69,6 +74,7 @@ function mapRows(rows: PaymentRaw[]): PayReq[] {
     type: c.masterKategoriPayment?.namaKategori ?? '-',
     amount: amountLabel(c),
     projectID: c.projectID ?? '-',
+    submitted: formatDateTimeWIB(c.createdAt),
     status: c.idStatus,
     details: null,
     action: null,
@@ -81,6 +87,7 @@ function mapRows(rows: PaymentRaw[]): PayReq[] {
       createdAt: c.createdAt,
       attachments: c.attachments ?? [],
       masterKategoriPayment: c.masterKategoriPayment,
+      karyawan: c.karyawan,
     },
   }));
 }
@@ -107,7 +114,7 @@ export default function PaymentRequestPage() {
       setRequests(mapRows((data.list ?? []) as PaymentRaw[]));
     } else {
       const data = await res.json().catch(() => null);
-      setMessage({ ok: false, text: data?.error || 'Gagal memuat data' });
+      setMessage({ ok: false, text: data?.error || 'Failed to load data' });
     }
   };
 
@@ -135,10 +142,10 @@ export default function PaymentRequestPage() {
   const handleAction = async (id: string, action: string) => {
     if (processingId) return; // cegah double-processing
     if (action === 'reject') {
-      const catatan = window.prompt('Alasan penolakan (wajib diisi):');
+      const catatan = window.prompt('Rejection reason (required):');
       if (catatan === null) return;
       if (!catatan.trim()) {
-        setMessage({ ok: false, text: 'Alasan penolakan wajib diisi' });
+        setMessage({ ok: false, text: 'Rejection reason is required' });
         return;
       }
       setProcessingId(id);
@@ -149,10 +156,10 @@ export default function PaymentRequestPage() {
       });
       if (res2.ok) {
         await load();
-        setMessage({ ok: true, text: 'Pengajuan berhasil ditolak.' });
+        setMessage({ ok: true, text: 'Request rejected.' });
       } else {
         const d2 = await res2.json().catch(() => null);
-        setMessage({ ok: false, text: d2?.error || `Gagal memproses (${res2.status})` });
+        setMessage({ ok: false, text: d2?.error || `Failed to process (${res2.status})` });
       }
       setProcessingId(null);
       return;
@@ -165,10 +172,10 @@ export default function PaymentRequestPage() {
     });
     if (res.ok) {
       await load();
-      setMessage({ ok: true, text: 'Pengajuan berhasil diproses.' });
+      setMessage({ ok: true, text: 'Request processed.' });
     } else {
       const data = await res.json().catch(() => null);
-      setMessage({ ok: false, text: data?.error || `Gagal memproses (${res.status})` });
+      setMessage({ ok: false, text: data?.error || `Failed to process (${res.status})` });
     }
     setProcessingId(null);
   };
@@ -186,10 +193,11 @@ export default function PaymentRequestPage() {
     if (r.status === 'ST_PAY_PENDING_PARTNER') {
       return <span className="text-[14px] text-amana-neutral-400 italic">Waiting Partner</span>;
     }
-    return <span className="text-[14px] text-amana-neutral-400 italic">Rejected</span>;
+    return <span className="text-[14px] text-amana-neutral-400 italic">{STATUS_MAP[r.status]?.label ?? r.status}</span>;
   };
 
   const columns: DataTableColumn<PayReq>[] = [
+    { key: 'submitted', label: 'Submitted', sortValue: (r) => (r.submitted === '-' ? 0 : 1) },
     { key: 'idRequest', label: 'ID', width: '200px' },
     { key: 'user', label: 'Requester' },
     { key: 'type', label: 'Type' },
@@ -228,7 +236,7 @@ export default function PaymentRequestPage() {
   return (
     <>
       <div className="w-full h-full flex flex-col gap-3">
-        <PageTopBar showGreeting section="Career Hub" page="Payment Request" />
+        <PageTopBar showGreeting section="Payment" page="Payment Approval" />
 
         <SearchPanel
           title="Search Payment Request"
@@ -250,13 +258,13 @@ export default function PaymentRequestPage() {
             columns={columns}
             rows={filtered}
             defaultSortKey="idRequest"
-            emptyMessage="Tidak ada pengajuan."
+            emptyMessage="No requests found."
           />
         </SectionCard>
       </div>
 
       {message && (
-        <Modal title={message.ok ? 'Berhasil' : 'Gagal'} onClose={() => setMessage(null)} maxWidth="max-w-md">
+        <Modal title={message.ok ? 'Success' : 'Failed'} onClose={() => setMessage(null)} maxWidth="max-w-md">
           <div className="px-5 py-4 flex flex-col gap-3 bg-amana-neutral-100">
             <p className="text-[15px] text-amana-neutral-500">{message.text}</p>
             <Button variant="primary" onClick={() => setMessage(null)}>

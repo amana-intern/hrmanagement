@@ -1,11 +1,12 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import PageTopBar from '../layout/PageTopBar';
 import SectionCard from '../layout/SectionCard';
 import DataTable from './DataTable';
 import type { DataTableColumn } from './DataTable';
 import ToggleButton from '../forms/ToggleButton';
+import { formatDateWIB } from '@/app/utils/formatDate';
 
 export interface Contract {
   id: number | string;
@@ -46,9 +47,22 @@ interface ContractTrackingPageProps {
   actionsColumn?: DataTableColumn<Contract>;
   /** Show the Start Date column (HR view). */
   showStartDate?: boolean;
+  /** Breadcrumb section label (default "Career Hub"). */
+  section?: string;
+  /** Breadcrumb page label (default "Contract Tracking"). */
+  page?: string;
+  /** Konten aksi tambahan di kanan baris filter (mis. tombol Add/Extend Contract). */
+  headerAction?: ReactNode;
 }
 
-export default function ContractTrackingPage({ contracts, actionsColumn, showStartDate = false }: ContractTrackingPageProps) {
+export default function ContractTrackingPage({
+  contracts,
+  actionsColumn,
+  showStartDate = false,
+  section = 'Career Hub',
+  page = 'Contract Tracking',
+  headerAction,
+}: ContractTrackingPageProps) {
   const [activeFilter, setActiveFilter] = useState<FilterKey>('all');
 
   const filtered = useMemo(
@@ -67,7 +81,7 @@ export default function ContractTrackingPage({ contracts, actionsColumn, showSta
             label: 'Start Date',
             sortValue: (c: Contract) => (c.startDate ? new Date(c.startDate).getTime() : 0),
             render: (c: Contract) =>
-              c.startDate ? new Date(c.startDate + 'T00:00:00').toLocaleDateString('id-ID') : '-',
+              c.startDate ? formatDateWIB(new Date(c.startDate + 'T00:00:00')) : '-',
           } as DataTableColumn<Contract>,
         ]
       : []),
@@ -77,7 +91,7 @@ export default function ContractTrackingPage({ contracts, actionsColumn, showSta
 
   return (
     <div className="w-full h-full flex flex-col gap-3">
-      <PageTopBar showGreeting section="Career Hub" page="Contract Tracking" />
+      <PageTopBar showGreeting section={section} page={page} />
 
       <div className="flex-shrink-0 flex flex-col lg:flex-row lg:items-center gap-3 bg-amana-neutral-100 rounded-[5px] border border-amana-primary-500 shadow-sm px-5 py-2.5">
         <div className="flex-1">
@@ -95,6 +109,7 @@ export default function ContractTrackingPage({ contracts, actionsColumn, showSta
               {f.label}
             </ToggleButton>
           ))}
+          {headerAction}
         </div>
       </div>
 

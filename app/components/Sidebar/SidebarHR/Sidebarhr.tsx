@@ -25,7 +25,7 @@ const groups: NavGroup[] = [
       { href: '/hr/contracttracking', label: 'Contract Tracking' },
       { href: '/hr/talentroster', label: 'Talent Management' },
       { href: '/hr/joblistings', label: 'Job Listings' },
-      { href: '/user/assessment', label: 'Assessment' },
+      { href: '/user/careerhub', label: 'Career Hub' },
     ],
   },
 ];

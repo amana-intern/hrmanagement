@@ -12,6 +12,9 @@ import TextField from '../../components/forms/TextField';
 import SelectField from '../../components/forms/SelectField';
 import SharedUploadBox from '../../components/forms/UploadBox';
 import { easeOut } from '@/app/utils/motion';
+import { formatDateTimeWIB } from '@/app/utils/formatDate';
+import { DEPARTMENT_LABEL } from '@/lib/roles';
+import { useRole, isAdminRole } from '@/app/utils/useRole';
 import { PAYMENT_KATEGORI, PAYMENT_STATUS } from '@/lib/constants';
 
 interface OutgoingPayment {
@@ -19,8 +22,39 @@ interface OutgoingPayment {
   timeSubmission: string | null;
   toWhom: string | null;
   submittedToWhom: string | null;
+  requester: string | null;
+  department: string | null;
+  partner: string | null;
+  paymentUnder: string | null;
   idStatus: string | null;
   namaStatus: string | null;
+}
+
+function parseDetail(detail?: string | null): Record<string, string> {
+  if (!detail) return {};
+  try {
+    const parsed = JSON.parse(detail);
+    return typeof parsed === 'object' && parsed !== null ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function mapOutgoingPayment(p: Record<string, unknown>): OutgoingPayment {
+  const detail = parseDetail((p as { detail?: string | null }).detail ?? null);
+  const karyawan = (p as { karyawan?: { nama?: string | null; department?: string | null } | null }).karyawan;
+  return {
+    id: (p as { idRequest?: string }).idRequest ?? String(Math.random()),
+    timeSubmission: (p as { createdAt?: string | null }).createdAt ?? null,
+    toWhom: (p as { masterKategoriPayment?: { namaKategori?: string | null } | null }).masterKategoriPayment?.namaKategori ?? null,
+    submittedToWhom: (p as { projectID?: string | null }).projectID ?? null,
+    requester: karyawan?.nama ?? null,
+    department: karyawan?.department ? DEPARTMENT_LABEL[karyawan.department] ?? karyawan.department : null,
+    partner: detail.partner ?? null,
+    paymentUnder: detail.paymentUnder ?? null,
+    idStatus: (p as { idStatus?: string | null }).idStatus ?? null,
+    namaStatus: (p as { masterStatus?: { namaStatus?: string | null } | null }).masterStatus?.namaStatus ?? null,
+  };
 }
 
 function statusColor(s: string | null): string {
@@ -40,10 +74,15 @@ const paymentColumns: DataTableColumn<OutgoingPayment>[] = [
   {
     key: 'timeSubmission',
     label: 'Time Submission',
+    render: (r) => formatDateTimeWIB(r.timeSubmission),
     sortValue: (r) => (r.timeSubmission ? new Date(r.timeSubmission).getTime() : 0),
   },
+  { key: 'requester', label: 'Requester' },
+  { key: 'department', label: 'Department' },
+  { key: 'partner', label: 'Partner' },
+  { key: 'paymentUnder', label: 'Payment Under' },
   { key: 'toWhom', label: 'To Whom' },
-  { key: 'submittedToWhom', label: 'Submitted To Whom' },
+  { key: 'submittedToWhom', label: 'Event/Vendor Name' },
   {
     key: 'idStatus',
     label: 'Status',
@@ -73,6 +112,8 @@ function UploadBox({
 }
 
 export default function PaymentPage() {
+  const userRole = useRole();
+  const isAdmin = isAdminRole(userRole);
   const [step, setStep] = useState(1);
   const [role, setRole] = useState('');
   const [practiceGroup, setPracticeGroup] = useState('');
@@ -106,16 +147,7 @@ export default function PaymentPage() {
         const res = await fetch('/api/payment/list?scope=mine', { cache: 'no-store' });
         if (res.ok) {
           const data = await res.json();
-          setOutgoingPayments(
-            ((data.list ?? []) as Record<string, unknown>[]).map((p) => ({
-              id: (p as { idRequest?: string }).idRequest ?? String(Math.random()),
-              timeSubmission: (p as { createdAt?: string | null }).createdAt ?? null,
-              toWhom: (p as { masterKategoriPayment?: { namaKategori?: string | null } | null }).masterKategoriPayment?.namaKategori ?? null,
-              submittedToWhom: (p as { projectID?: string | null }).projectID ?? null,
-              idStatus: (p as { idStatus?: string | null }).idStatus ?? null,
-              namaStatus: (p as { masterStatus?: { namaStatus?: string | null } | null }).masterStatus?.namaStatus ?? null,
-            }))
-          );
+          setOutgoingPayments(((data.list ?? []) as Record<string, unknown>[]).map(mapOutgoingPayment));
         }
       } catch {}
       setLoadingPayments(false);
@@ -164,7 +196,7 @@ export default function PaymentPage() {
 
     const detail =
       paymentFor === 'Vendor'
-        ? JSON.stringify({ type: 'Vendor', vendorName, vendorNpwp, vendorDueDate })
+        ? JSON.stringify({ type: 'Vendor', vendorName, vendorNpwp, vendorDueDate, role, practiceGroup, partner, paymentUnder })
         : paymentFor === 'Individual(s)'
         ? JSON.stringify({
             type: 'Individual(s)',
@@ -174,8 +206,12 @@ export default function PaymentPage() {
             indBankName,
             indAccNumber,
             indComponent,
+            role,
+            practiceGroup,
+            partner,
+            paymentUnder,
           })
-        : JSON.stringify({ type: 'Per Diem', perDiemEvent, perDiemParticipants });
+        : JSON.stringify({ type: 'Per Diem', perDiemEvent, perDiemParticipants, role, practiceGroup, partner, paymentUnder });
 
     const fd = new FormData();
     fd.append('projectID', projectID || 'Pending Detail');
@@ -203,28 +239,19 @@ export default function PaymentPage() {
         const list = await fetch('/api/payment/list?scope=mine', { cache: 'no-store' });
         if (list.ok) {
           const ldata = await list.json();
-          setOutgoingPayments(
-            ((ldata.list ?? []) as Record<string, unknown>[]).map((p) => ({
-              id: (p as { idRequest?: string }).idRequest ?? String(Math.random()),
-              timeSubmission: (p as { createdAt?: string | null }).createdAt ?? null,
-              toWhom: (p as { masterKategoriPayment?: { namaKategori?: string | null } | null }).masterKategoriPayment?.namaKategori ?? null,
-              submittedToWhom: (p as { projectID?: string | null }).projectID ?? null,
-              idStatus: (p as { idStatus?: string | null }).idStatus ?? null,
-              namaStatus: (p as { masterStatus?: { namaStatus?: string | null } | null }).masterStatus?.namaStatus ?? null,
-            }))
-          );
+          setOutgoingPayments(((ldata.list ?? []) as Record<string, unknown>[]).map(mapOutgoingPayment));
         }
       } else {
-        alert(data.error || 'Gagal mengirim pengajuan');
+        alert(data.error || 'Failed to submit request');
       }
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Terjadi kesalahan jaringan');
+      alert(err instanceof Error ? err.message : 'Network error');
     }
   };
 
   return (
     <div className="w-full h-full flex flex-col gap-3">
-      <PageTopBar showGreeting section="Career Hub" page="Payment" />
+      <PageTopBar showGreeting section={isAdmin ? 'Payment' : 'Services'} page={isAdmin ? 'Payment Request' : 'Request Payment'} />
 
       {step === 1 && (
         <motion.div
@@ -236,7 +263,7 @@ export default function PaymentPage() {
           <SectionCard title="Outgoing Payments" scroll>
             {outgoingPayments.length === 0 ? (
               <p className="py-8 text-center text-[14px] text-amana-neutral-400 font-medium">
-                {loadingPayments ? 'Memuat data...' : "You haven't requested any payments yet"}
+                {loadingPayments ? 'Loading data...' : "You haven't requested any payments yet"}
               </p>
             ) : (
               <DataTable columns={paymentColumns} rows={outgoingPayments} defaultSortKey="timeSubmission" />
