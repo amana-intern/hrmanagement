@@ -8,6 +8,7 @@ import PageTopBar from '../layout/PageTopBar';
 import Button from '../forms/Button';
 import Collapse from '../layout/Collapse';
 import StatBox, { type Stat } from './StatBox';
+import CareerHistoryModal, { type CareerHistoryEntry } from './CareerHistoryModal';
 import { cn } from '@/app/utils/cn';
 import { springSnappy, durationFast, easeOut } from '@/app/utils/motion';
 import { logout } from '@/lib/useAuth';
@@ -36,7 +37,7 @@ export interface TodoItem {
 
 function SummaryPanel({ title, stats, updates }: SummaryPanelConfig) {
   return (
-    <div className="flex-1 min-h-0 flex flex-col bg-amana-neutral-100 rounded-[7px] border border-amana-primary-500 shadow-sm px-4 py-2.5">
+    <div className="flex-1 min-h-0 flex flex-col bg-amana-neutral-100 rounded-[5px] border border-amana-primary-500 shadow-sm px-4 py-2.5">
       <h3 className="flex-shrink-0 text-[20px] font-semibold text-amana-primary-500 pb-1.5 mb-2 border-b border-amana-primary-500">
         {title}
       </h3>
@@ -63,15 +64,15 @@ function SummaryPanel({ title, stats, updates }: SummaryPanelConfig) {
   );
 }
 
-function EmployeeBio({ name, role, email, phone, photoSrc }: ProfileBio) {
+function EmployeeBio({ name, role, email, phone, photoSrc, onViewDetails }: ProfileBio & { onViewDetails?: () => void }) {
   return (
-    <div className="flex-shrink-0 bg-amana-neutral-100 rounded-[8px] border border-amana-primary-500 shadow-sm px-4 py-2.5">
+    <div className="flex-shrink-0 bg-amana-neutral-100 rounded-[5px] border border-amana-primary-500 shadow-sm px-4 py-2.5">
       <h3 className="text-[20px] font-semibold text-amana-primary-500 pb-1.5 mb-3 border-b border-amana-primary-500">
         Employee Bio
       </h3>
       <div className="flex items-center gap-3">
         <div className="flex-1 min-w-0 text-right">
-          <p className="text-[35px] font-light text-amana-primary-500 leading-tight truncate">{name}</p>
+          <p className="text-[35px] font-light text-amana-primary-500 leading-tight break-words">{name}</p>
           <div className="border-t border-amana-neutral-300 my-1" />
           <p className="text-[19px] font-light text-amana-primary-500 truncate">{role}</p>
           <div className="border-t border-amana-neutral-300 my-1" />
@@ -81,7 +82,7 @@ function EmployeeBio({ name, role, email, phone, photoSrc }: ProfileBio) {
           <div className="border-t border-amana-neutral-300 my-1" />
           <p className="text-[19px] font-light text-amana-primary-500 truncate">{phone}</p>
         </div>
-        <div className="w-[92px] h-[123px] rounded-[4px] overflow-hidden border border-amana-primary-500 shadow-md flex-shrink-0 bg-amana-neutral-200 flex items-center justify-center">
+        <div className="w-[92px] h-[123px] rounded-[8px] overflow-hidden border border-amana-primary-500 shadow-md flex-shrink-0 bg-amana-neutral-200 flex items-center justify-center">
           {photoSrc ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={photoSrc} alt="" className="w-full h-full object-cover" />
@@ -97,6 +98,11 @@ function EmployeeBio({ name, role, email, phone, photoSrc }: ProfileBio) {
           )}
         </div>
       </div>
+      {onViewDetails && (
+        <Button variant="primary" size="md" className="w-full mt-3" onClick={onViewDetails}>
+          View Details
+        </Button>
+      )}
     </div>
   );
 }
@@ -156,7 +162,7 @@ function ToDoList({
   };
 
   return (
-    <div className="flex-1 min-h-0 flex flex-col bg-amana-neutral-100 rounded-[8px] border border-amana-primary-500 shadow-sm px-4 py-2.5">
+    <div className="flex-1 min-h-0 flex flex-col bg-amana-neutral-100 rounded-[5px] border border-amana-primary-500 shadow-sm px-4 py-2.5">
       <h3 className="text-[20px] font-semibold text-amana-primary-500 pb-1.5 mb-1.5 border-b border-amana-primary-500 flex-shrink-0">
         To-Do List
       </h3>
@@ -220,7 +226,7 @@ function ToDoList({
                 )}
                 <span
                   className={cn(
-                    'w-[18px] h-[18px] rounded-[4px] border flex items-center justify-center flex-shrink-0',
+                    'w-[18px] h-[18px] rounded-[8px] border flex items-center justify-center flex-shrink-0',
                     task.done
                       ? 'bg-amana-primary-500 border-amana-primary-500'
                       : 'border-amana-neutral-300 group-hover:border-amana-primary-500'
@@ -264,6 +270,8 @@ export interface ProfileOverviewProps {
   showGreeting?: boolean;
   /** Show a logout button at the top-right corner. */
   showLogout?: boolean;
+  /** Show a "View Details" button on the Employee Bio card, opening the user's own Career History. */
+  showCareerHistory?: boolean;
 }
 
 export default function ProfileOverview({
@@ -277,9 +285,13 @@ export default function ProfileOverview({
   pageLabel = 'Profile',
   showGreeting = false,
   showLogout = false,
+  showCareerHistory = false,
 }: ProfileOverviewProps) {
   const router = useRouter();
   const [loggingOut, setLoggingOut] = useState(false);
+  const [careerHistoryOpen, setCareerHistoryOpen] = useState(false);
+  const [careerHistory, setCareerHistory] = useState<CareerHistoryEntry[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
 
   const handleLogout = async () => {
     if (loggingOut) return;
@@ -290,6 +302,23 @@ export default function ProfileOverview({
     } finally {
       setLoggingOut(false);
     }
+  };
+
+  const openCareerHistory = async () => {
+    setCareerHistoryOpen(true);
+    setLoadingHistory(true);
+    try {
+      const res = await fetch('/api/me/career-history', { cache: 'no-store' });
+      if (res.ok) {
+        const data = await res.json();
+        setCareerHistory(data.list ?? []);
+      } else {
+        setCareerHistory([]);
+      }
+    } catch {
+      setCareerHistory([]);
+    }
+    setLoadingHistory(false);
   };
 
   return (
@@ -323,7 +352,7 @@ export default function ProfileOverview({
         </div>
 
         <div className="flex flex-col gap-4 w-full lg:w-2/5 min-h-0">
-          <EmployeeBio {...bio} />
+          <EmployeeBio {...bio} onViewDetails={showCareerHistory ? openCareerHistory : undefined} />
           <ToDoList
             initialTodos={initialTodos}
             todos={todos}
@@ -333,6 +362,15 @@ export default function ProfileOverview({
           />
         </div>
       </div>
+
+      {careerHistoryOpen && (
+        <CareerHistoryModal
+          employeeName={bio.name}
+          history={careerHistory}
+          loading={loadingHistory}
+          onClose={() => setCareerHistoryOpen(false)}
+        />
+      )}
     </div>
   );
 }

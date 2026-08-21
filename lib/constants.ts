@@ -55,6 +55,19 @@ export const ASSESSMENT_STATUS = {
   CLOSED: 'ST_ASM_CLOSED',
 } as const;
 
+// AssessmentQuestion.tipeSoal — null means the legacy fixed 1-4 proficiency-level question.
+export const ASSESSMENT_QUESTION_TYPES = {
+  MULTIPLE_CHOICE: 'multiple_choice',
+  CHECKBOX: 'checkbox',
+  SHORT_ANSWER: 'short_answer',
+} as const;
+
+export const ASSESSMENT_QUESTION_TYPE_LABELS: Record<string, string> = {
+  multiple_choice: 'Multiple Choice',
+  checkbox: 'Checkbox',
+  short_answer: 'Short Answer',
+};
+
 // MasterStatus — talent
 export const TALENT_STATUS = {
   PENDING: 'ST_TAL_PENDING',
@@ -66,3 +79,11 @@ export const JOB_STATUS = {
   OPEN: 'OPEN',
   CLOSED: 'CLOSED',
 } as const;
+
+// Karyawan.department key -> display label.
+export const DEPARTMENT_LABELS: Record<string, string> = {
+  health: 'Health & Wellbeing',
+  digital: 'Digital & Finance',
+  education: 'Education & HR',
+  ops: 'Operations',
+};

@@ -1,6 +1,7 @@
 'use client';
 
 import { ReactNode, useEffect, useState } from 'react';
+import { useBreadcrumb } from './BreadcrumbContext';
 
 export default function PageTopBar({
   section,
@@ -8,7 +9,7 @@ export default function PageTopBar({
   right,
   showGreeting = false,
 }: {
-  /** Grey breadcrumb prefix, e.g. "Career Hub". Renders "{section} > {page}" — pass `right` instead for anything else. */
+  /** Grey breadcrumb prefix, e.g. "Career Hub". Renders "{section} > {page}" — auto-derived from the current sidebar entry when omitted; pass `right` instead for anything else. */
   section?: string;
   page?: string;
   right?: ReactNode;
@@ -16,6 +17,9 @@ export default function PageTopBar({
 }) {
   const [dateLabel, setDateLabel] = useState('');
   const [greeting, setGreeting] = useState('');
+  const auto = useBreadcrumb();
+  const effectiveSection = section ?? auto?.section;
+  const effectivePage = page ?? auto?.page;
 
   useEffect(() => {
     const update = () => {
@@ -45,16 +49,16 @@ export default function PageTopBar({
   }, []);
 
   const content =
-    section && page ? (
+    effectiveSection && effectivePage ? (
       <>
-        <span className="text-amana-neutral-300">{section}</span> <span className="text-amana-neutral-300">{'>'}</span> {page}
+        <span className="text-amana-neutral-300">{effectiveSection}</span> <span className="text-amana-neutral-300">{'>'}</span> {effectivePage}
       </>
     ) : (
       right
     );
 
   return (
-    <div className="flex-shrink-0 -mt-2 md:-mt-3 lg:-mt-4 bg-amana-neutral-100 rounded-b-[10px] shadow-sm px-3 py-2.5">
+    <div className="flex-shrink-0 -mt-2 md:-mt-3 lg:-mt-4 bg-amana-neutral-100 rounded-b-[5px] shadow-sm px-3 py-2.5">
       {showGreeting && <p className="text-[16px] font-semibold text-amana-primary-500">{greeting}</p>}
       <div className="flex items-center gap-2.5">
         <p className="flex-1 min-w-0 text-[16px] font-semibold text-amana-primary-500 truncate">{dateLabel}</p>

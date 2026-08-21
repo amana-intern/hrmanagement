@@ -3,29 +3,37 @@
 import SidebarNavBase from '../SidebarNavBase';
 import type { NavGroup } from '../SidebarNavBase';
 
-const groups: NavGroup[] = [
-  { title: 'Account', links: [{ href: '/hr/profile', label: 'Profile' }] },
+export const groups: NavGroup[] = [
   {
-    title: 'Attendance',
+    title: 'Account',
     links: [
-      { href: '/hr/leaverecord', label: 'Leave Record' },
-      { href: '/hr/medicalleave', label: 'Medical Leave Record' },
-      { href: '/hr/blockeddates', label: 'Blocked Dates' },
-      { href: '/user/attendance/leaverequest', label: 'Leave Request' },
-      { href: '/user/attendance/sickleave', label: 'Sick Leave' },
+      { href: '/hr/profile', label: 'Profile' },
+      { href: '/user/careerhub', label: 'Career Hub', activePaths: ['/user/assessment', '/user/careerhub/result'] },
     ],
   },
   {
-    title: 'Payment',
-    links: [{ href: '/user/payment', label: 'Payment Request' }],
+    title: 'Services',
+    links: [
+      { href: '/user/attendance/leaverequest', label: 'Leave Request' },
+      { href: '/user/attendance/sickleave', label: 'Sick Request' },
+      { href: '/user/payment', label: 'Payment Request' },
+    ],
   },
   {
-    title: 'Career Hub',
+    title: 'Employee Record',
     links: [
+      { href: '/hr/medicalleave', label: 'Medical Leave Record' },
+      { href: '/hr/leaverecord', label: 'Leave Record' },
+    ],
+  },
+  {
+    title: 'HR Center',
+    links: [
+      { href: '/hr/manageassessment', label: 'Assessment Editor' },
+      { href: '/hr/blockeddates', label: 'Leave Blocker' },
       { href: '/hr/contracttracking', label: 'Contract Tracking' },
-      { href: '/hr/talentroster', label: 'Talent Management' },
-      { href: '/hr/joblistings', label: 'Job Listings' },
-      { href: '/user/assessment', label: 'Assessment' },
+      { href: '/hr/talentroster', label: 'Talent Roster' },
+      { href: '/hr/joblistings', label: 'Job Listing' },
     ],
   },
 ];

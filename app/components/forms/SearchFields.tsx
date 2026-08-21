@@ -20,7 +20,7 @@ export function SearchTextField({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full border border-amana-neutral-300 rounded-[13px] px-3 py-2.5 text-[16px] text-amana-neutral-500 placeholder:text-amana-neutral-300 transition-colors duration-200 focus:outline-none focus:border-amana-primary-500"
+        className="w-full border border-amana-neutral-300 rounded-[8px] px-3 py-2.5 text-[16px] text-amana-neutral-500 placeholder:text-amana-neutral-300 transition-colors duration-200 focus:outline-none focus:border-amana-primary-500"
       />
     </div>
   );
@@ -44,7 +44,7 @@ export function SearchSelectField({
         <select
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="w-full appearance-none border border-amana-neutral-300 rounded-[13px] px-3 py-2.5 pr-9 text-[16px] text-amana-neutral-500 bg-transparent transition-colors duration-200 focus:outline-none focus:border-amana-primary-500"
+          className="w-full appearance-none border border-amana-neutral-300 rounded-[8px] px-3 py-2.5 pr-9 text-[16px] text-amana-neutral-500 bg-transparent transition-colors duration-200 focus:outline-none focus:border-amana-primary-500"
         >
           <option value="">All</option>
           {options.map((o) => (

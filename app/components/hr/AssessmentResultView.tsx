@@ -2,13 +2,38 @@
 
 import { useMemo, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
-import ToggleButton from '../forms/ToggleButton';
 import { ASSESSMENT_LEVELS } from '@/lib/assessment-template';
 import { cn } from '@/app/utils/cn';
+
+// A plain, fixed-size tab button — unlike ToggleButton, it has no width-animating selection
+// indicator, so a row of many long-label tabs never reflows/resizes itself on click or hover.
+function CategoryTab({ selected, onClick, children }: { selected: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'flex-1 min-w-0 whitespace-normal text-center px-2 py-1.5 text-[13px] leading-[1.15] font-semibold rounded-[8px] border transition-colors duration-150',
+        selected
+          ? 'bg-amana-neutral-100 text-amana-primary-500 border-amana-primary-500'
+          : 'bg-amana-primary-500 text-amana-neutral-100 border-transparent hover:bg-amana-primary-100 hover:text-amana-primary-500'
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
+export interface AssessmentResultOption {
+  idOpsi: string;
+  teks: string | null;
+}
 
 export interface AssessmentResultQuestion {
   idPertanyaan: string;
   teks: string;
+  tipeSoal?: string | null;
+  options?: AssessmentResultOption[];
 }
 
 export interface AssessmentResultField {
@@ -17,11 +42,17 @@ export interface AssessmentResultField {
   questions?: AssessmentResultQuestion[];
 }
 
+export interface AssessmentResultAnswer {
+  level?: number | null;
+  pilihan?: string[] | null;
+  jawabanTeks?: string | null;
+}
+
 export interface AssessmentResultData {
   bidangSkor?: Record<string, number | null>;
   technicalSkills?: string | null;
   selfDevelopmentAreas?: string | null;
-  answers?: Record<string, number>;
+  answers?: Record<string, AssessmentResultAnswer>;
 }
 
 interface AssessmentResultViewProps {
@@ -138,31 +169,18 @@ export default function AssessmentResultView({ categories, assessment }: Assessm
   return (
     <div className="flex-1 min-h-0 overflow-y-auto scroll-smooth flex flex-col gap-4 pr-1">
       <div className="bg-amana-neutral-100 rounded-[5px] border border-amana-primary-500 shadow-sm px-5 py-2.5">
-        <div className="flex flex-wrap gap-2">
-          <ToggleButton
-            selected={selectedField === null}
-            onClick={() => setSelectedField(null)}
-            className="grow min-w-0 whitespace-normal text-center px-2 py-1.5 text-[13px] leading-[1.15]"
-          >
+        <div className="flex flex-nowrap gap-2">
+          <CategoryTab selected={selectedField === null} onClick={() => setSelectedField(null)}>
             Average
-          </ToggleButton>
+          </CategoryTab>
           {fields.map(({ field }) => (
-            <ToggleButton
-              key={field}
-              selected={selectedField === field}
-              onClick={() => setSelectedField(field)}
-              className="grow min-w-0 whitespace-normal text-center px-2 py-1.5 text-[13px] leading-[1.15]"
-            >
+            <CategoryTab key={field} selected={selectedField === field} onClick={() => setSelectedField(field)}>
               {field}
-            </ToggleButton>
+            </CategoryTab>
           ))}
-          <ToggleButton
-            selected={selectedField === SELF_ASSESSMENT_FIELD}
-            onClick={() => setSelectedField(SELF_ASSESSMENT_FIELD)}
-            className="grow min-w-0 whitespace-normal text-center px-2 py-1.5 text-[13px] leading-[1.15]"
-          >
+          <CategoryTab selected={selectedField === SELF_ASSESSMENT_FIELD} onClick={() => setSelectedField(SELF_ASSESSMENT_FIELD)}>
             {SELF_ASSESSMENT_LABEL}
-          </ToggleButton>
+          </CategoryTab>
         </div>
       </div>
 
@@ -176,18 +194,33 @@ export default function AssessmentResultView({ categories, assessment }: Assessm
           <div className="flex flex-col divide-y divide-amana-neutral-200">
             {selectedCategory.questions && selectedCategory.questions.length > 0 ? (
               selectedCategory.questions.map((q) => {
-                const level = assessment.answers?.[q.idPertanyaan];
-                const lvl = ASSESSMENT_LEVELS.find((l) => l.level === level);
+                const answer = assessment.answers?.[q.idPertanyaan];
+                const lvl = !q.tipeSoal ? ASSESSMENT_LEVELS.find((l) => l.level === answer?.level) : undefined;
+                const optionLabel = (idOpsi: string) => q.options?.find((o) => o.idOpsi === idOpsi)?.teks ?? idOpsi;
+
+                let content: React.ReactNode = '-';
+                let answered = false;
+                if (!q.tipeSoal) {
+                  content = lvl ? `L${lvl.level} (${lvl.label})` : '-';
+                  answered = !!lvl;
+                } else if (q.tipeSoal === 'short_answer') {
+                  content = answer?.jawabanTeks || '-';
+                  answered = !!answer?.jawabanTeks;
+                } else if (answer?.pilihan?.length) {
+                  content = answer.pilihan.map(optionLabel).join(', ');
+                  answered = true;
+                }
+
                 return (
                   <div key={q.idPertanyaan} className="min-h-[42px] flex items-center justify-between gap-3 py-1">
                     <span className="text-[15px] text-amana-neutral-500">{q.teks}</span>
                     <span
                       className={cn(
-                        'flex-shrink-0 rounded-full px-4 py-1 text-[14px] font-semibold',
-                        lvl ? 'bg-amana-success-500 text-amana-neutral-100' : 'bg-amana-neutral-300 text-amana-neutral-500'
+                        'flex-shrink-0 max-w-[280px] truncate rounded-full px-4 py-1 text-[14px] font-semibold',
+                        answered ? 'bg-amana-success-500 text-amana-neutral-100' : 'bg-amana-neutral-300 text-amana-neutral-500'
                       )}
                     >
-                      {lvl ? `L${lvl.level} (${lvl.label})` : '-'}
+                      {content}
                     </span>
                   </div>
                 );

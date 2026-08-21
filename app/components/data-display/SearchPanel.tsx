@@ -40,12 +40,9 @@ export default function SearchPanel({
           <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4">{children}</div>
 
           <div className="flex justify-end gap-3 pt-4">
-            <button
-              onClick={onReset}
-              className="px-8 py-3 rounded-lg border border-amana-primary-500 bg-amana-neutral-100 text-amana-primary-500 font-semibold text-base hover:bg-amana-primary-500 hover:text-amana-neutral-100"
-            >
+            <Button variant="outline" size="lg" onClick={onReset}>
               Reset
-            </button>
+            </Button>
             <Button variant="primary" size="lg" onClick={onSearch}>
               Search
             </Button>

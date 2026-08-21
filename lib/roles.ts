@@ -14,6 +14,14 @@ export function isEmployeeRole(role?: string | null): boolean {
   return role !== ROLES.PARTNER && role !== ROLES.ADMIN_HR && role !== ROLES.ADMIN_OPS;
 }
 
+// Admin HR/OPS are also staff and use employee self-service features themselves
+// (assessment, leave, sick leave, payment requests, CV, certificates) — only Partner
+// is a pure external approver with no employee record of their own.
+export function canUseEmployeeFeatures(role?: string | null): boolean {
+  if (!role) return false;
+  return role !== ROLES.PARTNER;
+}
+
 // Home route bagi tiap role setelah login
 export const ROLE_HOME: Record<Role, string> = {
   [ROLES.EMPLOYEE]: '/user/profile',

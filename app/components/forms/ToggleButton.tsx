@@ -55,7 +55,7 @@ export default function ToggleButton({
       disabled={disabled}
       transition={springSnappy}
       className={cn(
-        'inline-flex items-center justify-center px-4 py-2.5 rounded-[5px] text-[16px] font-semibold whitespace-nowrap border border-transparent',
+        'inline-flex items-center justify-center px-4 py-2.5 rounded-[8px] text-[16px] font-semibold whitespace-nowrap border border-transparent',
         disabled
           ? 'bg-amana-neutral-200 text-amana-neutral-300 cursor-not-allowed'
           : selected

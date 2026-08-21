@@ -15,6 +15,12 @@ export function useFilters<F extends object>(emptyFilters: F) {
     setDraft((prev) => ({ ...prev, [key]: value }));
   };
 
+  // Bypasses the "click Search" step — for quick-pickers (e.g. inline date range next to an export button).
+  const setFieldAndApply = <K extends keyof F>(key: K, value: F[K]) => {
+    setDraft((prev) => ({ ...prev, [key]: value }));
+    setApplied((prev) => ({ ...prev, [key]: value }));
+  };
+
   const handleSearch = () => setApplied(draft);
 
   const handleReset = () => {
@@ -22,5 +28,5 @@ export function useFilters<F extends object>(emptyFilters: F) {
     setApplied(emptyFilters);
   };
 
-  return { draft, applied, setDraft, setField, handleSearch, handleReset };
+  return { draft, applied, setDraft, setField, setFieldAndApply, handleSearch, handleReset };
 }

@@ -1,9 +1,11 @@
 import { requireAuth } from '@/lib/dal';
 import { prisma } from '@/lib/prisma';
-import { ASSESSMENT_STATUS } from '@/lib/constants';
+import { ASSESSMENT_STATUS, ASSESSMENT_QUESTION_TYPES } from '@/lib/constants';
 
 // POST /api/assessments/submit — employee mengisi assessment.
-// Body: { idAssessment, answers: { [idPertanyaan]: level 1-4 }, technicalSkills, selfDevelopmentAreas }
+// Body: { idAssessment, answers: { [idPertanyaan]: { level?, pilihan?, jawabanTeks? } }, technicalSkills, selfDevelopmentAreas }
+// Field yang dipakai per pertanyaan tergantung tipeSoal-nya: legacy (null) = level 1-4,
+// multiple_choice/checkbox = pilihan (array idOpsi), short_answer = jawabanTeks.
 // Hanya pertanyaan yang dijawab yang disimpan (bisa di-skip). 2 isian teks wajib.
 // Upsert: pengisian baru menggantikan submission lama per orang per assessment.
 export async function POST(request: Request) {
@@ -31,7 +33,7 @@ export async function POST(request: Request) {
     const assessment = await prisma.assessment.findUnique({
       where: { idAssessment },
       include: {
-        categories: { include: { questions: true } },
+        categories: { include: { questions: { include: { options: true } } } },
       },
     });
     if (!assessment) return Response.json({ error: 'Assessment tidak ditemukan' }, { status: 404 });
@@ -39,24 +41,49 @@ export async function POST(request: Request) {
       return Response.json({ error: 'Assessment sudah ditutup' }, { status: 409 });
     }
 
-    const validQuestionIds = new Set(
-      assessment.categories.flatMap((c) => c.questions.map((q) => q.idPertanyaan))
+    const questionMap = new Map(
+      assessment.categories.flatMap((c) => c.questions.map((q) => [q.idPertanyaan, q]))
     );
 
-    const answerRows = Array.isArray(answers) || typeof answers === 'object'
-      ? Object.entries(answers ?? {})
-          .map(([idPertanyaan, lvl]) => ({
-            idPertanyaan,
-            level: Number(lvl),
-          }))
-          .filter(
-            (a) =>
-              validQuestionIds.has(a.idPertanyaan) &&
-              Number.isInteger(a.level) &&
-              a.level >= 1 &&
-              a.level <= 4
-          )
-      : [];
+    // Per question type: legacy (tipeSoal null) reads `level` (1-4); multiple_choice/checkbox reads
+    // `pilihan` (array of option ids, validated against that question's own options); short_answer
+    // reads `jawabanTeks`.
+    type AnswerRow = { idPertanyaan: string; level: number | null; pilihan: string[] | null; jawabanTeks: string | null };
+    const answerRows: AnswerRow[] = [];
+    if (answers && typeof answers === 'object') {
+      for (const [idPertanyaan, raw] of Object.entries(answers as Record<string, unknown>)) {
+        const question = questionMap.get(idPertanyaan);
+        if (!question) continue;
+        const value = (raw && typeof raw === 'object' ? raw : {}) as {
+          level?: unknown;
+          pilihan?: unknown;
+          jawabanTeks?: unknown;
+        };
+
+        if (!question.tipeSoal) {
+          const level = Number(value.level);
+          if (Number.isInteger(level) && level >= 1 && level <= 4) {
+            answerRows.push({ idPertanyaan, level, pilihan: null, jawabanTeks: null });
+          }
+          continue;
+        }
+
+        if (question.tipeSoal === ASSESSMENT_QUESTION_TYPES.SHORT_ANSWER) {
+          const text = String(value.jawabanTeks ?? '').trim();
+          if (text) answerRows.push({ idPertanyaan, level: null, pilihan: null, jawabanTeks: text });
+          continue;
+        }
+
+        // multiple_choice / checkbox
+        const validOptionIds = new Set(question.options.map((o) => o.idOpsi));
+        const ids = (Array.isArray(value.pilihan) ? value.pilihan : [])
+          .map((v) => String(v))
+          .filter((v) => validOptionIds.has(v));
+        if (ids.length > 0) {
+          answerRows.push({ idPertanyaan, level: null, pilihan: ids, jawabanTeks: null });
+        }
+      }
+    }
 
     const idSubmission = `ASUB-${Date.now()}`;
 
@@ -81,6 +108,8 @@ export async function POST(request: Request) {
               idJawaban: `${idSubmission}-${a.idPertanyaan}`,
               idPertanyaan: a.idPertanyaan,
               level: a.level,
+              pilihan: a.pilihan ?? undefined,
+              jawabanTeks: a.jawabanTeks,
             })),
           },
         },

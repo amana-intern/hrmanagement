@@ -5,6 +5,7 @@ import { AnimatePresence } from 'framer-motion';
 import { Upload, FileText, Eye } from 'lucide-react';
 import { cn } from '@/app/utils/cn';
 import Modal from '../feedback/Modal';
+import Button from './Button';
 
 /**
  * Matches Figma's "Upload Hover" component: amana-neutral-100 background by default,
@@ -53,18 +54,20 @@ export default function UploadBox({
             <p className="max-w-[85%] truncate text-[16px] text-center text-amana-neutral-500 transition-colors duration-200 group-hover:text-amana-primary-500">
               {file.name}
             </p>
-            <button
+            <Button
               type="button"
+              variant="outline"
+              size="sm"
+              className="relative z-20"
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
                 setPreviewOpen(true);
               }}
-              className="relative z-20 inline-flex items-center gap-1.5 rounded-lg border border-amana-primary-500 bg-amana-neutral-100 px-4 py-1.5 text-[13px] font-semibold text-amana-primary-500 hover:bg-amana-primary-500 hover:text-amana-neutral-100 transition-colors"
             >
               <Eye className="h-3.5 w-3.5" />
               View
-            </button>
+            </Button>
           </>
         ) : (
           <>
@@ -82,9 +85,9 @@ export default function UploadBox({
             <div className="flex-1 p-4">
               {file.type.startsWith('image/') ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={previewUrl} alt={file.name} className="h-full w-full rounded-[13px] border border-amana-neutral-300 object-contain" />
+                <img src={previewUrl} alt={file.name} className="h-full w-full rounded-[5px] border border-amana-neutral-300 object-contain" />
               ) : (
-                <iframe src={previewUrl} className="h-full w-full rounded-[13px] border border-amana-neutral-300" title={file.name} />
+                <iframe src={previewUrl} className="h-full w-full rounded-[5px] border border-amana-neutral-300" title={file.name} />
               )}
             </div>
           </Modal>

@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/prisma';
 import { createSession, deleteSession } from '@/lib/session';
 import { ASSESSMENT_STATUS } from '@/lib/constants';
-import { isEmployeeRole } from '@/lib/roles';
+import { canUseEmployeeFeatures } from '@/lib/roles';
 
 export async function POST(request: NextRequest) {
   try {
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
     // Flag: user baru yang belum mengisi assessment yang sedang berjalan.
     // Hanya untuk karyawan (Employee + role custom); Partner/Admin tidak wajib.
     let needsAssessment = false;
-    if (idKaryawan && isEmployeeRole(user.idRole)) {
+    if (idKaryawan && canUseEmployeeFeatures(user.idRole)) {
       const now = new Date();
       const open = await prisma.assessment.findFirst({
         where: {

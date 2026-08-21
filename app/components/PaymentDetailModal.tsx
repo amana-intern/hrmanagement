@@ -2,6 +2,8 @@
 
 import { ReactNode, useState } from 'react';
 import Modal from './feedback/Modal';
+import PdfPreviewModal, { PdfPreviewTarget } from './feedback/PdfPreviewModal';
+import Button from './forms/Button';
 import { PAYMENT_KATEGORI } from '@/lib/constants';
 
 interface Attachment {
@@ -42,22 +44,16 @@ function AttachmentLink({ file, label, onPreview }: { file?: Attachment | null; 
     return (
       <div className="py-2.5 border-b border-amana-neutral-200 last:border-0">
         <p className="text-xs font-medium text-amana-neutral-500 mb-0.5">{label}</p>
-        <p className="text-sm text-amana-neutral-400 italic">Tidak ada lampiran</p>
+        <p className="text-sm text-amana-neutral-400 italic">No attachment</p>
       </div>
     );
   }
   return (
     <div className="py-2.5 border-b border-amana-neutral-200 last:border-0">
       <p className="text-xs font-medium text-amana-neutral-500 mb-1">{label}</p>
-      <button
-        onClick={() => onPreview(file)}
-        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-amana-primary-500/5 border border-amana-primary-500/25 text-amana-primary-500 text-xs font-semibold hover:bg-amana-primary-500/10 transition-colors"
-      >
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-        </svg>
-        Lihat {file.fileName || label}
-      </button>
+      <Button variant="outline" size="sm" onClick={() => onPreview(file)}>
+        View {file.fileName || label}
+      </Button>
     </div>
   );
 }
@@ -80,7 +76,7 @@ function formatTanggal(v?: string) {
 }
 
 export default function PaymentDetailModal({ row, open, onClose }: PaymentDetailModalProps) {
-  const [preview, setPreview] = useState<{ url: string; name: string } | null>(null);
+  const [preview, setPreview] = useState<PdfPreviewTarget | null>(null);
 
   if (!row) return null;
 
@@ -94,7 +90,7 @@ export default function PaymentDetailModal({ row, open, onClose }: PaymentDetail
   const findAtt = (key: string) => att.find((a) => a.kategori === key) ?? null;
   const pax = (v: unknown) => (v === undefined || v === null || v === '' ? undefined : String(v));
   const handlePreview = (f: Attachment) => {
-    if (f.fileURL) setPreview({ url: f.fileURL, name: f.fileName || 'Lampiran' });
+    if (f.fileURL) setPreview({ url: f.fileURL, title: f.fileName || 'Attachment' });
   };
 
   let body: ReactNode;
@@ -144,23 +140,7 @@ export default function PaymentDetailModal({ row, open, onClose }: PaymentDetail
         </Modal>
       )}
 
-      {preview && (
-        <div className="fixed inset-0 z-[60] bg-amana-neutral-900/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-amana-neutral-100 w-[95vw] max-w-6xl h-[92vh] rounded-2xl flex flex-col relative overflow-hidden shadow-2xl animate-scale-in">
-            <div className="p-4 border-b border-amana-neutral-200 flex items-center justify-between bg-amana-neutral-100">
-              <h4 className="font-semibold text-amana-neutral-700 truncate">{preview.name}</h4>
-              <button onClick={() => setPreview(null)} className="text-amana-neutral-500 hover:text-amana-neutral-700 transition p-1 hover:bg-amana-neutral-200 rounded-lg">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            <div className="flex-1 bg-amana-neutral-200">
-              <iframe src={preview.url} className="w-full h-full" title={preview.name} />
-            </div>
-          </div>
-        </div>
-      )}
+      <PdfPreviewModal target={preview} onClose={() => setPreview(null)} />
     </>
   );
 }

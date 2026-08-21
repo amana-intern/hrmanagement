@@ -37,7 +37,7 @@ export default function Modal({
       />
       <motion.div
         className={cn(
-          'relative w-full flex flex-col bg-amana-neutral-100 rounded-[10px] border border-amana-primary-500 shadow-lg overflow-hidden',
+          'relative w-full flex flex-col bg-amana-neutral-100 rounded-[5px] border border-amana-primary-500 shadow-lg overflow-hidden',
           maxWidth,
           className
         )}
@@ -59,7 +59,7 @@ export default function Modal({
           <h2 className="text-[24px] font-semibold text-amana-primary-500">{title}</h2>
           <motion.button
             onClick={onClose}
-            whileHover={{ scale: 1.15, rotate: 90 }}
+            whileHover={{ rotate: 90 }}
             whileTap={{ scale: 0.9 }}
             transition={springSnappy}
             className="text-amana-primary-500 hover:text-amana-danger-500"

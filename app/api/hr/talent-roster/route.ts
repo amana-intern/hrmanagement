@@ -25,7 +25,12 @@ export async function GET() {
       },
       include: {
         categories: {
-          include: { questions: { orderBy: { urutan: 'asc' } } },
+          include: {
+            questions: {
+              include: { options: { orderBy: { urutan: 'asc' } } },
+              orderBy: { urutan: 'asc' },
+            },
+          },
           orderBy: { namaKategori: 'asc' },
         },
       },
@@ -34,7 +39,12 @@ export async function GET() {
     const assessment = openAssessment ?? (await prisma.assessment.findFirst({
       include: {
         categories: {
-          include: { questions: { orderBy: { urutan: 'asc' } } },
+          include: {
+            questions: {
+              include: { options: { orderBy: { urutan: 'asc' } } },
+              orderBy: { urutan: 'asc' },
+            },
+          },
           orderBy: { namaKategori: 'asc' },
         },
       },
@@ -42,15 +52,6 @@ export async function GET() {
     }));
 
     const employees = await prisma.karyawan.findMany({
-      where: {
-        user: {
-          idRole: { notIn: [ROLES.PARTNER, ROLES.ADMIN_HR, ROLES.ADMIN_OPS] },
-        },
-        OR: [
-          { masterGrade: { is: null } },
-          { masterGrade: { namaGrade: { notIn: ['Head', 'Head of Operations', 'Head OPS'] } } },
-        ],
-      },
       include: {
         masterGrade: true,
         user: { include: { role: true } },
@@ -110,7 +111,12 @@ export async function GET() {
               technicalSkills: submission.technicalSkills,
               selfDevelopmentAreas: submission.selfDevelopmentAreas,
               tanggalSelesai: submission.tanggalSelesai,
-              answers: Object.fromEntries(submission.answers.map((a) => [a.idPertanyaan, a.level])),
+              answers: Object.fromEntries(
+                submission.answers.map((a) => [
+                  a.idPertanyaan,
+                  { level: a.level, pilihan: a.pilihan as string[] | null, jawabanTeks: a.jawabanTeks },
+                ])
+              ),
               bidangSkor,
             }
           : null,
@@ -154,7 +160,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { nama, email, namaRole, namaGrade, department, tanggalLahir, tanggalMasuk, tanggalBerakhir, tipeKontrak, noTelepon } = body || {};
+    const { nama, email, namaRole, namaGrade, department, tanggalLahir, tanggalMasuk, tanggalBerakhir, tipeKontrak, noTelepon, akses } = body || {};
 
     const cleanNama = String(nama ?? '').trim();
     const cleanEmail = String(email ?? '').trim().toLowerCase();
@@ -202,6 +208,12 @@ export async function POST(request: Request) {
       role = await prisma.role.findUnique({ where: { idRole: ROLES.PARTNER } });
       if (!role) {
         return Response.json({ error: 'Role Partner tidak ditemukan' }, { status: 500 });
+      }
+    } else if (akses === 'admin_hr' || akses === 'admin_ops') {
+      const targetRoleId = akses === 'admin_hr' ? ROLES.ADMIN_HR : ROLES.ADMIN_OPS;
+      role = await prisma.role.findUnique({ where: { idRole: targetRoleId } });
+      if (!role) {
+        return Response.json({ error: 'Role akses tidak ditemukan' }, { status: 500 });
       }
     } else {
       const cleanRole = String(namaRole ?? '').trim();

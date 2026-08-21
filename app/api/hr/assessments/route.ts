@@ -15,7 +15,12 @@ export async function GET() {
       include: {
         masterStatus: true,
         categories: {
-          include: { questions: { orderBy: { urutan: 'asc' } } },
+          include: {
+            questions: {
+              include: { options: { orderBy: { urutan: 'asc' } } },
+              orderBy: { urutan: 'asc' },
+            },
+          },
           orderBy: { namaKategori: 'asc' },
         },
         submissions: { include: { karyawan: true } },
@@ -60,7 +65,13 @@ export async function POST(request: Request) {
     const catList: {
       idKategoriAsm: string;
       namaKategori: string;
-      questions: { idPertanyaan: string; teks: string; urutan: number }[];
+      questions: {
+        idPertanyaan: string;
+        teks: string;
+        urutan: number;
+        tipeSoal: string | null;
+        options: { idOpsi: string; teks: string; urutan: number }[];
+      }[];
     }[] = Array.isArray(categories)
       ? categories
           .filter((c: any) => c?.namaKategori)
@@ -71,9 +82,19 @@ export async function POST(request: Request) {
               ? (c.questions as any[])
                   .filter((q: any) => q?.teks)
                   .map((q: any, i: number) => ({
-                    idPertanyaan: `ASQ-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+                    idPertanyaan: `ASQ-${Date.now()}-${Math.random().toString(36).slice(2, 6)}-${i}`,
                     teks: String(q.teks),
                     urutan: i + 1,
+                    tipeSoal: q.tipeSoal ? String(q.tipeSoal) : null,
+                    options: Array.isArray(q.options)
+                      ? (q.options as any[])
+                          .filter((o: any) => o?.teks)
+                          .map((o: any, oi: number) => ({
+                            idOpsi: `ASO-${Date.now()}-${Math.random().toString(36).slice(2, 6)}-${i}-${oi}`,
+                            teks: String(o.teks),
+                            urutan: oi + 1,
+                          }))
+                      : [],
                   }))
               : [],
           }))
@@ -101,7 +122,15 @@ export async function POST(request: Request) {
           create: catList.map((c) => ({
             idKategoriAsm: c.idKategoriAsm,
             namaKategori: c.namaKategori,
-            questions: { create: c.questions },
+            questions: {
+              create: c.questions.map((q) => ({
+                idPertanyaan: q.idPertanyaan,
+                teks: q.teks,
+                urutan: q.urutan,
+                tipeSoal: q.tipeSoal,
+                options: { create: q.options },
+              })),
+            },
           })),
         },
       },

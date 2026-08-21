@@ -3,20 +3,20 @@
 import SidebarNavBase from '../SidebarNavBase';
 import type { NavGroup } from '../SidebarNavBase';
 
-const groups: NavGroup[] = [
+export const groups: NavGroup[] = [
   {
-    title: 'Employee',
+    title: 'Account',
     links: [
       { href: '/user/profile', label: 'Profile' },
-      { href: '/user/careerhub', label: 'Career Hub' },
+      { href: '/user/careerhub', label: 'Career Hub', activePaths: ['/user/assessment', '/user/careerhub/result'] },
     ],
   },
   {
     title: 'Services',
     links: [
-      { href: '/user/attendance/leaverequest', label: 'Request Leave' },
-      { href: '/user/attendance/sickleave', label: 'Request Sick Leave' },
-      { href: '/user/payment', label: 'Request Payment' },
+      { href: '/user/attendance/leaverequest', label: 'Leave Request' },
+      { href: '/user/attendance/sickleave', label: 'Sick Request' },
+      { href: '/user/payment', label: 'Payment Request' },
     ],
   },
 ];

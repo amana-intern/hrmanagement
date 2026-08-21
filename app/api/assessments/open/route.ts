@@ -22,7 +22,12 @@ export async function GET() {
       },
       include: {
         categories: {
-          include: { questions: { orderBy: { urutan: 'asc' } } },
+          include: {
+            questions: {
+              include: { options: { orderBy: { urutan: 'asc' } } },
+              orderBy: { urutan: 'asc' },
+            },
+          },
           orderBy: { namaKategori: 'asc' },
         },
       },
@@ -55,7 +60,12 @@ export async function GET() {
             idSubmission: submission.idSubmission,
             technicalSkills: submission.technicalSkills,
             selfDevelopmentAreas: submission.selfDevelopmentAreas,
-            answers: Object.fromEntries(submission.answers.map((a) => [a.idPertanyaan, a.level])),
+            answers: Object.fromEntries(
+              submission.answers.map((a) => [
+                a.idPertanyaan,
+                { level: a.level, pilihan: a.pilihan as string[] | null, jawabanTeks: a.jawabanTeks },
+              ])
+            ),
           }
         : null,
     });

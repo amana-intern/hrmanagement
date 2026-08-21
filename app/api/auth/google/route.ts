@@ -2,7 +2,7 @@ import { OAuth2Client } from 'google-auth-library';
 import { prisma } from '@/lib/prisma';
 import { createSession } from '@/lib/session';
 import { ASSESSMENT_STATUS } from '@/lib/constants';
-import { isEmployeeRole } from '@/lib/roles';
+import { canUseEmployeeFeatures } from '@/lib/roles';
 
 const googleClientId = process.env.GOOGLE_CLIENT_ID;
 const domain = (process.env.CMP_EMAIL_DOMAIN ?? '').toLowerCase();
@@ -84,7 +84,7 @@ export async function POST(request: Request) {
     const idKaryawan = user.karyawan?.idKaryawan ?? null;
 
     let needsAssessment = false;
-    if (idKaryawan && isEmployeeRole(user.idRole)) {
+    if (idKaryawan && canUseEmployeeFeatures(user.idRole)) {
       const now = new Date();
       const open = await prisma.assessment.findFirst({
         where: {

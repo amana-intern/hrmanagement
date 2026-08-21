@@ -1,6 +1,6 @@
 import { requireAuth } from '@/lib/dal';
 import { prisma } from '@/lib/prisma';
-import { isEmployeeRole, ROLES } from '@/lib/roles';
+import { canUseEmployeeFeatures, ROLES } from '@/lib/roles';
 import { LEAVE_TYPES } from '@/lib/constants';
 import { computeLeaveBalance, parseDateOnly } from '@/lib/leave';
 
@@ -14,7 +14,7 @@ export async function POST(request: Request) {
 
     // Employee biasa + Admin HR/OPS boleh mengajukan (Fitur 11).
     const isAdmin = auth.idRole === ROLES.ADMIN_HR || auth.idRole === ROLES.ADMIN_OPS;
-    if (!isEmployeeRole(auth.idRole) && !isAdmin) {
+    if (!canUseEmployeeFeatures(auth.idRole) && !isAdmin) {
       return Response.json({ error: 'Forbidden' }, { status: 403 });
     }
     if (!auth.idKaryawan) {

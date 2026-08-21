@@ -2,11 +2,13 @@ import { NextRequest } from 'next/server';
 import { requireAuth } from '@/lib/dal';
 import { prisma } from '@/lib/prisma';
 import { ROLES } from '@/lib/roles';
+import { DEPARTMENT_LABELS } from '@/lib/constants';
 
 // PATCH /api/hr/talent-roster/[idKaryawan] — HR mengedit department, grade, dan/atau role karyawan.
 // Body: { department?, namaGrade?, namaRole? }. Logika grade/role mengikuti POST talent-roster:
 // grade Head/Partner = leader -> role selalu Partner; role custom -> salin permission Employee;
 // role Partner/Admin HR/Admin OPS ditolak utk grade non-leader.
+// Setiap field yang benar-benar berubah dicatat ke AuditTrail (lihat GET .../history) sebagai Career History.
 export async function PATCH(
   request: NextRequest,
   ctx: { params: Promise<{ idKaryawan: string }> }
@@ -18,7 +20,7 @@ export async function PATCH(
     }
     const { idKaryawan } = await ctx.params;
     const body = await request.json();
-    const { department, namaGrade, namaRole } = body || {};
+    const { department, namaGrade, namaRole, akses } = body || {};
 
     const karyawan = await prisma.karyawan.findUnique({
       where: { idKaryawan },
@@ -63,7 +65,7 @@ export async function PATCH(
     const isLeader = gradeName === 'head' || gradeName === 'partner';
 
     if (auth.idKaryawan === idKaryawan) {
-      return Response.json({ error: 'Tidak bisa mengedit akun sendiri' }, { status: 400 });
+      return Response.json({ error: "You can't edit your own account" }, { status: 400 });
     }
 
     // Resolusi role di luar transaksi agar error bisa di-return langsung.
@@ -71,6 +73,13 @@ export async function PATCH(
     if (isLeader) {
       // Grade leader -> role selalu Partner.
       idRole = ROLES.PARTNER;
+    } else if (akses === 'admin_hr' || akses === 'admin_ops') {
+      const targetRoleId = akses === 'admin_hr' ? ROLES.ADMIN_HR : ROLES.ADMIN_OPS;
+      const role = await prisma.role.findUnique({ where: { idRole: targetRoleId } });
+      if (!role) {
+        return Response.json({ error: 'Role akses tidak ditemukan' }, { status: 500 });
+      }
+      idRole = role.idRole;
     } else if (namaRole !== undefined) {
       const cleanRole = String(namaRole ?? '').trim();
       if (!cleanRole) {
@@ -128,10 +137,56 @@ export async function PATCH(
       idRole = role.idRole;
     }
 
+    // Bandingkan nilai lama vs baru untuk dicatat di Career History.
+    const perubahan: { field: string; from: string; to: string }[] = [];
+
+    const oldDepartment = karyawan.department ?? null;
+    const newDepartment = data.department !== undefined ? data.department : oldDepartment;
+    if (newDepartment !== oldDepartment) {
+      perubahan.push({
+        field: 'Department Transfer',
+        from: oldDepartment ? (DEPARTMENT_LABELS[oldDepartment] ?? oldDepartment) : '-',
+        to: newDepartment ? (DEPARTMENT_LABELS[newDepartment] ?? newDepartment) : '-',
+      });
+    }
+
+    const oldGradeName = karyawan.masterGrade?.namaGrade ?? null;
+    let newGradeName = oldGradeName;
+    if (data.idGrade && data.idGrade !== karyawan.masterGrade?.idGrade) {
+      const gradeRow = await prisma.masterGrade.findUnique({ where: { idGrade: data.idGrade }, select: { namaGrade: true } });
+      newGradeName = gradeRow?.namaGrade ?? newGradeName;
+    }
+    if (newGradeName !== oldGradeName) {
+      perubahan.push({ field: 'Grade Transfer', from: oldGradeName ?? '-', to: newGradeName ?? '-' });
+    }
+
+    const oldRoleName = karyawan.user?.role?.namaRole ?? null;
+    let newRoleName = oldRoleName;
+    if (idRole && idRole !== karyawan.user?.role?.idRole) {
+      const roleRow = await prisma.role.findUnique({ where: { idRole }, select: { namaRole: true } });
+      newRoleName = roleRow?.namaRole ?? newRoleName;
+    }
+    if (newRoleName !== oldRoleName) {
+      perubahan.push({ field: 'Role Change', from: oldRoleName ?? '-', to: newRoleName ?? '-' });
+    }
+
     await prisma.$transaction(async (tx) => {
       await tx.karyawan.update({ where: { idKaryawan }, data });
       if (karyawan.user && idRole) {
         await tx.user.update({ where: { idUser: karyawan.user.idUser }, data: { idRole } });
+      }
+      if (perubahan.length > 0) {
+        await tx.auditTrail.create({
+          data: {
+            idAudit: `AUD-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+            idKaryawan,
+            idAktor: auth.idKaryawan,
+            aktorNama: auth.nama,
+            tindakan: 'Profile Updated',
+            perubahan,
+            waktu: new Date(),
+          },
+        });
       }
     });
 
@@ -164,7 +219,7 @@ export async function DELETE(
       return Response.json({ error: 'Karyawan tidak ditemukan' }, { status: 404 });
     }
     if (auth.idKaryawan === idKaryawan) {
-      return Response.json({ error: 'Tidak bisa menghapus akun sendiri' }, { status: 400 });
+      return Response.json({ error: "You can't delete your own account" }, { status: 400 });
     }
 
     await prisma.$transaction(async (tx) => {

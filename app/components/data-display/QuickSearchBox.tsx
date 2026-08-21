@@ -49,7 +49,7 @@ export default function QuickSearchBox({
             onChange={(e) => onQueryChange(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && onSearch()}
             placeholder={placeholder}
-            className="flex-1 border border-amana-neutral-300 rounded-[13px] px-3 py-2.5 text-[16px] text-amana-neutral-500 placeholder:text-amana-neutral-300 transition-colors duration-200 focus:outline-none focus:border-amana-primary-500"
+            className="flex-1 border border-amana-neutral-300 rounded-[8px] px-3 py-2.5 text-[16px] text-amana-neutral-500 placeholder:text-amana-neutral-300 transition-colors duration-200 focus:outline-none focus:border-amana-primary-500"
           />
           <Button variant="primary" size="lg" onClick={onSearch}>
             Search

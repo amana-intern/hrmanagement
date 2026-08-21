@@ -2,12 +2,18 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { AnimatePresence } from 'framer-motion';
+import { LogOut } from 'lucide-react';
 import { cn } from '@/app/utils/cn';
+import { logout } from '@/lib/useAuth';
+import ConfirmModal from '../feedback/ConfirmModal';
 
 export interface NavLink {
   href: string;
   label: string;
+  /** Extra pathnames that should also light up this link (e.g. a result page reached from it). */
+  activePaths?: string[];
 }
 
 export interface NavGroup {
@@ -17,14 +23,29 @@ export interface NavGroup {
 
 export default function SidebarNavBase({ groups }: { groups: NavGroup[] }) {
   const pathname = usePathname();
-  const isActive = (href: string) => pathname === href;
+  const router = useRouter();
+  const isActive = (link: NavLink) => pathname === link.href || !!link.activePaths?.includes(pathname);
 
   const navRef = useRef<HTMLDivElement>(null);
   const linkRefs = useRef<Record<string, HTMLAnchorElement | null>>({});
   const [pillRect, setPillRect] = useState<{ top: number; height: number } | null>(null);
+  const [loggingOut, setLoggingOut] = useState(false);
+  const [confirmLogout, setConfirmLogout] = useState(false);
+
+  const handleLogout = async () => {
+    if (loggingOut) return;
+    setLoggingOut(true);
+    try {
+      await logout();
+      router.push('/login');
+    } finally {
+      setLoggingOut(false);
+      setConfirmLogout(false);
+    }
+  };
 
   useEffect(() => {
-    const activeLink = groups.flatMap((g) => g.links).find((l) => isActive(l.href));
+    const activeLink = groups.flatMap((g) => g.links).find((l) => isActive(l));
     const el = activeLink ? linkRefs.current[activeLink.href] : null;
     setPillRect(el ? { top: el.offsetTop, height: el.offsetHeight } : null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -42,7 +63,7 @@ export default function SidebarNavBase({ groups }: { groups: NavGroup[] }) {
         {pillRect && (
           <div
             aria-hidden
-            className="absolute left-0 right-0 bg-amana-neutral-100 border border-amana-primary-500 rounded-[5px] transition-[top,height] duration-200 ease-out pointer-events-none"
+            className="absolute left-0 right-0 bg-amana-neutral-100 border border-amana-primary-500 rounded-[8px] transition-[top,height] duration-200 ease-out pointer-events-none"
             style={{ top: pillRect.top, height: pillRect.height }}
           />
         )}
@@ -54,7 +75,7 @@ export default function SidebarNavBase({ groups }: { groups: NavGroup[] }) {
               <div className="w-full border-t border-amana-neutral-100 mt-1" />
             </div>
             {group.links.map((link) => {
-              const active = isActive(link.href);
+              const active = isActive(link);
               return (
                 <Link
                   key={link.href}
@@ -63,7 +84,7 @@ export default function SidebarNavBase({ groups }: { groups: NavGroup[] }) {
                   }}
                   href={link.href}
                   className={cn(
-                    'group relative z-10 flex items-center justify-center h-[30px] w-full rounded-[5px] px-[5px] border border-transparent overflow-hidden mb-[5px] last:mb-0',
+                    'group relative z-10 flex items-center justify-center h-[30px] w-full rounded-[8px] px-[5px] border border-transparent overflow-hidden mb-[5px] last:mb-0',
                     !active && 'hover:bg-amana-primary-100'
                   )}
                 >
@@ -107,6 +128,32 @@ export default function SidebarNavBase({ groups }: { groups: NavGroup[] }) {
           </div>
         ))}
       </div>
+
+      <div className="w-full border-t border-amana-neutral-100 mt-1.5 mb-1.5 flex-shrink-0" />
+
+      <button
+        type="button"
+        onClick={() => setConfirmLogout(true)}
+        disabled={loggingOut}
+        className="flex-shrink-0 flex items-center justify-center gap-2 h-[36px] w-full rounded-[8px] text-[16px] font-semibold text-amana-neutral-100 hover:bg-amana-primary-100 hover:text-amana-primary-500 transition-colors duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
+      >
+        <LogOut className="w-4 h-4" />
+        {loggingOut ? 'Logging out...' : 'Logout'}
+      </button>
+
+      <AnimatePresence>
+        {confirmLogout && (
+          <ConfirmModal
+            title="Logout"
+            message="Are you sure you want to log out?"
+            confirmLabel="Logout"
+            loadingLabel="Logging out..."
+            loading={loggingOut}
+            onConfirm={handleLogout}
+            onCancel={() => setConfirmLogout(false)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

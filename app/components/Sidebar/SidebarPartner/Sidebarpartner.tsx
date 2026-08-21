@@ -3,17 +3,14 @@
 import SidebarNavBase from '../SidebarNavBase';
 import type { NavGroup } from '../SidebarNavBase';
 
-const groups: NavGroup[] = [
+export const groups: NavGroup[] = [
   { title: 'Account', links: [{ href: '/partner/profile', label: 'Profile' }] },
   {
-    title: 'Employee Record',
-    links: [{ href: '/partner/contracttracking', label: 'Contract Tracking' }],
-  },
-  {
-    title: 'Approvals',
+    title: 'Partner Center',
     links: [
       { href: '/partner/leaveapproval', label: 'Leave Approval' },
       { href: '/partner/paymentapproval', label: 'Payment Approval' },
+      { href: '/partner/contracttracking', label: 'Contract Management' },
     ],
   },
 ];

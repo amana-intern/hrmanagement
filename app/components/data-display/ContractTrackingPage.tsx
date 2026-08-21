@@ -6,6 +6,13 @@ import SectionCard from '../layout/SectionCard';
 import DataTable from './DataTable';
 import type { DataTableColumn } from './DataTable';
 import ToggleButton from '../forms/ToggleButton';
+import StatusPill from './StatusPill';
+
+function durationColor(daysLeft: number) {
+  if (daysLeft > 90) return 'bg-amana-primary-500';
+  if (daysLeft > 30) return 'bg-amana-warning-500';
+  return 'bg-amana-danger-500';
+}
 
 export interface Contract {
   id: number | string;
@@ -71,13 +78,18 @@ export default function ContractTrackingPage({ contracts, actionsColumn, showSta
           } as DataTableColumn<Contract>,
         ]
       : []),
-    { key: 'daysLeft', label: 'Remaining Duration', render: (c) => `${c.daysLeft} Day(s)` },
+    {
+      key: 'daysLeft',
+      label: 'Remaining Duration',
+      width: '150px',
+      render: (c) => <StatusPill color={durationColor(c.daysLeft)}>{c.daysLeft} Day(s)</StatusPill>,
+    },
     ...(actionsColumn ? [actionsColumn] : []),
   ];
 
   return (
     <div className="w-full h-full flex flex-col gap-3">
-      <PageTopBar showGreeting section="Career Hub" page="Contract Tracking" />
+      <PageTopBar showGreeting />
 
       <div className="flex-shrink-0 flex flex-col lg:flex-row lg:items-center gap-3 bg-amana-neutral-100 rounded-[5px] border border-amana-primary-500 shadow-sm px-5 py-2.5">
         <div className="flex-1">
@@ -99,7 +111,14 @@ export default function ContractTrackingPage({ contracts, actionsColumn, showSta
       </div>
 
       <SectionCard title="All Active Contract" scroll>
-        <DataTable columns={columns} rows={filtered} defaultSortKey="name" emptyMessage="No contracts match this filter." />
+        <DataTable
+          key={activeFilter}
+          columns={columns}
+          rows={filtered}
+          defaultSortKey={activeFilter === 'all' ? 'daysLeft' : 'name'}
+          defaultSortDir={activeFilter === 'all' ? 'desc' : 'asc'}
+          emptyMessage="No contracts match this filter."
+        />
       </SectionCard>
     </div>
   );

@@ -12,6 +12,11 @@ export function AssessmentBadge({ done, fullWidth = false }: { done: boolean; fu
   );
 }
 
+export interface EmployeeCertificate {
+  title: string;
+  fileURL: string | null;
+}
+
 export interface EmployeeDetails {
   name: string;
   grade: string;
@@ -21,7 +26,7 @@ export interface EmployeeDetails {
   photoSrc?: string;
   assessmentDone: boolean;
   assessmentName?: string;
-  certificates: string[];
+  certificates: EmployeeCertificate[];
 }
 
 interface EmployeeDetailsModalProps {
@@ -29,13 +34,22 @@ interface EmployeeDetailsModalProps {
   onClose: () => void;
   onRemove?: () => void;
   onViewAssessment?: () => void;
+  onViewCertificate?: (cert: EmployeeCertificate) => void;
+  onViewCareerHistory?: () => void;
 }
 
-export default function EmployeeDetailsModal({ employee, onClose, onRemove, onViewAssessment }: EmployeeDetailsModalProps) {
+export default function EmployeeDetailsModal({
+  employee,
+  onClose,
+  onRemove,
+  onViewAssessment,
+  onViewCertificate,
+  onViewCareerHistory,
+}: EmployeeDetailsModalProps) {
   return (
     <Modal title="Employee Details" onClose={onClose} maxWidth="max-w-4xl" className="max-h-[90vh]">
       <div className="flex-1 min-h-0 overflow-y-auto scroll-smooth p-5 flex flex-col lg:flex-row gap-4">
-        <div className="w-full lg:w-2/5 flex-shrink-0 flex flex-col bg-amana-neutral-100 rounded-[8px] border border-amana-primary-500 px-4 py-3">
+        <div className="w-full lg:w-2/5 flex-shrink-0 flex flex-col bg-amana-neutral-100 rounded-[5px] border border-amana-primary-500 px-4 py-3">
           <h3 className="flex-shrink-0 text-[18px] font-semibold text-amana-primary-500 pb-1.5 mb-3 border-b border-amana-primary-500">
             Bio
           </h3>
@@ -68,7 +82,7 @@ export default function EmployeeDetailsModal({ employee, onClose, onRemove, onVi
           )}
         </div>
 
-        <div className="w-full lg:w-3/5 flex-1 min-h-0 flex flex-col bg-amana-neutral-100 rounded-[8px] border border-amana-primary-500 px-4 py-3">
+        <div className="w-full lg:w-3/5 flex-1 min-h-0 flex flex-col bg-amana-neutral-100 rounded-[5px] border border-amana-primary-500 px-4 py-3">
           <h3 className="flex-shrink-0 text-[18px] font-semibold text-amana-primary-500 pb-1.5 mb-3 border-b border-amana-primary-500">
             Assessement(s)
           </h3>
@@ -78,13 +92,26 @@ export default function EmployeeDetailsModal({ employee, onClose, onRemove, onVi
                 <Button
                   variant="primary"
                   size="sm"
-                  className="w-[224px] h-[29.75px] rounded-[5px] px-[19.51px] py-[4.88px] gap-[9.75px] flex-shrink-0"
+                  className="w-[224px] flex-shrink-0"
                   onClick={onViewAssessment}
                 >
                   View
                 </Button>
               )}
             </div>
+
+          {onViewCareerHistory && (
+            <>
+              <h4 className="flex-shrink-0 text-[18px] font-semibold not-italic text-amana-primary-500 pb-1.5 mb-3 border-b border-amana-primary-500">
+                Career History
+              </h4>
+              <div className="flex-shrink-0 pb-3 mb-3 border-b border-amana-neutral-300">
+                <Button variant="primary" size="sm" className="w-full" onClick={onViewCareerHistory}>
+                  View
+                </Button>
+              </div>
+            </>
+          )}
 
           <h4 className="flex-shrink-0 text-[18px] font-semibold not-italic text-amana-primary-500 pb-1.5 mb-3 border-b border-amana-primary-500">
             Certificates
@@ -93,11 +120,13 @@ export default function EmployeeDetailsModal({ employee, onClose, onRemove, onVi
             {employee.certificates.length > 0 ? (
               employee.certificates.map((cert, i) => (
                 <div key={i} className="flex items-center gap-[10px]">
-                  <span className="flex-1 min-w-0 text-[15px] text-amana-neutral-500">{cert}</span>
+                  <span className="flex-1 min-w-0 text-[15px] text-amana-neutral-500">{cert.title}</span>
                   <Button
                     variant="primary"
                     size="sm"
-                    className="w-[224px] h-[29.75px] rounded-[5px] px-[19.51px] py-[4.88px] gap-[9.75px] flex-shrink-0"
+                    className="w-[224px] flex-shrink-0"
+                    disabled={!cert.fileURL}
+                    onClick={() => onViewCertificate?.(cert)}
                   >
                     View
                   </Button>

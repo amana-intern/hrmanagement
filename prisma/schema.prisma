@@ -206,7 +206,11 @@ model AuditTrail {
   idAudit     String    @id @db.VarChar
   idReferensi String?   @db.VarChar
   idKaryawan  String?   @db.VarChar
+  idAktor     String?   @db.VarChar
+  aktorNama   String?   @db.VarChar
   tindakan    String?   @db.VarChar
+  // Array of { field, from, to } describing what changed in this action.
+  perubahan   Json?
   waktu       DateTime? @db.Timestamp()
   karyawan    Karyawan? @relation(fields: [idKaryawan], references: [idKaryawan])
 }
@@ -254,12 +258,23 @@ model AssessmentSubmission {
 }
 
 model AssessmentQuestion {
-  idPertanyaan  String              @id @db.VarChar
-  idKategoriAsm String?             @db.VarChar
-  teks          String?             @db.VarChar
+  idPertanyaan  String                     @id @db.VarChar
+  idKategoriAsm String?                    @db.VarChar
+  teks          String?                    @db.VarChar
   urutan        Int?
-  kategori      AssessmentCategory? @relation(fields: [idKategoriAsm], references: [idKategoriAsm])
+  // null = legacy fixed proficiency-level question (1-4). Otherwise: multiple_choice | checkbox | short_answer.
+  tipeSoal      String?                    @db.VarChar
+  kategori      AssessmentCategory?        @relation(fields: [idKategoriAsm], references: [idKategoriAsm])
+  options       AssessmentQuestionOption[]
   answers       AssessmentAnswer[]
+}
+
+model AssessmentQuestionOption {
+  idOpsi       String              @id @db.VarChar
+  idPertanyaan String?             @db.VarChar
+  teks         String?             @db.VarChar
+  urutan       Int?
+  pertanyaan   AssessmentQuestion? @relation(fields: [idPertanyaan], references: [idPertanyaan])
 }
 
 model AssessmentAnswer {
@@ -267,6 +282,10 @@ model AssessmentAnswer {
   idSubmission  String?               @db.VarChar
   idPertanyaan  String?               @db.VarChar
   level         Int?
+  // Selected option id(s) for multiple_choice (1 item) / checkbox (N items) questions.
+  pilihan       Json?
+  // Free text for short_answer questions.
+  jawabanTeks   String?               @db.VarChar
   submission    AssessmentSubmission? @relation(fields: [idSubmission], references: [idSubmission])
   pertanyaan    AssessmentQuestion?   @relation(fields: [idPertanyaan], references: [idPertanyaan])
 }
