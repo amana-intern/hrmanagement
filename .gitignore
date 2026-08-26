@@ -42,3 +42,6 @@ next-env.d.ts
 
 # uploaded user files (dev)
 public/uploads/
+
+# local Claude plugin (was accidentally committed as a broken submodule reference)
+.claude/skills/taste-skill/
