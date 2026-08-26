@@ -1,6 +1,7 @@
 'use client';
 
 import Modal from '../feedback/Modal';
+import { formatDateTimeWIB } from '@/app/utils/formatDate';
 
 export interface CareerHistoryChange {
   field: string;
@@ -9,22 +10,17 @@ export interface CareerHistoryChange {
 }
 
 export interface CareerHistoryEntry {
-  idAudit: string;
-  aktorNama: string | null;
+  id: string;
+  aktor: string | null;
   waktu: string | null;
-  perubahan: CareerHistoryChange[] | null;
+  changes: CareerHistoryChange[] | null;
 }
 
-function formatHistoryDate(iso: string | null): string {
-  if (!iso) return '-';
-  const d = new Date(iso);
-  const month = d.toLocaleString('en-US', { month: 'long' });
-  let hours = d.getHours();
-  const minutes = String(d.getMinutes()).padStart(2, '0');
-  const ampm = hours >= 12 ? 'pm' : 'am';
-  hours = hours % 12 || 12;
-  return `${d.getDate()} ${month} ${d.getFullYear()}, ${hours}:${minutes} ${ampm}`;
-}
+const FIELD_LABELS: Record<string, string> = {
+  DEPARTMENT: 'Department',
+  GRADE: 'Grade',
+  ROLE: 'Role',
+};
 
 export default function CareerHistoryModal({
   employeeName,
@@ -50,17 +46,19 @@ export default function CareerHistoryModal({
           <p className="text-[14px] text-amana-neutral-400">No history recorded yet.</p>
         ) : (
           history.map((entry) => (
-            <div key={entry.idAudit} className="p-3 rounded-[5px] border border-amana-neutral-300 bg-amana-neutral-100">
+            <div key={entry.id} className="p-3 rounded-[5px] border border-amana-neutral-300 bg-amana-neutral-100">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-[13px] text-amana-neutral-400">by {entry.aktorNama ?? '-'}</span>
-                <span className="text-[13px] text-amana-neutral-400">{formatHistoryDate(entry.waktu)}</span>
+                <span className="text-[13px] text-amana-neutral-400">by {entry.aktor ?? '-'}</span>
+                <span className="text-[13px] text-amana-neutral-400">{formatDateTimeWIB(entry.waktu)}</span>
               </div>
               <div className="flex flex-col gap-1">
-                {(entry.perubahan ?? []).map((c, i) => (
-                  <div key={i} className="flex items-center gap-2 text-[14px]">
-                    <span className="font-semibold text-amana-primary-500 flex-shrink-0">{c.field}</span>
+                {(entry.changes ?? []).map((c, i) => (
+                  <div key={`${entry.id}-${i}`} className="flex items-center gap-2 text-[14px]">
+                    <span className="font-semibold text-amana-primary-500 flex-shrink-0">
+                      {FIELD_LABELS[c.field] ?? c.field}
+                    </span>
                     <span className="text-amana-neutral-500">
-                      {c.from} <span aria-hidden>→</span> <span className="font-semibold">{c.to}</span>
+                      {c.from} <span aria-hidden>&rarr;</span> <span className="font-semibold">{c.to}</span>
                     </span>
                   </div>
                 ))}

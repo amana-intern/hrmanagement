@@ -121,7 +121,7 @@ export default function AssessmentResultView({ categories, assessment }: Assessm
   const developmentAreas = toList(assessment?.selfDevelopmentAreas);
 
   if (!assessment) {
-    return <p className="text-sm text-amana-neutral-400">Belum ada data assessment.</p>;
+    return <p className="text-sm text-amana-neutral-400">No assessment data yet.</p>;
   }
 
   const selfAssessmentSection = (
@@ -266,7 +266,7 @@ export default function AssessmentResultView({ categories, assessment }: Assessm
                   onClick={() => toggleSort('score')}
                   className="flex items-center justify-between gap-2 pb-1.5 border-b border-amana-primary-500 cursor-pointer group"
                 >
-                  <h4 className="text-[18px] font-sans font-semibold not-italic text-amana-primary-500">Average Score</h4>
+                  <h4 className="text-[18px] font-sans font-semibold not-italic text-amana-primary-500">Average Level</h4>
                   <ChevronDown
                     className={cn(
                       'w-4 h-4 flex-shrink-0 transition-transform duration-200 group-hover:text-amana-primary-400',

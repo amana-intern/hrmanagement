@@ -15,6 +15,7 @@ import { useFilters } from '@/app/utils/useFilters';
 import { DEPARTMENT_OPTIONS, getAllGradeOptions } from '@/app/utils/orgStructure';
 import { downloadTSV, copyTSV } from '@/lib/sheets';
 import { TableSkeleton } from '@/app/components/feedback/PageSkeleton';
+import { formatDateWIB } from '@/app/utils/formatDate';
 
 const DEPARTMENT_LABEL: Record<string, string> = {
   ops: 'Operations',
@@ -30,7 +31,6 @@ interface SickLog {
   grade: string;
   startDate: string;
   endDate: string;
-  submitted: string;
   duration: number;
   gejala: string;
   buktiSakitURL: string | null;
@@ -88,7 +88,6 @@ export default function MedicalLeavePage() {
               grade: l.karyawan?.masterGrade?.namaGrade ?? '-',
               startDate,
               endDate,
-              submitted: l.tanggalMulai ? new Date(l.tanggalMulai).toLocaleDateString('id-ID') : '-',
               duration,
               gejala: l.gejala ?? '-',
               buktiSakitURL: l.buktiSakitURL ?? null,
@@ -167,9 +166,15 @@ export default function MedicalLeavePage() {
     { key: 'department', label: 'Department' },
     { key: 'grade', label: 'Grade' },
     {
-      key: 'submitted',
-      label: 'Submitted',
+      key: 'startDate',
+      label: 'Date',
+      width: '160px',
       sortValue: (r) => (r.startDate ? new Date(r.startDate).getTime() : 0),
+      render: (r) => (
+        <span className="text-[13px] leading-snug">
+          {formatDateWIB(r.startDate)} - {formatDateWIB(r.endDate)}
+        </span>
+      ),
     },
     { key: 'duration', label: 'Duration', render: (r) => `${r.duration} Day(s)` },
     { key: 'gejala', label: 'Sickness Type' },

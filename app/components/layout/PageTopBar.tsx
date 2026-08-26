@@ -32,7 +32,7 @@ export default function PageTopBar({
       const minutes = now.getMinutes().toString().padStart(2, '0');
       const ampm = hours >= 12 ? 'PM' : 'AM';
       hours = hours % 12 || 12;
-      setDateLabel(`${weekday}, ${day} ${month} ${year} - ${hours}.${minutes} ${ampm}`);
+      setDateLabel(`${weekday}, ${day} ${month} ${year} - ${hours}:${minutes} ${ampm}`);
       const h = now.getHours();
       setGreeting(h < 12 ? 'Good Morning!' : h < 17 ? 'Good Afternoon!' : 'Good Evening!');
     };
@@ -48,21 +48,17 @@ export default function PageTopBar({
     };
   }, []);
 
-  const content =
-    effectiveSection && effectivePage ? (
-      <>
-        <span className="text-amana-neutral-300">{effectiveSection}</span> <span className="text-amana-neutral-300">{'>'}</span> {effectivePage}
-      </>
-    ) : (
-      right
-    );
-
   return (
     <div className="flex-shrink-0 -mt-2 md:-mt-3 lg:-mt-4 bg-amana-neutral-100 rounded-b-[5px] shadow-sm px-3 py-2.5">
       {showGreeting && <p className="text-[16px] font-semibold text-amana-primary-500">{greeting}</p>}
-      <div className="flex items-center gap-2.5">
+      <div className="flex items-center justify-between gap-2.5">
         <p className="flex-1 min-w-0 text-[16px] font-semibold text-amana-primary-500 truncate">{dateLabel}</p>
-        <div className="flex-1 text-[16px] font-semibold text-amana-primary-500 text-right">{content}</div>
+        <div className="flex items-center gap-2.5">
+          {effectiveSection && effectivePage && (
+            <span className="text-amana-neutral-300">{effectiveSection} {' > '} {effectivePage}</span>
+          )}
+          {right}
+        </div>
       </div>
       <div className="border-t-2 border-amana-primary-500" />
     </div>

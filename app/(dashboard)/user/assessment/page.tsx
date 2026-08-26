@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { CheckCircle2 } from 'lucide-react';
 import PageTopBar from '@/app/components/layout/PageTopBar';
 import SectionCard from '@/app/components/layout/SectionCard';
 import Button from '@/app/components/forms/Button';
@@ -45,6 +46,7 @@ export default function AssessmentPage() {
   const [technicalSkills, setTechnicalSkills] = useState('');
   const [selfDevelopmentAreas, setSelfDevelopmentAreas] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
   const [status, setStatus] = useState<{ ok: boolean; text: string } | null>(null);
   const topRef = useRef<HTMLDivElement>(null);
   const isFirstScroll = useRef(true);
@@ -54,8 +56,21 @@ export default function AssessmentPage() {
       isFirstScroll.current = false;
       return;
     }
-    if (!openAssessment) return;
-    topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (!openAssessment || !topRef.current) return;
+
+    // 1) Reset semua kontainer scroll LELUHUR (main PageLayout, dll).
+    let el: HTMLElement | null = topRef.current.parentElement;
+    while (el) {
+      const style = getComputedStyle(el);
+      if (/(auto|scroll)/.test(style.overflowY)) el.scrollTop = 0;
+      el = el.parentElement;
+    }
+
+    // 2) Reset semua kontainer scroll KETURUNAN dalam topRef (daftar pertanyaan).
+    topRef.current.querySelectorAll<HTMLElement>('*').forEach((n) => {
+      const style = getComputedStyle(n);
+      if (/(auto|scroll)/.test(style.overflowY)) n.scrollTop = 0;
+    });
   }, [step, openAssessment]);
 
   useEffect(() => {
@@ -108,7 +123,10 @@ export default function AssessmentPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || 'Failed to save assessment result');
-      router.push('/user/careerhub');
+      // Refresh server components (DashboardLayout ikut dihitung ulang)
+      // supaya gerbang assessment terbuka segera setelah tersimpan.
+      router.refresh();
+      setSubmitSuccess(true);
     } catch (err) {
       setStatus({ ok: false, text: err instanceof Error ? err.message : 'An error occurred' });
     } finally {
@@ -116,7 +134,39 @@ export default function AssessmentPage() {
     }
   };
 
+  // Setelah submit sukses: tampilkan konfirmasi singkat lalu otomatis ke profile.
+  useEffect(() => {
+    if (!submitSuccess) return;
+    const t = setTimeout(() => router.push('/user/profile'), 2000);
+    return () => clearTimeout(t);
+  }, [submitSuccess, router]);
+
   if (loading) return <CardStackSkeleton blocks={2} />;
+
+  if (submitSuccess) {
+    return (
+      <div className="w-full h-full flex flex-col gap-3">
+        <PageTopBar showGreeting />
+        <div className="flex-1 min-h-0 flex items-center justify-center">
+          <div className="w-full max-w-xl bg-amana-neutral-100 rounded-[5px] border border-amana-primary-500 shadow-sm px-8 py-10 flex flex-col items-center text-center gap-4">
+            <span className="w-16 h-16 rounded-full bg-amana-success-100 flex items-center justify-center">
+              <CheckCircle2 className="w-8 h-8 text-amana-success-500" />
+            </span>
+            <h2 className="text-[22px] font-semibold text-amana-primary-500">
+              Assessment submitted successfully
+            </h2>
+            <p className="text-[15px] text-amana-neutral-400 leading-relaxed">
+              Thank you for completing the competency assessment.
+              Your answers have been saved and all pages are now unlocked.
+            </p>
+            <p className="text-[14px] font-medium text-amana-primary-500 animate-pulse">
+              Redirecting to your profile...
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!openAssessment) {
     return (
@@ -124,10 +174,10 @@ export default function AssessmentPage() {
         <PageTopBar showGreeting />
         <SectionCard className="text-center">
           <p className="font-semibold text-amana-primary-500 text-[20px] mb-2">Belum ada assessment</p>
-          <p className="text-[14px] text-amana-neutral-400 mb-6">HR belum membuka assessment saat ini.</p>
+          <p className="text-[14px] text-amana-neutral-400 mb-6">HR has not opened any assessment yet.</p>
           <div className="flex justify-center">
             <Button variant="primary" size="lg" onClick={() => router.push('/user/careerhub')}>
-              Kembali ke Career Hub
+              Back to Career Hub
             </Button>
           </div>
         </SectionCard>
@@ -152,7 +202,7 @@ export default function AssessmentPage() {
                 {(openAssessment.deskripsi ?? '').trim() === 'Self assessment kompetensi seluruh karyawan.'
                   ? 'Self assessment of all employees.'
                   : (openAssessment.deskripsi ?? undefined) ??
-                    'Pilih tingkat kemahiran untuk setiap kompetensi. Kompetensi boleh dilewati (tidak wajib diisi).'}
+                    'Choose a proficiency level for each competency. Competencies may be skipped.'}
               </p>
             </div>
             <div className="text-right flex-shrink-0">

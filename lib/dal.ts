@@ -43,6 +43,7 @@ export async function requireAuth() {
     grade: user.karyawan?.masterGrade?.namaGrade ?? null,
     department: user.karyawan?.department ?? null,
     noTelepon: user.karyawan?.noTelepon ?? null,
+    pictureUrl: user.pictureUrl ?? null,
     rolePermissions: user.role?.rolePermissions.map((rp) => rp.idPermission) ?? [],
   };
 }

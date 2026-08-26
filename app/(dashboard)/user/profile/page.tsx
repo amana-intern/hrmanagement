@@ -8,9 +8,11 @@ interface Me {
   nama: string;
   email: string;
   noTelepon: string | null;
+  departmentLabel?: string | null;
+  pictureUrl?: string | null;
   rolesDivisi: string;
+  displayGrade?: string | null;
   roleLabel: string;
-  displayGrade: string | null;
   leave: {
     sisaCuti: number | null;
     accrued: number | null;
@@ -72,15 +74,15 @@ export default function UserProfilePage() {
 
   const bio: ProfileBio = {
     name: me?.nama ?? 'Amana User',
-    role: me?.rolesDivisi ?? me?.roleLabel ?? 'Amana Employee',
+    role: [me?.departmentLabel, me?.displayGrade].filter(Boolean).join(' - ') || '-',
     email: me?.email ?? '-',
     phone: me?.noTelepon ?? '-',
+    photoSrc: me?.pictureUrl ?? undefined,
   };
 
   return (
     <ProfileOverview
       showGreeting
-      showLogout
       showCareerHistory
       panels={[attendancePanel, careerPanel]}
       bio={bio}

@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/prisma';
 import { createSession, deleteSession } from '@/lib/session';
-import { ASSESSMENT_STATUS } from '@/lib/constants';
+import { hasPendingFirstAssessment } from '@/lib/assessment-gate';
 import { canUseEmployeeFeatures } from '@/lib/roles';
 
 export async function POST(request: NextRequest) {
@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
     const { email, password } = body || {};
 
     if (!email || !password) {
-      return Response.json({ error: 'Email & password wajib diisi' }, { status: 400 });
+      return Response.json({ error: 'Email & password are required' }, { status: 400 });
     }
 
     const user = await prisma.user.findUnique({
@@ -25,12 +25,12 @@ export async function POST(request: NextRequest) {
     });
 
     if (!user || !user.passwordHash) {
-      return Response.json({ error: 'Email atau password salah' }, { status: 401 });
+      return Response.json({ error: 'Incorrect email or password' }, { status: 401 });
     }
 
     const valid = await bcrypt.compare(password, user.passwordHash);
     if (!valid) {
-      return Response.json({ error: 'Email atau password salah' }, { status: 401 });
+      return Response.json({ error: 'Incorrect email or password' }, { status: 401 });
     }
 
     const nama = user.karyawan?.nama ?? user.email;
@@ -38,28 +38,12 @@ export async function POST(request: NextRequest) {
     const department = user.karyawan?.department ?? null;
     const idKaryawan = user.karyawan?.idKaryawan ?? null;
 
-    // Flag: user baru yang belum mengisi assessment yang sedang berjalan.
-    // Hanya untuk karyawan (Employee + role custom); Partner/Admin tidak wajib.
-    let needsAssessment = false;
-    if (idKaryawan && canUseEmployeeFeatures(user.idRole)) {
-      const now = new Date();
-      const open = await prisma.assessment.findFirst({
-        where: {
-          idStatus: ASSESSMENT_STATUS.OPEN,
-          OR: [
-            { tanggalBuka: { lte: now }, tanggalTutup: null },
-            { tanggalBuka: { lte: now }, tanggalTutup: { gte: now } },
-          ],
-        },
-        orderBy: { tanggalBuka: 'desc' },
-      });
-      if (open) {
-        const sub = await prisma.assessmentSubmission.findFirst({
-          where: { idKaryawan: idKaryawan, idAssessment: open.idAssessment },
-        });
-        needsAssessment = !sub;
-      }
-    }
+    // Flag: user yang belum mengisi assessment yang sedang berjalan.
+    // Berlaku untuk semua kecuali Partner (Employee + Admin + role custom).
+    const needsAssessment =
+      idKaryawan && canUseEmployeeFeatures(user.idRole)
+        ? await hasPendingFirstAssessment(idKaryawan)
+        : false;
 
     await createSession({
       idUser: user.idUser,
@@ -87,7 +71,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Login error:', error);
-    return Response.json({ error: 'Terjadi kesalahan, coba lagi nanti' }, { status: 500 });
+    return Response.json({ error: 'An error occurred, please try again later' }, { status: 500 });
   }
 }
 

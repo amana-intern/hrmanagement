@@ -2,7 +2,7 @@ import { requireAuth } from '@/lib/dal';
 import { prisma } from '@/lib/prisma';
 import { ASSESSMENT_STATUS } from '@/lib/constants';
 
-// GET /api/assessments/open — assessment yang sedang dibuka untuk employee,
+// GET /api/assessments/open - assessment yang sedang dibuka untuk employee,
 // termasuk kategorinya + kompetensi untuk diisi.
 export async function GET() {
   try {
@@ -71,6 +71,6 @@ export async function GET() {
     });
   } catch (e) {
     const status = (e as { status?: number }).status ?? 500;
-    return Response.json({ error: 'Terjadi kesalahan' }, { status });
+    return Response.json({ error: 'An error occurred' }, { status });
   }
 }

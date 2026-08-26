@@ -17,6 +17,7 @@ import type { DataTableColumn } from '@/app/components/data-display/DataTable';
 import StatusPill from '@/app/components/data-display/StatusPill';
 import { ASSESSMENT_LEVELS } from '@/lib/assessment-template';
 import { ASSESSMENT_STATUS, ASSESSMENT_QUESTION_TYPES, ASSESSMENT_QUESTION_TYPE_LABELS } from '@/lib/constants';
+import { formatDateWIB } from '@/app/utils/formatDate';
 
 type QuestionType = (typeof ASSESSMENT_QUESTION_TYPES)[keyof typeof ASSESSMENT_QUESTION_TYPES];
 const QUESTION_TYPE_VALUES = Object.values(ASSESSMENT_QUESTION_TYPES);
@@ -247,8 +248,8 @@ export default function ManageAssessmentPage() {
       label: 'Period',
       render: (a) => (
         <span className="whitespace-nowrap">
-          {a.tanggalBuka ? new Date(a.tanggalBuka).toLocaleDateString('en-GB') : '-'}
-          {a.tanggalTutup ? ` - ${new Date(a.tanggalTutup).toLocaleDateString('en-GB')}` : ''}
+          {a.tanggalBuka ? formatDateWIB(a.tanggalBuka) : '-'}
+          {a.tanggalTutup ? ` - ${formatDateWIB(a.tanggalTutup)}` : ''}
         </span>
       ),
     },

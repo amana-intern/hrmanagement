@@ -2,7 +2,7 @@ import { requireAuth } from '@/lib/dal';
 import { prisma } from '@/lib/prisma';
 import { ASSESSMENT_STATUS, ASSESSMENT_QUESTION_TYPES } from '@/lib/constants';
 
-// POST /api/assessments/submit — employee mengisi assessment.
+// POST /api/assessments/submit - employee mengisi assessment.
 // Body: { idAssessment, answers: { [idPertanyaan]: { level?, pilihan?, jawabanTeks? } }, technicalSkills, selfDevelopmentAreas }
 // Field yang dipakai per pertanyaan tergantung tipeSoal-nya: legacy (null) = level 1-4,
 // multiple_choice/checkbox = pilihan (array idOpsi), short_answer = jawabanTeks.
@@ -18,14 +18,14 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { idAssessment, answers, technicalSkills, selfDevelopmentAreas } = body || {};
     if (!idAssessment) {
-      return Response.json({ error: 'idAssessment wajib diisi' }, { status: 400 });
+      return Response.json({ error: 'idAssessment is required' }, { status: 400 });
     }
 
     const techSkills = String(technicalSkills ?? '').trim();
     const devAreas = String(selfDevelopmentAreas ?? '').trim();
     if (!techSkills || !devAreas) {
       return Response.json(
-        { error: 'Technical skills & Self-development areas wajib diisi' },
+        { error: 'Technical skills & Self-development areas are required' },
         { status: 400 }
       );
     }
@@ -36,9 +36,9 @@ export async function POST(request: Request) {
         categories: { include: { questions: { include: { options: true } } } },
       },
     });
-    if (!assessment) return Response.json({ error: 'Assessment tidak ditemukan' }, { status: 404 });
+    if (!assessment) return Response.json({ error: 'Assessment not found' }, { status: 404 });
     if (assessment.idStatus !== ASSESSMENT_STATUS.OPEN) {
-      return Response.json({ error: 'Assessment sudah ditutup' }, { status: 409 });
+      return Response.json({ error: 'Assessment is already closed' }, { status: 409 });
     }
 
     const questionMap = new Map(
@@ -120,6 +120,6 @@ export async function POST(request: Request) {
     return Response.json({ ok: true, submission }, { status: 201 });
   } catch (e) {
     const status = (e as { status?: number }).status ?? 500;
-    return Response.json({ error: 'Terjadi kesalahan' }, { status });
+    return Response.json({ error: 'An error occurred' }, { status });
   }
 }

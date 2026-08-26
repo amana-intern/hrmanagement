@@ -1,15 +1,15 @@
 import { requireAuth } from '@/lib/dal';
 import { prisma } from '@/lib/prisma';
 
-// GET /api/todos — to-do list milik user yang sedang login (semua role).
+// GET /api/todos - to-do list milik user yang sedang login (semua role).
 // To-do yang sudah selesai (done) lebih dari 7 hari tidak lagi ditampilkan,
 // dan yang done selalu disortir ke paling bawah.
-// POST /api/todos — tambah to-do baru.
+// POST /api/todos - tambah to-do baru.
 export async function GET() {
   try {
     const auth = await requireAuth();
     if (!auth.idKaryawan) {
-      return Response.json({ error: 'Data karyawan tidak ditemukan' }, { status: 403 });
+      return Response.json({ error: 'Employee data not found' }, { status: 403 });
     }
 
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
@@ -39,7 +39,7 @@ export async function GET() {
     });
   } catch (e) {
     const status = (e as { status?: number }).status ?? 500;
-    return Response.json({ error: 'Terjadi kesalahan' }, { status });
+    return Response.json({ error: 'An error occurred' }, { status });
   }
 }
 
@@ -47,13 +47,13 @@ export async function POST(req: Request) {
   try {
     const auth = await requireAuth();
     if (!auth.idKaryawan) {
-      return Response.json({ error: 'Data karyawan tidak ditemukan' }, { status: 403 });
+      return Response.json({ error: 'Employee data not found' }, { status: 403 });
     }
 
     const body = await req.json().catch(() => null);
     const teks = (body?.teks ?? '').toString().trim();
     if (!teks) {
-      return Response.json({ error: 'Teks to-do tidak boleh kosong' }, { status: 400 });
+      return Response.json({ error: 'To-do text cannot be empty' }, { status: 400 });
     }
 
     const todo = await prisma.hrTodo.create({
@@ -67,6 +67,6 @@ export async function POST(req: Request) {
     return Response.json({ idTodo: todo.idTodo, teks: todo.teks }, { status: 201 });
   } catch (e) {
     const status = (e as { status?: number }).status ?? 500;
-    return Response.json({ error: 'Terjadi kesalahan' }, { status });
+    return Response.json({ error: 'An error occurred' }, { status });
   }
 }

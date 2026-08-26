@@ -3,9 +3,12 @@ import { prisma } from '@/lib/prisma';
 import { ROLES } from '@/lib/roles';
 import { ASSESSMENT_STATUS, CONTRACT_STATUS, LEAVE_STATUS } from '@/lib/constants';
 
+// Tanggal singkat dd/mm/yyyy untuk teks update dashboard.
 function fmt(d: Date | null | undefined): string {
   if (!d) return '-';
-  return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short' });
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  return `${dd}/${mm}/${d.getFullYear()}`;
 }
 
 // GET /api/hr/dashboard — ringkasan dashboard HR dari database:
@@ -41,10 +44,10 @@ export async function GET() {
 
     const attendanceUpdates = [
       ...recentLeaves.map((l) => ({
-        text: `${l.masterStatus?.namaStatus ?? 'Cuti'} · ${l.karyawan?.nama ?? '-'} (${fmt(l.tanggalMulai)})`,
+        text: `${l.masterStatus?.namaStatus ?? 'Leave'} - ${l.karyawan?.nama ?? '-'} (${fmt(l.tanggalMulai)})`,
       })),
       ...recentSick.map((s) => ({
-        text: `Izin sakit · ${s.karyawan?.nama ?? '-'} (${fmt(s.tanggalMulai)})`,
+        text: `Sick leave - ${s.karyawan?.nama ?? '-'} (${fmt(s.tanggalMulai)})`,
       })),
     ].slice(0, 5);
 
@@ -90,10 +93,10 @@ export async function GET() {
 
     const careerUpdates = [
       ...recentSubmissions.map((s) => ({
-        text: `Assessment · ${s.karyawan?.nama ?? '-'} (${fmt(s.tanggalSelesai)})`,
+        text: `Assessment - ${s.karyawan?.nama ?? '-'} (${fmt(s.tanggalSelesai)})`,
       })),
       ...recentCerts.map((c) => ({
-        text: `Sertifikat · ${c.karyawan?.nama ?? '-'} (${c.judul ?? '-'})`,
+        text: `Sertifikat - ${c.karyawan?.nama ?? '-'} (${c.judul ?? '-'})`,
       })),
     ].slice(0, 5);
 
@@ -118,9 +121,9 @@ export async function GET() {
     ]);
 
     const todos = [
-      ...pendingLeaves.map((l) => ({ text: `Approve cuti ${l.karyawan?.nama ?? '-'}` })),
+      ...pendingLeaves.map((l) => ({ text: `Approve leave ${l.karyawan?.nama ?? '-'}` })),
       ...expiringContracts.map((c) => ({
-        text: `Kontrak ${c.karyawan?.nama ?? '-'} berakhir ${fmt(c.tanggalBerakhir)}`,
+        text: `Kontrak ${c.karyawan?.nama ?? '-'} expires on ${fmt(c.tanggalBerakhir)}`,
       })),
     ];
 
@@ -141,6 +144,6 @@ export async function GET() {
     });
   } catch (e) {
     const status = (e as { status?: number }).status ?? 500;
-    return Response.json({ error: 'Terjadi kesalahan' }, { status });
+    return Response.json({ error: 'An error occurred' }, { status });
   }
 }

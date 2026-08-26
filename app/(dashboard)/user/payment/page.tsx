@@ -12,6 +12,7 @@ import TextField from '@/app/components/forms/TextField';
 import SelectField from '@/app/components/forms/SelectField';
 import SharedUploadBox from '@/app/components/forms/UploadBox';
 import { easeOut } from '@/app/utils/motion';
+import { formatDateTimeWIB } from '@/app/utils/formatDate';
 import { PAYMENT_KATEGORI, PAYMENT_STATUS } from '@/lib/constants';
 
 interface OutgoingPayment {
@@ -41,6 +42,7 @@ const paymentColumns: DataTableColumn<OutgoingPayment>[] = [
     key: 'timeSubmission',
     label: 'Time Submission',
     sortValue: (r) => (r.timeSubmission ? new Date(r.timeSubmission).getTime() : 0),
+    render: (r) => <span className="whitespace-nowrap">{formatDateTimeWIB(r.timeSubmission)}</span>,
   },
   { key: 'toWhom', label: 'To Whom' },
   { key: 'submittedToWhom', label: 'Submitted To Whom' },
@@ -215,10 +217,10 @@ export default function PaymentPage() {
           );
         }
       } else {
-        alert(data.error || 'Gagal mengirim pengajuan');
+        alert(data.error || 'Failed to submit request');
       }
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Terjadi kesalahan jaringan');
+      alert(err instanceof Error ? err.message : 'Network error');
     }
   };
 

@@ -1,6 +1,9 @@
 import { getSession } from '@/lib/session';
-import { ROLES } from '@/lib/roles';
+import { ROLES, canUseEmployeeFeatures } from '@/lib/roles';
+import { hasPendingFirstAssessment } from '@/lib/assessment-gate';
+import { prisma } from '@/lib/prisma';
 import PageLayout from '@/app/components/layout/PageLayout';
+import AssessmentGate from '@/app/components/layout/AssessmentGate';
 import SidebarHR, { groups as hrGroups } from '@/app/components/Sidebar/SidebarHR/Sidebarhr';
 import SidebarOPS, { groups as opsGroups } from '@/app/components/Sidebar/SidebarOPS/Sidebarops';
 import SidebarPartner, { groups as partnerGroups } from '@/app/components/Sidebar/SidebarPartner/Sidebarpartner';
@@ -22,9 +25,20 @@ export default async function DashboardLayout({ children }: { children: React.Re
           ? { sidebar: <SidebarPartner />, groups: partnerGroups }
           : { sidebar: <SidebarUser />, groups: userGroups };
 
+  // Gerbang assessment pertama: semua kecuali Partner wajib menyelesaikan
+  // assessment yang sedang terbuka sebelum bisa menjelajah halaman lain.
+  let mustAssess = false;
+  if (session?.idUser && canUseEmployeeFeatures(session.idRole)) {
+    const dbUser = await prisma.user.findUnique({
+      where: { idUser: session.idUser },
+      select: { karyawan: { select: { idKaryawan: true } } },
+    });
+    mustAssess = await hasPendingFirstAssessment(dbUser?.karyawan?.idKaryawan).catch(() => false);
+  }
+
   return (
     <PageLayout sidebar={sidebar} groups={groups}>
-      {children}
+      <AssessmentGate mustAssess={mustAssess}>{children}</AssessmentGate>
     </PageLayout>
   );
 }

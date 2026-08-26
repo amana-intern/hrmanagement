@@ -15,7 +15,7 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
     const { id } = await ctx.params;
 
     const assessment = await prisma.assessment.findUnique({ where: { idAssessment: id } });
-    if (!assessment) return Response.json({ error: 'Assessment tidak ditemukan' }, { status: 404 });
+    if (!assessment) return Response.json({ error: 'Assessment not found' }, { status: 404 });
 
     const body = await request.json().catch(() => ({}));
     const open = body?.open === true;
@@ -36,6 +36,6 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
     return Response.json({ ok: true, assessment: updated });
   } catch (e) {
     const status = (e as { status?: number }).status ?? 500;
-    return Response.json({ error: 'Terjadi kesalahan' }, { status });
+    return Response.json({ error: 'Something went wrong' }, { status });
   }
 }

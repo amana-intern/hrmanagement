@@ -7,7 +7,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ idTodo: strin
   try {
     const auth = await requireAuth();
     if (!auth.idKaryawan) {
-      return Response.json({ error: 'Data karyawan tidak ditemukan' }, { status: 403 });
+      return Response.json({ error: 'Employee data not found' }, { status: 403 });
     }
 
     const { idTodo } = await ctx.params;
@@ -18,7 +18,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ idTodo: strin
       where: { idTodo, idKaryawan: auth.idKaryawan },
     });
     if (!existing) {
-      return Response.json({ error: 'Tidak ditemukan' }, { status: 404 });
+      return Response.json({ error: 'Not found' }, { status: 404 });
     }
 
     const updated = await prisma.hrTodo.update({
@@ -37,7 +37,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ idTodo: strin
     });
   } catch (e) {
     const status = (e as { status?: number }).status ?? 500;
-    return Response.json({ error: 'Terjadi kesalahan' }, { status });
+    return Response.json({ error: 'Something went wrong' }, { status });
   }
 }
 
@@ -45,7 +45,7 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ idTodo: str
   try {
     const auth = await requireAuth();
     if (!auth.idKaryawan) {
-      return Response.json({ error: 'Data karyawan tidak ditemukan' }, { status: 403 });
+      return Response.json({ error: 'Employee data not found' }, { status: 403 });
     }
 
     const { idTodo } = await ctx.params;
@@ -54,13 +54,13 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ idTodo: str
       where: { idTodo, idKaryawan: auth.idKaryawan },
     });
     if (!existing) {
-      return Response.json({ error: 'Tidak ditemukan' }, { status: 404 });
+      return Response.json({ error: 'Not found' }, { status: 404 });
     }
 
     await prisma.hrTodo.delete({ where: { idTodo } });
     return Response.json({ ok: true });
   } catch (e) {
     const status = (e as { status?: number }).status ?? 500;
-    return Response.json({ error: 'Terjadi kesalahan' }, { status });
+    return Response.json({ error: 'Something went wrong' }, { status });
   }
 }

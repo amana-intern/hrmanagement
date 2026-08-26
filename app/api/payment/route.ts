@@ -9,7 +9,7 @@ const UPLOAD_DIR = path.join(process.cwd(), 'public', 'uploads');
 const MAX_BYTES = 5 * 1024 * 1024;
 const ALLOWED_EXT = ['.pdf', '.jpg', '.jpeg', '.png'];
 
-// POST /api/payment — Employee membuat pengajuan dana (status PENDING_OPS)
+// POST /api/payment - Employee membuat pengajuan dana (status PENDING_OPS)
 // Mendukung JSON (data minimal) dan multipart/form-data (detail + lampiran).
 export async function POST(request: NextRequest) {
   try {
@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
       const detailStr = form.get('detail')?.toString() ?? null;
 
       if (!projectID || !nominalStr || !idKategoriPayment) {
-        return Response.json({ error: 'ProjectID, nominal, dan kategori wajib diisi' }, { status: 400 });
+        return Response.json({ error: 'ProjectID, amount, and category are required' }, { status: 400 });
       }
 
       // Simpan file lampiran (field name = kategori, mis. vendor-invoice / ind-ktp).
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
 
       const nominal = Number(nominalStr);
       if (!Number.isFinite(nominal)) {
-        return Response.json({ error: 'Nominal tidak valid' }, { status: 400 });
+        return Response.json({ error: 'Invalid amount' }, { status: 400 });
       }
 
       const payment = await prisma.paymentRequest.create({
@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { projectID, nominal, idKategoriPayment, catatan } = body || {};
     if (!projectID || !nominal || !idKategoriPayment) {
-      return Response.json({ error: 'ProjectID, nominal, dan kategori wajib diisi' }, { status: 400 });
+      return Response.json({ error: 'ProjectID, amount, and category are required' }, { status: 400 });
     }
     const payment = await prisma.paymentRequest.create({
       data: {
@@ -96,6 +96,6 @@ export async function POST(request: NextRequest) {
     return Response.json({ ok: true, payment }, { status: 201 });
   } catch (e) {
     const status = (e as { status?: number }).status ?? 500;
-    return Response.json({ error: 'Terjadi kesalahan' }, { status });
+    return Response.json({ error: 'An error occurred' }, { status });
   }
 }

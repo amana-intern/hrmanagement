@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { ROLES } from '@/lib/roles';
 import { ASSESSMENT_STATUS } from '@/lib/constants';
 
-// GET /api/hr/assessments — daftar assessment + kategorinya (HR)
+// GET /api/hr/assessments - daftar assessment + kategorinya (HR)
 export async function GET() {
   try {
     const auth = await requireAuth();
@@ -43,11 +43,11 @@ export async function GET() {
     return Response.json({ list: result });
   } catch (e) {
     const status = (e as { status?: number }).status ?? 500;
-    return Response.json({ error: 'Terjadi kesalahan' }, { status });
+    return Response.json({ error: 'An error occurred' }, { status });
   }
 }
 
-// POST /api/hr/assessments — HR membuat assessment + kategori + kompetensi.
+// POST /api/hr/assessments - HR membuat assessment + kategori + kompetensi.
 // Saat dibuka (ST_ASM_OPEN), assessment lain yang masih open otomatis ditutup.
 export async function POST(request: Request) {
   try {
@@ -59,7 +59,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { judul, deskripsi, tanggalBuka, tanggalTutup, categories, open } = body || {};
     if (!judul) {
-      return Response.json({ error: 'Judul wajib diisi' }, { status: 400 });
+      return Response.json({ error: 'Title is required' }, { status: 400 });
     }
 
     const catList: {
@@ -139,6 +139,6 @@ export async function POST(request: Request) {
     return Response.json({ ok: true, assessment }, { status: 201 });
   } catch (e) {
     const status = (e as { status?: number }).status ?? 500;
-    return Response.json({ error: 'Terjadi kesalahan' }, { status });
+    return Response.json({ error: 'An error occurred' }, { status });
   }
 }

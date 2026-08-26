@@ -1,7 +1,8 @@
 import { OAuth2Client } from 'google-auth-library';
 import { prisma } from '@/lib/prisma';
 import { createSession } from '@/lib/session';
-import { ASSESSMENT_STATUS } from '@/lib/constants';
+import { saveFile } from '@/lib/storage';
+import { hasPendingFirstAssessment } from '@/lib/assessment-gate';
 import { canUseEmployeeFeatures } from '@/lib/roles';
 
 const googleClientId = process.env.GOOGLE_CLIENT_ID;
@@ -13,7 +14,7 @@ export async function POST(request: Request) {
   try {
     if (!googleClientId || !domain) {
       return Response.json(
-        { error: 'Konfigurasi Google belum lengkap. Hubungi administrator.' },
+        { error: 'Google configuration is incomplete. Contact the administrator.' },
         { status: 500 }
       );
     }
@@ -21,7 +22,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { token } = body || {};
     if (!token || typeof token !== 'string') {
-      return Response.json({ error: 'Token Google tidak ditemukan' }, { status: 400 });
+      return Response.json({ error: 'Google token not found' }, { status: 400 });
     }
 
     const ticket = await client.verifyIdToken({
@@ -30,7 +31,7 @@ export async function POST(request: Request) {
     });
     const payload = ticket.getPayload();
     if (!payload || !payload.email) {
-      return Response.json({ error: 'Token Google tidak valid' }, { status: 401 });
+      return Response.json({ error: 'Invalid Google token' }, { status: 401 });
     }
 
     const email = payload.email.toLowerCase();
@@ -56,24 +57,44 @@ export async function POST(request: Request) {
     // Opsi A: email @domain valid tapi belum terdaftar -> tolak, arahkan ke HR.
     if (!user) {
       return Response.json(
-        { error: 'Email Anda belum terdaftar di sistem. Hubungi HR untuk diaktifkan.' },
+        { error: 'Your email is not registered in the system yet. Contact HR to get activated.' },
         { status: 403 }
       );
     }
 
     // Link konsisten via Google `sub`: login pertama auto-link, berikutnya wajib cocok.
+    // Foto profil Google diunduh & disimpan lokal (URL lh3.googleusercontent.com
+    // di-rate-limit Google/429 bila di-hotlink langsung).
     const googleSub = payload.sub ?? '';
     if (googleSub) {
       if (user.googleSub && user.googleSub !== googleSub) {
         return Response.json(
-          { error: 'Akun Google tidak cocok dengan akun yang terdaftar. Hubungi HR.' },
+          { error: 'This Google account does not match the registered account. Contact HR.' },
           { status: 403 }
         );
       }
-      if (!user.googleSub) {
+
+      let pictureUrl = user.pictureUrl; // fallback: pertahankan foto lama
+      if (payload.picture) {
+        try {
+          // Minta resolusi tinggi (default ID token hanya s96 -> blur saat ditampilkan besar).
+          const hiRes = /=[sS]\d+(-c)?$/.test(payload.picture)
+            ? payload.picture.replace(/=[sS]\d+(-c)?$/, '=s400-c')
+            : `${payload.picture}=s400-c`;
+          const res = await fetch(hiRes, { signal: AbortSignal.timeout(5000) });
+          if (res.ok) {
+            const buffer = Buffer.from(await res.arrayBuffer());
+            pictureUrl = await saveFile(buffer, `avatar-${googleSub}-400.jpg`);
+          }
+        } catch {
+          // Unduhan gagal (timeout/network) -> pakai foto lama.
+        }
+      }
+
+      if (!user.googleSub || user.pictureUrl !== pictureUrl) {
         await prisma.user.update({
           where: { idUser: user.idUser },
-          data: { googleSub },
+          data: { ...(user.googleSub ? {} : { googleSub }), pictureUrl },
         });
       }
     }
@@ -85,23 +106,7 @@ export async function POST(request: Request) {
 
     let needsAssessment = false;
     if (idKaryawan && canUseEmployeeFeatures(user.idRole)) {
-      const now = new Date();
-      const open = await prisma.assessment.findFirst({
-        where: {
-          idStatus: ASSESSMENT_STATUS.OPEN,
-          OR: [
-            { tanggalBuka: { lte: now }, tanggalTutup: null },
-            { tanggalBuka: { lte: now }, tanggalTutup: { gte: now } },
-          ],
-        },
-        orderBy: { tanggalBuka: 'desc' },
-      });
-      if (open) {
-        const sub = await prisma.assessmentSubmission.findFirst({
-          where: { idKaryawan: idKaryawan, idAssessment: open.idAssessment },
-        });
-        needsAssessment = !sub;
-      }
+      needsAssessment = await hasPendingFirstAssessment(idKaryawan);
     }
 
     await createSession({
@@ -131,7 +136,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('Google auth error:', error);
     return Response.json(
-      { error: 'Autentikasi gagal atau token kadaluarsa' },
+      { error: 'Authentication failed or token expired' },
       { status: 401 }
     );
   }

@@ -109,7 +109,7 @@ export default function CareerHubPage() {
     fd.append('file', file);
     const res = await fetch('/api/upload', { method: 'POST', body: fd });
     const data = await res.json();
-    if (!res.ok || !data.url) throw new Error(data.error || 'Upload gagal');
+    if (!res.ok || !data.url) throw new Error(data.error || 'Upload failed');
     return data.url;
   };
 

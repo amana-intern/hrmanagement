@@ -14,6 +14,7 @@ import Modal from '@/app/components/feedback/Modal';
 import { statusColor } from '@/app/utils/statusColor';
 import { useFilters } from '@/app/utils/useFilters';
 import { downloadTSV } from '@/lib/sheets';
+import { formatDateWIB } from '@/app/utils/formatDate';
 import { TableSkeleton } from '@/app/components/feedback/PageSkeleton';
 
 interface LeaveRecord {
@@ -197,8 +198,8 @@ export default function LeaveRecordPage() {
               ['Grade', detailsModal.grade],
               ['Leave Type', detailsModal.type],
               ['Reason', detailsModal.reason],
-              ['Start Date', detailsModal.startDate ? new Date(detailsModal.startDate + 'T00:00:00').toLocaleDateString('id-ID') : '-'],
-              ['End Date', detailsModal.endDate ? new Date(detailsModal.endDate + 'T00:00:00').toLocaleDateString('id-ID') : '-'],
+              ['Start Date', detailsModal.startDate ? formatDateWIB(detailsModal.startDate) : '-'],
+              ['End Date', detailsModal.endDate ? formatDateWIB(detailsModal.endDate) : '-'],
               [
                 'Total Days',
                 detailsModal.totalDays != null
@@ -207,7 +208,7 @@ export default function LeaveRecordPage() {
                     ? `${Math.max(Math.round((new Date(detailsModal.endDate).getTime() - new Date(detailsModal.startDate).getTime()) / 86400000) + 1, 0)} day(s)`
                     : '-',
               ],
-              ['Submitted On', detailsModal.submittedDate ? new Date(detailsModal.submittedDate + 'T00:00:00').toLocaleDateString('id-ID') : '-'],
+              ['Submitted On', detailsModal.submittedDate ? formatDateWIB(detailsModal.submittedDate) : '-'],
               ['Status', STATUS_LABELS[detailsModal.status] ?? detailsModal.status],
               ...(detailsModal.note ? [['Approver Note', detailsModal.note]] : []),
             ].map(([label, value]) => (

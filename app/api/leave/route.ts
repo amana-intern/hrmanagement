@@ -18,7 +18,7 @@ export async function POST(request: Request) {
       return Response.json({ error: 'Forbidden' }, { status: 403 });
     }
     if (!auth.idKaryawan) {
-      return Response.json({ error: 'Akun bukan karyawan' }, { status: 400 });
+      return Response.json({ error: 'Account is not an employee' }, { status: 400 });
     }
 
     const body = await request.json();
@@ -26,16 +26,16 @@ export async function POST(request: Request) {
     const keterangan = String(body?.keterangan ?? '').trim() || null;
 
     if (!tanggalMulai || !tanggalSelesai || !idJenisCuti) {
-      return Response.json({ error: 'Semua field wajib diisi' }, { status: 400 });
+      return Response.json({ error: 'All fields are required' }, { status: 400 });
     }
 
     const start = parseDateOnly(tanggalMulai);
     const end = parseDateOnly(tanggalSelesai);
     if (!start || !end) {
-      return Response.json({ error: 'Format tanggal tidak valid' }, { status: 400 });
+      return Response.json({ error: 'Invalid date format' }, { status: 400 });
     }
     if (end < start) {
-      return Response.json({ error: 'Tanggal selesai tidak boleh lebih awal dari tanggal mulai' }, { status: 400 });
+      return Response.json({ error: 'End date cannot be earlier than start date' }, { status: 400 });
     }
     const jumlahHari = Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
 
@@ -51,7 +51,7 @@ export async function POST(request: Request) {
     if (blocked.length > 0) {
       const rangeLabel = (b: (typeof blocked)[number]) =>
         b.tanggalAkhir
-          ? `${b.tanggal?.toLocaleDateString('id-ID')} s/d ${b.tanggalAkhir.toLocaleDateString('id-ID')}`
+          ? `${b.tanggal?.toLocaleDateString('id-ID')} - ${b.tanggalAkhir.toLocaleDateString('id-ID')}`
           : (b.tanggal?.toLocaleDateString('id-ID') ?? '');
       return Response.json(
         {
@@ -119,6 +119,6 @@ export async function POST(request: Request) {
     return Response.json({ ok: true, cuti }, { status: 201 });
   } catch (e) {
     const status = (e as { status?: number }).status ?? 500;
-    return Response.json({ error: 'Terjadi kesalahan' }, { status });
+    return Response.json({ error: 'An error occurred' }, { status });
   }
 }

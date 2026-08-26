@@ -44,6 +44,9 @@ interface Employee {
   tipeKontrak?: string;
   noTelepon: string;
   tanggalLahir: string | null;
+  pictureUrl?: string | null;
+  contractStartDate?: string | null;
+  contractEndDate?: string | null;
   certificates: Certificate[];
   assessment: {
     idSubmission: string;
@@ -130,7 +133,7 @@ export default function TalentRosterPage() {
   const [deletingUser, setDeletingUser] = useState(false);
 
   const [editModal, setEditModal] = useState<Employee | null>(null);
-  const [editForm, setEditForm] = useState({ department: '', grade: '', roleLabel: '', akses: 'employee' });
+  const [editForm, setEditForm] = useState({ department: '', grade: '', roleLabel: '', akses: 'employee', contractStartDate: '', contractEndDate: '', noTelepon: '', tanggalLahir: '' });
   const [customEditGrade, setCustomEditGrade] = useState('');
   const [savingEdit, setSavingEdit] = useState(false);
   const [editMsg, setEditMsg] = useState('');
@@ -252,6 +255,10 @@ export default function TalentRosterPage() {
       grade: e.grade && e.grade !== '-' ? e.grade : '',
       roleLabel: e.roleLabel && e.roleLabel !== '-' ? e.roleLabel : '',
       akses: 'employee',
+      contractStartDate: e.contractStartDate ?? '',
+      contractEndDate: e.contractEndDate ?? '',
+      noTelepon: e.noTelepon || '',
+      tanggalLahir: e.tanggalLahir ? e.tanggalLahir.slice(0, 10) : '',
     });
     setCustomEditGrade('');
     setEditMsg('');
@@ -279,6 +286,18 @@ export default function TalentRosterPage() {
     setSavingEdit(true);
     setEditMsg('');
     try {
+      const hasContract = !!(editModal.contractStartDate || editModal.contractEndDate);
+      const datesChanged =
+        hasContract &&
+        (editForm.contractStartDate !== (editModal.contractStartDate ?? '') ||
+          editForm.contractEndDate !== (editModal.contractEndDate ?? ''));
+      if (datesChanged && (!editForm.contractStartDate || !editForm.contractEndDate)) {
+        setEditMsg('Both contract start & end date are required');
+        return;
+      }
+      const contactChanged =
+        editForm.noTelepon !== (editModal.noTelepon || '') ||
+        editForm.tanggalLahir !== (editModal.tanggalLahir ? editModal.tanggalLahir.slice(0, 10) : '');
       const res = await fetch(`/api/hr/talent-roster/${editModal.idKaryawan}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -286,7 +305,17 @@ export default function TalentRosterPage() {
           department: editForm.department,
           namaGrade: gradeVal,
           namaRole: roleVal,
-          akses: editForm.akses,
+          // 'employee' = tanpa akses admin -> jangan kirim field akses.
+          ...(editForm.akses && editForm.akses !== 'employee' ? { akses: editForm.akses } : {}),
+          ...(contactChanged
+            ? { noTelepon: editForm.noTelepon, tanggalLahir: editForm.tanggalLahir || null }
+            : {}),
+          ...(datesChanged
+            ? {
+                kontrakTanggalMulai: editForm.contractStartDate,
+                kontrakTanggalBerakhir: editForm.contractEndDate,
+              }
+            : {}),
         }),
       });
       const data = await res.json();
@@ -397,7 +426,7 @@ export default function TalentRosterPage() {
             </Button>
           }
         >
-          <DataTable key="roster" columns={rosterColumns} rows={rosterRows} defaultSortKey="nama" emptyMessage="Tidak ada karyawan." compact />
+          <DataTable key="roster" columns={rosterColumns} rows={rosterRows} defaultSortKey="nama" emptyMessage="No employees found." compact />
         </SectionCard>
       </div>
 
@@ -409,6 +438,7 @@ export default function TalentRosterPage() {
             department: departmentLabel(detailsModal.department),
             email: detailsModal.email,
             phone: detailsModal.noTelepon || '-',
+            photoSrc: detailsModal.pictureUrl ?? undefined,
             assessmentDone: !!detailsModal.assessment,
             assessmentName: assessmentName ?? undefined,
             certificates: detailsModal.certificates.map((c) => ({ title: c.judul, fileURL: c.fileURL })),
@@ -436,7 +466,7 @@ export default function TalentRosterPage() {
               <AssessmentResultView categories={categories} assessment={assessmentModal.assessment} />
             ) : (
               <p className="text-sm text-amana-neutral-400">
-                {assessmentName ? `Belum mengisi ${assessmentName}.` : 'Belum ada data assessment.'}
+                {assessmentName ? `Has not completed ${assessmentName}.` : 'No assessment data yet.'}
               </p>
             )}
           </div>
@@ -540,19 +570,31 @@ export default function TalentRosterPage() {
           className="max-h-[90vh]"
         >
           {isSelfEdit && (
-            <div className="mx-5 mt-4 flex-shrink-0 flex items-center gap-2 rounded-[5px] border border-amana-danger-500 bg-amana-danger-100 px-4 py-2.5 text-[14px] font-medium text-amana-danger-500">
+            <div className="mx-5 mt-4 flex-shrink-0 flex items-center gap-2 rounded-[5px] border border-amana-warning-500 bg-amana-warning-100 px-4 py-2.5 text-[14px] font-medium text-amana-warning-500">
               <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-              You can&apos;t edit your own account.
+              You can edit your own profile data, but not your own role/access.
             </div>
           )}
           <div className="flex-1 min-h-0 overflow-y-auto scroll-smooth p-5 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+            <TextField
+              label="Phone Number"
+              value={editForm.noTelepon}
+              onChange={(v) => setEditForm((p) => ({ ...p, noTelepon: v }))}
+              placeholder="e.g.: 0812-3456-7890"
+            />
+            <TextField
+              label="Birth Date"
+              type="date"
+              value={editForm.tanggalLahir}
+              onChange={(v) => setEditForm((p) => ({ ...p, tanggalLahir: v }))}
+            />
+
             <SelectField
               label="Department"
               value={editForm.department}
               onChange={(v) => setEditForm((p) => ({ ...p, department: v, grade: '' }))}
               options={DEPARTMENT_OPTION_LIST}
               labels={DEPARTMENT_LABELS}
-              disabled={isSelfEdit}
               placeholder="Choose Department"
             />
 
@@ -563,7 +605,7 @@ export default function TalentRosterPage() {
                 onChange={(v) => setEditForm((p) => ({ ...p, grade: v }))}
                 options={[...(editForm.department === 'ops' ? OPS_GRADES : editForm.department ? NON_OPS_GRADES : []), '__other__']}
                 labels={{ __other__: 'Other / Custom' }}
-                disabled={!editForm.department || isSelfEdit}
+                disabled={!editForm.department}
                 placeholder={editForm.department ? 'Choose Grade' : 'Select department first'}
               />
               {editForm.grade === '__other__' && (
@@ -611,6 +653,29 @@ export default function TalentRosterPage() {
                 <p className="pt-1.5 text-[12px] text-amana-neutral-400">Grade Head/Partner automatically becomes access Partner.</p>
               )}
             </div>
+
+            {(editModal.contractStartDate || editModal.contractEndDate) && (
+              <div className="md:col-span-2 border-t border-amana-neutral-200 pt-4">
+                <h4 className="text-[16px] font-semibold text-amana-primary-500 mb-3">Contract Dates</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                  <TextField
+                    label="Contract Start"
+                    type="date"
+                    value={editForm.contractStartDate}
+                    onChange={(v) => setEditForm((p) => ({ ...p, contractStartDate: v }))}
+                  />
+                  <TextField
+                    label="Contract End"
+                    type="date"
+                    value={editForm.contractEndDate}
+                    onChange={(v) => setEditForm((p) => ({ ...p, contractEndDate: v }))}
+                  />
+                </div>
+                <p className="pt-1.5 text-[12px] text-amana-neutral-400">
+                  Fix wrong contract dates here (e.g. from a mistaken Extend Contract input).
+                </p>
+              </div>
+            )}
           </div>
 
           {editMsg && (
@@ -633,7 +698,7 @@ export default function TalentRosterPage() {
               <Button variant="outline" size="lg" onClick={() => { setEditModal(null); setEditMsg(''); setCustomEditGrade(''); }}>
                 Cancel
               </Button>
-              <Button variant="primary" size="lg" disabled={savingEdit || isSelfEdit} onClick={handleSaveEdit}>
+              <Button variant="primary" size="lg" disabled={savingEdit} onClick={handleSaveEdit}>
                 {savingEdit ? 'Saving...' : 'Save Changes'}
               </Button>
             </div>

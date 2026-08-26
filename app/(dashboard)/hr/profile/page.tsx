@@ -27,7 +27,10 @@ interface Me {
   nama: string;
   email: string;
   noTelepon: string | null;
+  departmentLabel?: string | null;
+  pictureUrl?: string | null;
   rolesDivisi: string;
+  displayGrade?: string | null;
   roleLabel: string;
 }
 
@@ -56,8 +59,8 @@ export default function HRProfilePage() {
     title: 'Attendance Summary',
     stats: [
       stat(data?.attendance.pendingApproval ?? 0, 'Pending Approval', 'Menunggu persetujuan'),
-      stat(data?.attendance.sickLeave ?? 0, 'Sick Leave', 'Izin sakit tercatat'),
-      stat(data?.attendance.totalLeave ?? 0, 'Total Leave', 'Total pengajuan cuti'),
+      stat(data?.attendance.sickLeave ?? 0, 'Sick Leave', 'Sick leave recorded'),
+      stat(data?.attendance.totalLeave ?? 0, 'Total Leave', 'Total leave requests'),
     ],
     updates: (data?.attendance.updates ?? []).map((u) => u.text),
   };
@@ -65,24 +68,24 @@ export default function HRProfilePage() {
   const careerPanel: SummaryPanelConfig = {
     title: 'Career Hub Summary',
     stats: [
-      stat(data?.career.pendingApproval ?? 0, 'Assessment Pending', 'Belum mengisi assessment'),
+      stat(data?.career.pendingApproval ?? 0, 'Assessment Pending', 'Not yet assessed'),
       stat(data?.career.certificates ?? 0, 'Certificates', 'Total sertifikat'),
-      stat(data?.career.assessment ?? 0, 'Assessment', 'Sudah mengisi'),
+      stat(data?.career.assessment ?? 0, 'Assessment', 'Completed'),
     ],
     updates: (data?.career.updates ?? []).map((u) => u.text),
   };
 
   const bio: ProfileBio = {
     name: me?.nama ?? 'Amana User',
-    role: me?.rolesDivisi ?? me?.roleLabel ?? 'Human Resource',
+    role: [me?.departmentLabel, me?.displayGrade].filter(Boolean).join(' - ') || '-',
     email: me?.email ?? '-',
     phone: me?.noTelepon ?? '-',
+    photoSrc: me?.pictureUrl ?? undefined,
   };
 
   return (
     <ProfileOverview
       showGreeting
-      showLogout
       showCareerHistory
       panels={[attendancePanel, careerPanel]}
       bio={bio}

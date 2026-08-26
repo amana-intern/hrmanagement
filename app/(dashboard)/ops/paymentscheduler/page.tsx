@@ -49,7 +49,7 @@ function amountLabel(c: PaymentRaw): string {
       const p = Number(detail?.perDiemParticipants);
       if (Number.isFinite(p) && p > 0) return `${p} peserta`;
     } catch {}
-    return 'Lihat file';
+    return 'View file';
   }
   return `Rp ${Number(c.nominal).toLocaleString('id-ID')}`;
 }
@@ -255,7 +255,7 @@ export default function PaymentSchedulerPage() {
             columns={columns}
             rows={filtered}
             defaultSortKey="idRequest"
-            emptyMessage="Tidak ada data."
+            emptyMessage="No data found."
           />
         </SectionCard>
       </div>

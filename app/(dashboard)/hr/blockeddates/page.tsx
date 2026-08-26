@@ -10,6 +10,7 @@ import TextField from '@/app/components/forms/TextField';
 import ConfirmModal from '@/app/components/feedback/ConfirmModal';
 import StatusModal from '@/app/components/feedback/StatusModal';
 import { TableSkeleton } from '@/app/components/feedback/PageSkeleton';
+import { formatDateWIB } from '@/app/utils/formatDate';
 
 interface BlockedDate {
   id: string;
@@ -18,7 +19,7 @@ interface BlockedDate {
   alasan: string | null;
 }
 
-const fmt = (v: string | null) => (v ? new Date(v).toLocaleDateString('id-ID', { timeZone: 'UTC' }) : '');
+const fmt = (v: string | null) => (v ? formatDateWIB(v) : '');
 
 export default function BlockedDatesPage() {
   const [rows, setRows] = useState<BlockedDate[]>([]);
@@ -47,7 +48,7 @@ export default function BlockedDatesPage() {
       );
       setError('');
     } else {
-      setError('Gagal memuat data');
+      setError('Failed to load data');
     }
   };
 
@@ -59,7 +60,7 @@ export default function BlockedDatesPage() {
   }, []);
 
   const blockLabel = (row: BlockedDate) =>
-    row.tanggalAkhir ? `${fmt(row.tanggal)} s/d ${fmt(row.tanggalAkhir)}` : fmt(row.tanggal);
+    row.tanggalAkhir ? `${fmt(row.tanggal)} - ${fmt(row.tanggalAkhir)}` : fmt(row.tanggal);
 
   const handleAdd = async () => {
     if (!newDate) {
@@ -105,12 +106,28 @@ export default function BlockedDatesPage() {
     {
       key: 'tanggal',
       label: 'Date',
+      width: '210px',
       sortValue: (r) => (r.tanggal ? new Date(r.tanggal).getTime() : 0),
+      render: (r) => (
+        <span className="text-[13px] leading-snug whitespace-nowrap">
+          {fmt(r.tanggal)}
+          {r.tanggalAkhir ? ` - ${fmt(r.tanggalAkhir)}` : ''}
+        </span>
+      ),
     },
-    { key: 'alasan', label: 'Reason' },
+    {
+      key: 'alasan',
+      label: 'Reason',
+      render: (r) => (
+        <span className="block w-full break-words text-center">
+          {r.alasan ?? '-'}
+        </span>
+      ),
+    },
     {
       key: 'id',
       label: 'Action',
+      width: '240px',
       render: (r) => (
         <Button variant="danger" size="sm" className="w-full" onClick={() => setRowToDelete(r)}>
           Remove
@@ -148,7 +165,7 @@ export default function BlockedDatesPage() {
           columns={columns}
           rows={rows}
           defaultSortKey="tanggal"
-          emptyMessage="Belum ada tanggal diblokir."
+          emptyMessage="No blocked dates yet."
           compact
         />
       </SectionCard>

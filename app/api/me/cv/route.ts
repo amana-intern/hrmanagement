@@ -9,7 +9,7 @@ const UPLOAD_DIR = path.join(process.cwd(), 'public', 'uploads');
 const MAX_BYTES = 5 * 1024 * 1024;
 const ALLOWED_EXT = ['.pdf'];
 
-// PATCH /api/me/cv — Employee meng-update CV (upload file -> simpan URL di TalentProfile.fileCVURL)
+// PATCH /api/me/cv - Employee meng-update CV (upload file -> simpan URL di TalentProfile.fileCVURL)
 export async function PATCH(request: NextRequest) {
   try {
     const auth = await requireAuth();
@@ -20,12 +20,12 @@ export async function PATCH(request: NextRequest) {
     const form = await request.formData();
     const file = form.get('file');
     if (!(file instanceof File) || file.size === 0) {
-      return Response.json({ error: 'File CV wajib diupload' }, { status: 400 });
+      return Response.json({ error: 'CV file is required' }, { status: 400 });
     }
 
     const ext = path.extname(file.name).toLowerCase();
     if (!ALLOWED_EXT.includes(ext)) {
-      return Response.json({ error: 'Format tidak didukung (pdf)' }, { status: 400 });
+      return Response.json({ error: 'Unsupported format (pdf)' }, { status: 400 });
     }
     if (file.size > MAX_BYTES) {
       return Response.json({ error: 'Ukuran file melebihi 5MB' }, { status: 400 });
@@ -46,6 +46,6 @@ export async function PATCH(request: NextRequest) {
     return Response.json({ ok: true, fileURL, profile });
   } catch (e) {
     const status = (e as { status?: number }).status ?? 500;
-    return Response.json({ error: 'Terjadi kesalahan' }, { status });
+    return Response.json({ error: 'An error occurred' }, { status });
   }
 }

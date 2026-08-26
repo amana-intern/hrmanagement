@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { ROLES } from '@/lib/roles';
 import { parseDateOnly } from '@/lib/leave';
 
-// GET /api/hr/blocked-dates — daftar tanggal diblokir (Admin HR, view-only utk lainnya)
+// GET /api/hr/blocked-dates - daftar tanggal diblokir (Admin HR, view-only utk lainnya)
 export async function GET() {
   try {
     const auth = await requireAuth();
@@ -16,11 +16,11 @@ export async function GET() {
     return Response.json({ list });
   } catch (e) {
     const status = (e as { status?: number }).status ?? 500;
-    return Response.json({ error: 'Terjadi kesalahan' }, { status });
+    return Response.json({ error: 'An error occurred' }, { status });
   }
 }
 
-// POST /api/hr/blocked-dates — blokir satu tanggal atau rentang tanggal (Admin HR)
+// POST /api/hr/blocked-dates - blokir satu tanggal atau rentang tanggal (Admin HR)
 export async function POST(request: Request) {
   try {
     const auth = await requireAuth();
@@ -32,22 +32,22 @@ export async function POST(request: Request) {
     const { tanggal, tanggalAkhir, alasan } = body || {};
 
     if (!tanggal) {
-      return Response.json({ error: 'Tanggal wajib diisi' }, { status: 400 });
+      return Response.json({ error: 'Date is required' }, { status: 400 });
     }
 
     const start = parseDateOnly(tanggal);
     if (!start) {
-      return Response.json({ error: 'Format tanggal tidak valid' }, { status: 400 });
+      return Response.json({ error: 'Invalid date format' }, { status: 400 });
     }
 
     let end: Date | null = null;
     if (tanggalAkhir) {
       end = parseDateOnly(tanggalAkhir);
       if (!end) {
-        return Response.json({ error: 'Format tanggal akhir tidak valid' }, { status: 400 });
+        return Response.json({ error: 'Invalid end date format' }, { status: 400 });
       }
       if (end < start) {
-        return Response.json({ error: 'Tanggal akhir tidak boleh lebih awal dari tanggal mulai' }, { status: 400 });
+        return Response.json({ error: 'End date cannot be earlier than start date' }, { status: 400 });
       }
     }
 
@@ -62,7 +62,7 @@ export async function POST(request: Request) {
 
     if (hit) {
       const existing = hit.tanggalAkhir
-        ? `${hit.tanggal?.toLocaleDateString('id-ID')} s/d ${hit.tanggalAkhir.toLocaleDateString('id-ID')}`
+        ? `${hit.tanggal?.toLocaleDateString('id-ID')} - ${hit.tanggalAkhir.toLocaleDateString('id-ID')}`
         : (hit.tanggal?.toLocaleDateString('id-ID') ?? '');
       return Response.json({ error: `Rentang tanggal tumpang-tindih dengan blokir: ${existing}.` }, { status: 409 });
     }
@@ -79,6 +79,6 @@ export async function POST(request: Request) {
     return Response.json({ ok: true, item: created }, { status: 201 });
   } catch (e) {
     const status = (e as { status?: number }).status ?? 500;
-    return Response.json({ error: 'Terjadi kesalahan' }, { status });
+    return Response.json({ error: 'An error occurred' }, { status });
   }
 }

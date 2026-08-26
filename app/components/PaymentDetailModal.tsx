@@ -4,6 +4,7 @@ import { ReactNode, useState } from 'react';
 import Modal from './feedback/Modal';
 import PdfPreviewModal, { PdfPreviewTarget } from './feedback/PdfPreviewModal';
 import Button from './forms/Button';
+import { formatDateWIB } from '@/app/utils/formatDate';
 import { PAYMENT_KATEGORI } from '@/lib/constants';
 
 interface Attachment {
@@ -68,9 +69,7 @@ function formatTanggal(v?: string) {
   if (!v) return null;
   const parts = v.split('-');
   if (parts.length === 3) {
-    const d = new Date(`${v}T00:00:00`);
-    if (!Number.isNaN(d.getTime()))
-      return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+    return formatDateWIB(`${v}T00:00:00`);
   }
   return v;
 }

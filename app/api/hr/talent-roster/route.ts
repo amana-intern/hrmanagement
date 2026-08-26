@@ -4,7 +4,7 @@ import { ROLES } from '@/lib/roles';
 import { ASSESSMENT_STATUS } from '@/lib/constants';
 import bcrypt from 'bcryptjs';
 
-// GET /api/hr/talent-roster — data roster live + assessment (terbuka/latest) + hasil per karyawan.
+// GET /api/hr/talent-roster - data roster live + assessment (terbuka/latest) + hasil per karyawan.
 // Untuk tiap bidang dihitung skor rata-rata level (1-4) dari kompetensi yang dijawab.
 // Saat tidak ada assessment terbuka, fallback ke assessment terbaru agar hasil tetap bisa dilihat.
 export async function GET() {
@@ -55,6 +55,7 @@ export async function GET() {
       include: {
         masterGrade: true,
         user: { include: { role: true } },
+        kontrakKaryawan: { orderBy: { tanggalMulai: 'asc' } },
         sertifikat: true,
         assessmentSubmissions: {
           where: assessment ? { idAssessment: assessment.idAssessment } : undefined,
@@ -65,8 +66,20 @@ export async function GET() {
       orderBy: { nama: 'asc' },
     });
 
+    // Kontrak aktif = yang tanggalBerakhir-nya paling jauh (aturan sama dgn Contract Tracking).
+    const activeContractOf = (k: (typeof employees)[number]) => {
+      if (!k.kontrakKaryawan.length) return null;
+      return [...k.kontrakKaryawan].sort((a, b) => {
+        const ae = a.tanggalBerakhir ? a.tanggalBerakhir.getTime() : -1;
+        const be = b.tanggalBerakhir ? b.tanggalBerakhir.getTime() : -1;
+        if (ae !== be) return be - ae;
+        return a.idKontrak < b.idKontrak ? 1 : -1;
+      })[0];
+    };
+
     const list = employees.map((k) => {
       const submission = k.assessmentSubmissions[0] ?? null;
+      const activeContract = activeContractOf(k);
 
       let aggregated: Record<string, { answered: number; sum: number }> = {};
       if (assessment) {
@@ -96,7 +109,15 @@ export async function GET() {
         grade: k.masterGrade?.namaGrade ?? '-',
         department: k.department ?? '-',
         roleLabel: k.user?.role?.namaRole ?? '-',
+        pictureUrl: k.user?.pictureUrl ?? null,
         tipeKontrak: k.tipeKontrak ?? 'KONTRAK',
+        contractStartDate: activeContract?.tanggalMulai
+          ? activeContract.tanggalMulai.toISOString().slice(0, 10)
+          : null,
+        contractEndDate: activeContract?.tanggalBerakhir
+          ? activeContract.tanggalBerakhir.toISOString().slice(0, 10)
+          : null,
+        idKontrak: activeContract?.idKontrak ?? null,
         noTelepon: k.noTelepon ?? '',
         tanggalLahir: k.tanggalLahir,
         certificates: (k.sertifikat ?? []).map((s) => ({
@@ -141,11 +162,11 @@ export async function GET() {
     });
   } catch (e) {
     const status = (e as { status?: number }).status ?? 500;
-    return Response.json({ error: 'Terjadi kesalahan' }, { status });
+    return Response.json({ error: 'An error occurred' }, { status });
   }
 }
 
-// POST /api/hr/talent-roster — tambah pengguna baru (Karyawan + User).
+// POST /api/hr/talent-roster - tambah pengguna baru (Karyawan + User).
 // Body: { nama, email, namaRole, namaGrade, department?, tanggalLahir, tanggalMasuk, tanggalBerakhir?, tipeKontrak? }
 // Grade wajib. Grade "Head"/"Partner" = leader -> role dipaksa ROLE_PARTNER (permission Partner).
 // Selain itu = karyawan -> role bebas teks (custom); jika diisi Partner/Admin HR/Admin OPS ditolak,
@@ -166,13 +187,13 @@ export async function POST(request: Request) {
     const cleanEmail = String(email ?? '').trim().toLowerCase();
     const cleanTipe = String(tipeKontrak ?? '').trim().toUpperCase() === 'TETAP' ? 'TETAP' : 'KONTRAK';
     const cleanGrade = String(namaGrade ?? '').trim();
-    if (!cleanNama) return Response.json({ error: 'Nama wajib diisi' }, { status: 400 });
-    if (!cleanEmail) return Response.json({ error: 'Email wajib diisi' }, { status: 400 });
-    if (!cleanGrade) return Response.json({ error: 'Grade wajib diisi' }, { status: 400 });
+    if (!cleanNama) return Response.json({ error: 'Name is required' }, { status: 400 });
+    if (!cleanEmail) return Response.json({ error: 'Email is required' }, { status: 400 });
+    if (!cleanGrade) return Response.json({ error: 'Grade is required' }, { status: 400 });
 
     const existing = await prisma.user.findUnique({ where: { email: cleanEmail } });
     if (existing) {
-      return Response.json({ error: 'Email sudah terdaftar' }, { status: 409 });
+      return Response.json({ error: 'Email already registered' }, { status: 409 });
     }
 
     // Resolusi grade: cari by nama, jika belum ada buat baru (GRD### urutan berikutnya).
@@ -207,17 +228,17 @@ export async function POST(request: Request) {
     if (isLeader) {
       role = await prisma.role.findUnique({ where: { idRole: ROLES.PARTNER } });
       if (!role) {
-        return Response.json({ error: 'Role Partner tidak ditemukan' }, { status: 500 });
+        return Response.json({ error: 'Partner role not found' }, { status: 500 });
       }
     } else if (akses === 'admin_hr' || akses === 'admin_ops') {
       const targetRoleId = akses === 'admin_hr' ? ROLES.ADMIN_HR : ROLES.ADMIN_OPS;
       role = await prisma.role.findUnique({ where: { idRole: targetRoleId } });
       if (!role) {
-        return Response.json({ error: 'Role akses tidak ditemukan' }, { status: 500 });
+        return Response.json({ error: 'Access role not found' }, { status: 500 });
       }
     } else {
       const cleanRole = String(namaRole ?? '').trim();
-      if (!cleanRole) return Response.json({ error: 'Role wajib diisi' }, { status: 400 });
+      if (!cleanRole) return Response.json({ error: 'Role is required' }, { status: 400 });
 
       // Resolusi role: cari by nama (case-insensitive), jika belum ada buat baru (ROLE_<SLUG>).
       role = await prisma.role.findFirst({
@@ -238,7 +259,7 @@ export async function POST(request: Request) {
         role = await prisma.role.create({ data: { idRole: newId, namaRole: cleanRole } });
       }
       if (!role) {
-        return Response.json({ error: 'Role tidak ditemukan' }, { status: 500 });
+        return Response.json({ error: 'Role not found' }, { status: 500 });
       }
 
       // Grade biasa = karyawan -> role Partner/Admin HR/Admin OPS tidak boleh.
@@ -248,7 +269,7 @@ export async function POST(request: Request) {
         role.idRole === ROLES.ADMIN_OPS
       ) {
         return Response.json(
-          { error: 'Role Partner/Admin HR/Admin OPS hanya untuk grade Head/Partner' },
+          { error: 'Partner/Admin HR/Admin OPS roles are only allowed for grade Head/Partner' },
           { status: 400 }
         );
       }
@@ -275,8 +296,8 @@ export async function POST(request: Request) {
     // Validasi tanggal kontrak.
     const tanggalMulai = tanggalMasuk ? new Date(tanggalMasuk) : null;
     const tanggalAkhir = tanggalBerakhir ? new Date(tanggalBerakhir) : null;
-    if (tanggalAkhir && tanggalMulai && tanggalAkhir < tanggalMulai) {
-      return Response.json({ error: 'Tanggal berakhir kontrak tidak boleh sebelum tanggal masuk' }, { status: 400 });
+    if (tanggalAkhir && tanggalMulai && tanggalAkhir <= tanggalMulai) {
+      return Response.json({ error: 'Contract end date must be after the join date' }, { status: 400 });
     }
 
     // Generate idKaryawan / idUser: KRY + urutan berikutnya.
@@ -339,6 +360,6 @@ export async function POST(request: Request) {
     );
   } catch (e) {
     const status = (e as { status?: number }).status ?? 500;
-    return Response.json({ error: 'Terjadi kesalahan' }, { status });
+    return Response.json({ error: 'An error occurred' }, { status });
   }
 }

@@ -88,7 +88,7 @@ export default function JobListingsPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
-    if (!res.ok) throw new Error('Gagal memperbarui lowongan');
+    if (!res.ok) throw new Error('Failed to update job listing');
   };
 
   const handleAddJob = async (asDraft: boolean) => {
@@ -107,7 +107,7 @@ export default function JobListingsPage() {
         }),
       });
       if (!res.ok) {
-        setErrorMsg('Gagal menambahkan lowongan');
+        setErrorMsg('Failed to add job listing');
         return;
       }
       await load();
@@ -135,7 +135,7 @@ export default function JobListingsPage() {
       setEditJob(null);
       setStatus({ ok: true, text: asDraft ? `Job listing "${editFields.title}" saved as draft` : `Job listing "${editFields.title}" successfully published` });
     } catch {
-      setErrorMsg('Gagal memperbarui lowongan');
+      setErrorMsg('Failed to update job listing');
     } finally {
       setBusy(false);
     }
@@ -232,7 +232,7 @@ export default function JobListingsPage() {
           {errorMsg && (
             <p className="pb-2 text-[13px] font-medium text-amana-danger-500">{errorMsg}</p>
           )}
-          <DataTable columns={columns} rows={filtered} defaultSortKey="title" emptyMessage="Belum ada lowongan." />
+          <DataTable columns={columns} rows={filtered} defaultSortKey="title" emptyMessage="No job listings yet." />
         </SectionCard>
       </div>
 

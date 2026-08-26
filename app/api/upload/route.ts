@@ -7,7 +7,7 @@ const UPLOAD_DIR = path.join(process.cwd(), 'public', 'uploads');
 const MAX_BYTES = 5 * 1024 * 1024; // 5MB
 const ALLOWED_EXT = ['.pdf', '.jpg', '.jpeg', '.png'];
 
-// POST /api/upload — simpan file bukti ke public/uploads, balas URL publik.
+// POST /api/upload - simpan file bukti ke public/uploads, balas URL publik.
 export async function POST(request: NextRequest) {
   try {
     await requireAuth();
@@ -15,12 +15,12 @@ export async function POST(request: NextRequest) {
     const form = await request.formData();
     const file = form.get('file');
     if (!(file instanceof File)) {
-      return Response.json({ error: 'File tidak ditemukan' }, { status: 400 });
+      return Response.json({ error: 'File not found' }, { status: 400 });
     }
 
     const ext = path.extname(file.name).toLowerCase();
     if (!ALLOWED_EXT.includes(ext)) {
-      return Response.json({ error: 'Format tidak didukung (pdf/jpg/png)' }, { status: 400 });
+      return Response.json({ error: 'Unsupported format (pdf/jpg/png)' }, { status: 400 });
     }
     if (file.size > MAX_BYTES) {
       return Response.json({ error: 'Ukuran file melebihi 5MB' }, { status: 400 });
@@ -35,6 +35,6 @@ export async function POST(request: NextRequest) {
     return Response.json({ ok: true, url: `/uploads/${safeName}`, name: safeName });
   } catch (e) {
     const status = (e as { status?: number }).status ?? 500;
-    return Response.json({ error: 'Terjadi kesalahan' }, { status });
+    return Response.json({ error: 'An error occurred' }, { status });
   }
 }

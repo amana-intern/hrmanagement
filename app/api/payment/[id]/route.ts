@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { requireAuth } from '@/lib/dal';
 import { prisma } from '@/lib/prisma';
 import { ROLES } from '@/lib/roles';
+import { sendEmail } from '@/lib/notify';
 
 const nota = () => `NOTIF-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 const hist = () => `HIST-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -21,11 +22,14 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
 
     const payment = await prisma.paymentRequest.findUnique({
       where: { idRequest: id },
-      include: { karyawan: true },
+      include: { karyawan: { include: { user: true } } },
     });
-    if (!payment) return Response.json({ error: 'Tidak ditemukan' }, { status: 404 });
+    if (!payment) return Response.json({ error: 'Not found' }, { status: 404 });
 
     const idKaryawan = payment.karyawan?.idKaryawan ?? null;
+    const applicantEmail = payment.karyawan?.user?.email ?? null;
+    const sendNotifEmail = (subject: string, text: string) =>
+      applicantEmail ? sendEmail({ to: applicantEmail, subject, text }) : Promise.resolve();
     const notifData = (tipe: string, judul: string, pesan: string) => ({
       idNotif: nota(),
       idKaryawan,
@@ -38,7 +42,7 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
     if (auth.idRole === ROLES.ADMIN_OPS) {
       if (action === 'review_approve') {
         if (payment.idStatus !== 'ST_PAY_PENDING_OPS') {
-          return Response.json({ error: 'Status tidak sesuai' }, { status: 409 });
+          return Response.json({ error: 'Invalid status' }, { status: 409 });
         }
         const updated = await prisma.$transaction(async (tx) => {
           const u = await tx.paymentRequest.update({
@@ -56,18 +60,22 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
             await tx.notification.create({
               data: notifData(
                 'PAY_REVIEW_APPROVED',
-                'Lolos review Ops',
-                `Pengajuan dana ${id} Anda telah lolos review Ops dan menunggu persetujuan final Partner.`
+                'Ops review passed',
+                `Your payment request ${id} has passed the Ops review and is waiting for final Partner approval.`
               ),
             });
           }
           return u;
         });
+        await sendNotifEmail(
+          'Ops review passed',
+          `Your payment request ${id} has passed the Ops review and is waiting for final Partner approval.`
+        );
         return Response.json({ ok: true, payment: updated });
       }
       if (action === 'schedule') {
         if (payment.idStatus !== 'ST_PAY_APPROVED') {
-          return Response.json({ error: 'Status tidak sesuai' }, { status: 409 });
+          return Response.json({ error: 'Invalid status' }, { status: 409 });
         }
         const tanggal = tanggalPembayaran ? new Date(tanggalPembayaran) : new Date();
         const updated = await prisma.$transaction(async (tx) => {
@@ -82,18 +90,22 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
             await tx.notification.create({
               data: notifData(
                 'PAY_SCHEDULED',
-                'Jadwal pembayaran',
-                `Pengajuan dana ${id} dijadwalkan dibayar pada ${tanggal.toLocaleDateString('id-ID')}.`
+                'Payment schedule',
+                `Your payment request ${id} is scheduled to be paid on ${tanggal.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}.`
               ),
             });
           }
           return u;
         });
+        await sendNotifEmail(
+          'Payment schedule',
+          `Your payment request ${id} is scheduled to be paid on ${tanggal.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}.`
+        );
         return Response.json({ ok: true, payment: updated });
       }
       if (action === 'paid') {
         if (payment.idStatus !== 'ST_PAY_SCHEDULED') {
-          return Response.json({ error: 'Status tidak sesuai' }, { status: 409 });
+          return Response.json({ error: 'Invalid status' }, { status: 409 });
         }
         const updated = await prisma.$transaction(async (tx) => {
           const u = await tx.paymentRequest.update({
@@ -105,16 +117,17 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
           });
           if (idKaryawan) {
             await tx.notification.create({
-              data: notifData('PAY_PAID', 'Pembayaran selesai', `Pengajuan dana ${id} Anda telah dibayar lunas.`),
+              data: notifData('PAY_PAID', 'Payment completed', `Your payment request ${id} has been paid in full.`),
             });
           }
           return u;
         });
+        await sendNotifEmail('Payment completed', `Your payment request ${id} has been paid in full.`);
         return Response.json({ ok: true, payment: updated });
       }
       if (action === 'reject') {
         if (!catatan) {
-          return Response.json({ error: 'Alasan penolakan wajib diisi' }, { status: 400 });
+          return Response.json({ error: 'Rejection reason is required' }, { status: 400 });
         }
         const updated = await prisma.$transaction(async (tx) => {
           const u = await tx.paymentRequest.update({
@@ -126,14 +139,15 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
           });
           if (idKaryawan) {
             await tx.notification.create({
-              data: notifData('PAY_REJECTED', 'Pengajuan dana ditolak', `Pengajuan dana ${id} Anda ditolak. Alasan: ${catatan}`),
+              data: notifData('PAY_REJECTED', 'Payment request rejected', `Your payment request ${id} was rejected. Reason: ${catatan}`),
             });
           }
           return u;
         });
+        await sendNotifEmail('Payment request rejected', `Your payment request ${id} was rejected. Reason: ${catatan}`);
         return Response.json({ ok: true, payment: updated });
       }
-      return Response.json({ error: 'Action tidak valid untuk OPS' }, { status: 400 });
+      return Response.json({ error: 'Invalid action for OPS' }, { status: 400 });
     }
 
     if (auth.idRole === ROLES.PARTNER) {
@@ -148,16 +162,20 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
           });
           if (idKaryawan) {
             await tx.notification.create({
-              data: notifData('PAY_APPROVED', 'Pengajuan dana disetujui', `Pengajuan dana ${id} Anda telah disetujui dan menunggu jadwal pembayaran.`),
+              data: notifData('PAY_APPROVED', 'Payment request approved', `Your payment request ${id} has been approved and is waiting for a payment schedule.`),
             });
           }
           return u;
         });
+        await sendNotifEmail(
+          'Payment request approved',
+          `Your payment request ${id} has been approved and is waiting for a payment schedule.`
+        );
         return Response.json({ ok: true, payment: updated });
       }
       if (action === 'reject' && payment.idStatus === 'ST_PAY_PENDING_PARTNER') {
         if (!catatan) {
-          return Response.json({ error: 'Alasan penolakan wajib diisi' }, { status: 400 });
+          return Response.json({ error: 'Rejection reason is required' }, { status: 400 });
         }
         const updated = await prisma.$transaction(async (tx) => {
           const u = await tx.paymentRequest.update({
@@ -169,19 +187,20 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
           });
           if (idKaryawan) {
             await tx.notification.create({
-              data: notifData('PAY_REJECTED', 'Pengajuan dana ditolak', `Pengajuan dana ${id} Anda ditolak. Alasan: ${catatan}`),
+              data: notifData('PAY_REJECTED', 'Payment request rejected', `Your payment request ${id} was rejected. Reason: ${catatan}`),
             });
           }
           return u;
         });
+        await sendNotifEmail('Payment request rejected', `Your payment request ${id} was rejected. Reason: ${catatan}`);
         return Response.json({ ok: true, payment: updated });
       }
-      return Response.json({ error: 'Action tidak valid untuk Partner' }, { status: 400 });
+      return Response.json({ error: 'Invalid action for Partner' }, { status: 400 });
     }
 
     return Response.json({ error: 'Forbidden' }, { status: 403 });
   } catch (e) {
     const status = (e as { status?: number }).status ?? 500;
-    return Response.json({ error: 'Terjadi kesalahan' }, { status });
+    return Response.json({ error: 'Something went wrong' }, { status });
   }
 }

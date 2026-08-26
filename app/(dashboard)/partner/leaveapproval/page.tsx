@@ -9,12 +9,15 @@ import type { DataTableColumn } from '@/app/components/data-display/DataTable';
 import StatusPill from '@/app/components/data-display/StatusPill';
 import ApprovalActions from '@/app/components/data-display/ApprovalActions';
 import { SearchTextField, SearchSelectField } from '@/app/components/forms/SearchFields';
+import Button from '@/app/components/forms/Button';
+import Modal from '@/app/components/feedback/Modal';
 import StatusModal from '@/app/components/feedback/StatusModal';
 import RejectReasonModal from '@/app/components/feedback/RejectReasonModal';
 import { statusColor } from '@/app/utils/statusColor';
 import { useFilters } from '@/app/utils/useFilters';
 import { DEPARTMENT_OPTIONS, getAllGradeOptions } from '@/app/utils/orgStructure';
 import { TableSkeleton } from '@/app/components/feedback/PageSkeleton';
+import { formatDateWIB, formatDateTimeWIB } from '@/app/utils/formatDate';
 
 const DEPARTMENT_LABEL: Record<string, string> = {
   ops: 'Operations',
@@ -30,7 +33,14 @@ interface LeaveReq {
   department: string;
   grade: string;
   type: string;
-  dates: string;
+  startDate: string | null; // ISO
+  endDate: string | null; // ISO
+  totalDays: number | null;
+  reason: string | null;
+  submittedAt: string | null;
+  approverNote: string | null;
+  documentURL: string | null; // sick leave only
+  details: null;
   status: string;
   action: null;
   jenis: 'cuti' | 'sakit';
@@ -50,6 +60,10 @@ interface LeaveRaw {
   idStatus: string;
   tanggalMulai: string;
   tanggalSelesai: string;
+  jumlahHari?: number | null;
+  keterangan?: string | null;
+  catatan?: string | null;
+  tanggalPengajuan?: string | null;
   karyawan?: { nama?: string | null; department?: string | null; masterGrade?: { namaGrade?: string | null } | null };
   masterJenisCuti?: { namaJenis?: string | null };
 }
@@ -62,7 +76,14 @@ function mapRows(rows: LeaveRaw[]): LeaveReq[] {
     department: (c.karyawan?.department && DEPARTMENT_LABEL[c.karyawan.department]) || c.karyawan?.department || '-',
     grade: c.karyawan?.masterGrade?.namaGrade ?? '-',
     type: c.masterJenisCuti?.namaJenis ?? 'Leave',
-    dates: `${new Date(c.tanggalMulai).toLocaleDateString('id-ID')} - ${new Date(c.tanggalSelesai).toLocaleDateString('id-ID')}`,
+    startDate: c.tanggalMulai,
+    endDate: c.tanggalSelesai,
+    totalDays: c.jumlahHari ?? null,
+    reason: c.keterangan ?? null,
+    submittedAt: c.tanggalPengajuan ?? null,
+    approverNote: c.catatan ?? null,
+    documentURL: null,
+    details: null,
     status: c.idStatus,
     action: null,
     jenis: 'cuti',
@@ -74,6 +95,8 @@ interface SickRaw {
   tanggalMulai?: string | null;
   tanggalSelesai?: string | null;
   gejala?: string | null;
+  buktiSakitURL?: string | null;
+  createdAt?: string | null;
   karyawan?: { nama?: string | null; department?: string | null; masterGrade?: { namaGrade?: string | null } | null };
 }
 
@@ -85,7 +108,17 @@ function mapSickRows(rows: SickRaw[]): LeaveReq[] {
     department: (s.karyawan?.department && DEPARTMENT_LABEL[s.karyawan.department]) || s.karyawan?.department || '-',
     grade: s.karyawan?.masterGrade?.namaGrade ?? '-',
     type: 'Sick Leave',
-    dates: `${s.tanggalMulai ? new Date(s.tanggalMulai).toLocaleDateString('id-ID') : '-'} - ${s.tanggalSelesai ? new Date(s.tanggalSelesai).toLocaleDateString('id-ID') : '-'}`,
+    startDate: s.tanggalMulai ?? null,
+    endDate: s.tanggalSelesai ?? null,
+    totalDays:
+      s.tanggalMulai && s.tanggalSelesai
+        ? Math.max(Math.round((new Date(s.tanggalSelesai).getTime() - new Date(s.tanggalMulai).getTime()) / 86400000) + 1, 0)
+        : null,
+    reason: s.gejala ?? null,
+    submittedAt: s.createdAt ?? null,
+    approverNote: null,
+    documentURL: s.buktiSakitURL ?? null,
+    details: null,
     status: 'ST_MED_PENDING',
     action: null,
     jenis: 'sakit',
@@ -108,6 +141,7 @@ export default function PartnerLeaveApprovalPage() {
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [rejectTarget, setRejectTarget] = useState<string | null>(null);
   const [rejecting, setRejecting] = useState(false);
+  const [detailRow, setDetailRow] = useState<LeaveReq | null>(null);
   const { draft, applied, setField, handleSearch, handleReset } = useFilters<Filters>(emptyFilters);
   const gradeOptions = useMemo(() => getAllGradeOptions(), []);
   const typeOptions = useMemo(() => Array.from(new Set(requests.map((r) => r.type))).sort(), [requests]);
@@ -118,7 +152,7 @@ export default function PartnerLeaveApprovalPage() {
       const data = await res.json();
       const cuti = mapRows((data.list ?? []) as LeaveRaw[]);
       const sick = mapSickRows((data.sickList ?? []) as SickRaw[]);
-      setRequests([...cuti, ...sick].sort((a, b) => new Date(b.dates.slice(0, 10)).getTime() - new Date(a.dates.slice(0, 10)).getTime()));
+      setRequests([...cuti, ...sick].sort((a, b) => new Date(b.startDate ?? 0).getTime() - new Date(a.startDate ?? 0).getTime()));
     } else {
       const data = await res.json().catch(() => ({}));
       setMessage({ ok: false, text: data?.error ?? 'Failed to load data' });
@@ -189,7 +223,21 @@ export default function PartnerLeaveApprovalPage() {
     { key: 'department', label: 'Department' },
     { key: 'grade', label: 'Grade' },
     { key: 'type', label: 'Leave Type' },
-    { key: 'dates', label: 'Dates' },
+    {
+      key: 'details',
+      label: 'Details',
+      width: '140px',
+      render: (r) => (
+        <Button
+          variant="primary"
+          size="sm"
+          className="w-full whitespace-nowrap"
+          onClick={() => setDetailRow(r)}
+        >
+          View
+        </Button>
+      ),
+    },
     {
       key: 'status',
       label: 'Status',
@@ -201,6 +249,13 @@ export default function PartnerLeaveApprovalPage() {
     },
     { key: 'action', label: 'Action', width: '240px', render: renderAction },
   ];
+
+  const DetailField = ({ label, value }: { label: string; value: React.ReactNode }) => (
+    <div className="flex items-start justify-between gap-4 py-2 border-b border-amana-neutral-200 last:border-b-0">
+      <span className="text-[14px] font-semibold text-amana-neutral-400 flex-shrink-0">{label}</span>
+      <span className="text-[15px] text-amana-neutral-500 text-right break-words">{value}</span>
+    </div>
+  );
 
   if (loading) return <TableSkeleton columns={6} />;
 
@@ -232,7 +287,7 @@ export default function PartnerLeaveApprovalPage() {
             columns={columns}
             rows={filtered}
             defaultSortKey="name"
-            emptyMessage="Tidak ada pengajuan."
+            emptyMessage="No requests found."
           />
         </SectionCard>
       </div>
@@ -243,6 +298,49 @@ export default function PartnerLeaveApprovalPage() {
           onConfirm={handleConfirmReject}
           submitting={rejecting}
         />
+      )}
+
+      {detailRow && (
+        <Modal
+          title={`Leave Details - ${detailRow.name || ''}`}
+          onClose={() => setDetailRow(null)}
+          maxWidth="max-w-lg"
+        >
+          <div className="p-5 flex flex-col">
+            <DetailField label="Submitted On" value={formatDateTimeWIB(detailRow.submittedAt)} />
+            <DetailField label="Employee" value={detailRow.name} />
+            <DetailField label="Department" value={detailRow.department} />
+            <DetailField label="Grade" value={detailRow.grade} />
+            <div className="flex items-start justify-between gap-4 py-2 border-b border-amana-neutral-200">
+              <span className="text-[14px] font-semibold text-amana-neutral-400 flex-shrink-0">Status</span>
+              <StatusPill color={statusColor(STATUS_MAP[detailRow.status]?.label ?? detailRow.status)}>
+                {STATUS_MAP[detailRow.status]?.label ?? detailRow.status}
+              </StatusPill>
+            </div>
+            <DetailField label="Start Date" value={formatDateWIB(detailRow.startDate)} />
+            <DetailField label="End Date" value={formatDateWIB(detailRow.endDate)} />
+            {detailRow.totalDays != null && (
+              <DetailField label="Total Days" value={`${detailRow.totalDays} day(s)`} />
+            )}
+            <DetailField label={detailRow.jenis === 'sakit' ? 'Symptoms' : 'Reason'} value={detailRow.reason ?? '-'} />
+            {detailRow.approverNote && <DetailField label="Approver Note" value={detailRow.approverNote} />}
+            {detailRow.documentURL && (
+              <DetailField
+                label="Medical Document"
+                value={
+                  <a
+                    href={detailRow.documentURL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-amana-primary-500 underline"
+                  >
+                    View document
+                  </a>
+                }
+              />
+            )}
+          </div>
+        </Modal>
       )}
 
       <StatusModal state={message} onClose={() => setMessage(null)} />

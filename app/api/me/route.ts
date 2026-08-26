@@ -1,4 +1,4 @@
-import { requireAuth } from '@/lib/dal';
+﻿import { requireAuth } from '@/lib/dal';
 import { buildGradeLabel, DEPARTMENT_LABEL, ROLES, ROLE_LABEL, type Role } from '@/lib/roles';
 import { prisma } from '@/lib/prisma';
 import { computeLeaveBalance } from '@/lib/leave';
@@ -88,6 +88,7 @@ export async function GET() {
         displayGrade,
         department: auth.department,
         noTelepon: auth.noTelepon,
+        pictureUrl: auth.pictureUrl,
         permissions: auth.rolePermissions,
         cvURL,
         leave: { sisaCuti, accrued, carryOver, specialLeaveUsed, unpaidLeaveUsed },

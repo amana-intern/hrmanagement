@@ -1,17 +1,16 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Check, PowerOff, Trash2 } from 'lucide-react';
+import { Check, Trash2 } from 'lucide-react';
 import PageTopBar from '../layout/PageTopBar';
+import NotificationBell from '../ui/NotificationBell';
 import Button from '../forms/Button';
 import Collapse from '../layout/Collapse';
 import StatBox, { type Stat } from './StatBox';
 import CareerHistoryModal, { type CareerHistoryEntry } from './CareerHistoryModal';
 import { cn } from '@/app/utils/cn';
 import { springSnappy, durationFast, easeOut } from '@/app/utils/motion';
-import { logout } from '@/lib/useAuth';
 
 export type { Stat };
 
@@ -67,9 +66,10 @@ function SummaryPanel({ title, stats, updates }: SummaryPanelConfig) {
 function EmployeeBio({ name, role, email, phone, photoSrc, onViewDetails }: ProfileBio & { onViewDetails?: () => void }) {
   return (
     <div className="flex-shrink-0 bg-amana-neutral-100 rounded-[5px] border border-amana-primary-500 shadow-sm px-4 py-2.5">
-      <h3 className="text-[20px] font-semibold text-amana-primary-500 pb-1.5 mb-3 border-b border-amana-primary-500">
-        Employee Bio
-      </h3>
+      <div className="flex items-center justify-between pb-1.5 mb-3 border-b border-amana-primary-500">
+        <h3 className="text-[20px] font-semibold text-amana-primary-500">Employee Bio</h3>
+        <NotificationBell />
+      </div>
       <div className="flex items-center gap-3">
         <div className="flex-1 min-w-0 text-right">
           <p className="text-[35px] font-light text-amana-primary-500 leading-tight break-words">{name}</p>
@@ -268,8 +268,6 @@ export interface ProfileOverviewProps {
   onDeleteTodo?: (id: TodoItem['id']) => void;
   pageLabel?: string;
   showGreeting?: boolean;
-  /** Show a logout button at the top-right corner. */
-  showLogout?: boolean;
   /** Show a "View Details" button on the Employee Bio card, opening the user's own Career History. */
   showCareerHistory?: boolean;
 }
@@ -284,25 +282,11 @@ export default function ProfileOverview({
   onDeleteTodo,
   pageLabel = 'Profile',
   showGreeting = false,
-  showLogout = false,
   showCareerHistory = false,
 }: ProfileOverviewProps) {
-  const router = useRouter();
-  const [loggingOut, setLoggingOut] = useState(false);
   const [careerHistoryOpen, setCareerHistoryOpen] = useState(false);
   const [careerHistory, setCareerHistory] = useState<CareerHistoryEntry[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
-
-  const handleLogout = async () => {
-    if (loggingOut) return;
-    setLoggingOut(true);
-    try {
-      await logout();
-      router.push('/login');
-    } finally {
-      setLoggingOut(false);
-    }
-  };
 
   const openCareerHistory = async () => {
     setCareerHistoryOpen(true);
@@ -327,20 +311,7 @@ export default function ProfileOverview({
         <PageTopBar
           showGreeting={showGreeting}
           right={
-            <span className="flex flex-col items-end gap-1">
-              {showLogout && (
-                <Button
-                  variant="primary"
-                  size="sm"
-                  onClick={handleLogout}
-                  disabled={loggingOut}
-                >
-                  <PowerOff className="w-4 h-4" />
-                  {loggingOut ? 'Logging out...' : 'Logout'}
-                </Button>
-              )}
-              <span className="text-[16px] font-semibold text-amana-primary-500">{pageLabel}</span>
-            </span>
+            <span className="text-[16px] font-semibold text-amana-primary-500">{pageLabel}</span>
           }
         />
       </div>

@@ -13,11 +13,11 @@ export default function ForgotPasswordPage() {
         <img src="/AMANA_Logo.png" className="h-10 mb-4 mx-auto object-contain" alt="Amana Logo" />
         <h1 className="text-3xl font-bold mb-2 text-amana-primary-500">Forget Password</h1>
         <p className="text-xs text-amana-neutral-400 mb-6">
-          Layanan reset password otomatis belum tersedia.
+          Automatic password reset is not yet available.
         </p>
         <div className="px-5 py-4 rounded-xl bg-amana-primary-500/10 border border-amana-neutral-200 text-sm text-amana-neutral-500">
-          Silakan hubungi <span className="font-semibold text-amana-primary-500">Admin HR</span> untuk
-          mengatur ulang password akun Anda.
+          Please contact the <span className="font-semibold text-amana-primary-500">Admin HR</span> to
+          reset your account password.
         </div>
 
         <button
@@ -25,7 +25,7 @@ export default function ForgotPasswordPage() {
           onClick={() => router.push('/login')}
           className="bg-amana-primary-500 text-amana-neutral-100 text-xs font-bold py-3 px-11 rounded-xl uppercase tracking-wider mt-6 hover:shadow-lg hover:shadow-amana-primary-500/30 hover:-translate-y-0.5 transition-all duration-200 shadow-md"
         >
-          Kembali ke Login
+          Back to Login
         </button>
       </div>
     </div>

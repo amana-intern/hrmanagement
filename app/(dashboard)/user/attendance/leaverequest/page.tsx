@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { CalendarCheck } from 'lucide-react';
 import PageTopBar from '@/app/components/layout/PageTopBar';
 import SectionCard from '@/app/components/layout/SectionCard';
@@ -74,6 +74,21 @@ export default function LeaveRequestPage() {
     (selectedLeave !== 'Special Leave' || selectedSpecialLeave !== '') &&
     startDate !== '' &&
     endDate !== '';
+
+  // Jumlah hari yang diajukan (inklusif kalender) — konsisten dengan hitungan backend.
+  const requestedDays = useMemo(() => {
+    if (!startDate || !endDate) return null;
+    const s = new Date(startDate + 'T00:00:00');
+    const e = new Date(endDate + 'T00:00:00');
+    if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime()) || e < s) return null;
+    return Math.round((e.getTime() - s.getTime()) / 86400000) + 1;
+  }, [startDate, endDate]);
+
+  // Warning keterlebihan saldo Paid Leave (live, saat rentang diisi).
+  const balanceExceeded =
+    selectedLeave === 'Paid Leave' &&
+    requestedDays != null &&
+    ((leaveBalance ?? 0) <= 0 || requestedDays > (leaveBalance ?? 0));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -180,8 +195,16 @@ export default function LeaveRequestPage() {
         {selectedLeave === 'Unpaid Leave' && (
           <div className={`mb-4 px-4 py-3 rounded-lg border text-[13px] font-medium ${(leaveBalance ?? 0) > 0 ? 'bg-amana-warning-100 border-amana-warning-300 text-amana-warning-500' : 'bg-amana-success-100 border-amana-success-300 text-amana-success-500'}`}>
             {(leaveBalance ?? 0) > 0
-              ? `Unpaid leave hanya bisa diajukan saat saldo Paid = 0. Saldo Anda masih ${leaveBalance} hari.`
-              : 'Saldo Paid Anda 0, silakan ajukan Unpaid leave.'}
+              ? `Unpaid leave can only be requested when your Paid balance = 0. Your remaining balance is ${leaveBalance} day(s).`
+              : 'Your Paid balance is 0, you may proceed with Unpaid leave.'}
+          </div>
+        )}
+
+        {balanceExceeded && (
+          <div className="mb-4 px-4 py-3 rounded-lg border text-[13px] font-medium bg-amana-danger-100 border-amana-danger-500 text-amana-danger-500">
+            {(leaveBalance ?? 0) <= 0
+              ? 'Your Paid Leave balance is exhausted. Your request cannot exceed 0 day(s).'
+              : `Your request of ${requestedDays} day(s) exceeds your remaining Paid Leave balance of ${leaveBalance} day(s).`}
           </div>
         )}
 

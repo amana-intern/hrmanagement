@@ -9,7 +9,7 @@ const UPLOAD_DIR = path.join(process.cwd(), 'public', 'uploads');
 const MAX_BYTES = 5 * 1024 * 1024;
 const ALLOWED_EXT = ['.pdf', '.jpg', '.jpeg', '.png'];
 
-// POST /api/sick — Employee/Admin mengajukan izin sakit (FormData: tanggal, gejala, file)
+// POST /api/sick - Employee/Admin mengajukan izin sakit (FormData: tanggal, gejala, file)
 export async function POST(request: NextRequest) {
   try {
     const auth = await requireAuth();
@@ -25,14 +25,14 @@ export async function POST(request: NextRequest) {
     const file = form.get('file');
 
     if (!tanggalMulai || !tanggalSelesai) {
-      return Response.json({ error: 'Tanggal mulai & selesai wajib diisi' }, { status: 400 });
+      return Response.json({ error: 'Start & end date are required' }, { status: 400 });
     }
 
     let buktiSakitURL: string | null = null;
     if (file instanceof File && file.size > 0) {
       const ext = path.extname(file.name).toLowerCase();
       if (!ALLOWED_EXT.includes(ext)) {
-        return Response.json({ error: 'Format tidak didukung (pdf/jpg/png)' }, { status: 400 });
+        return Response.json({ error: 'Unsupported format (pdf/jpg/png)' }, { status: 400 });
       }
       if (file.size > MAX_BYTES) {
         return Response.json({ error: 'Ukuran file melebihi 5MB' }, { status: 400 });
@@ -58,11 +58,11 @@ export async function POST(request: NextRequest) {
     return Response.json({ ok: true, sick }, { status: 201 });
   } catch (e) {
     const status = (e as { status?: number }).status ?? 500;
-    return Response.json({ error: 'Terjadi kesalahan' }, { status });
+    return Response.json({ error: 'An error occurred' }, { status });
   }
 }
 
-// GET /api/sick — HR melihat seluruh record izin sakit
+// GET /api/sick - HR melihat seluruh record izin sakit
 export async function GET() {
   try {
     const auth = await requireAuth();
@@ -78,6 +78,6 @@ export async function GET() {
     return Response.json({ list });
   } catch (e) {
     const status = (e as { status?: number }).status ?? 500;
-    return Response.json({ error: 'Terjadi kesalahan' }, { status });
+    return Response.json({ error: 'An error occurred' }, { status });
   }
 }
