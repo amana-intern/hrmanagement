@@ -429,7 +429,6 @@ async function main() {
         tanggalLahir: new Date(u.tanggalLahir),
         tanggalMasuk: new Date(u.tanggalMasuk),
         sisaCutiTahunan: 12,
-        accrualRate: 1,
       },
     });
   }

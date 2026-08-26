@@ -9,7 +9,7 @@ import type { DataTableColumn } from '@/app/components/data-display/DataTable';
 import StatusPill from '@/app/components/data-display/StatusPill';
 import ApprovalActions from '@/app/components/data-display/ApprovalActions';
 import { SearchTextField, SearchSelectField } from '@/app/components/forms/SearchFields';
-import StatusModal from '@/app/components/feedback/StatusModal';
+import StatusModal, { StatusState } from '@/app/components/feedback/StatusModal';
 import RejectReasonModal from '@/app/components/feedback/RejectReasonModal';
 import Button from '@/app/components/forms/Button';
 import LeaveDetailModal, { LeaveDetailRow } from '@/app/components/LeaveDetailModal';
@@ -17,13 +17,8 @@ import { statusColor } from '@/app/utils/statusColor';
 import { useFilters } from '@/app/utils/useFilters';
 import { DEPARTMENT_OPTIONS, getAllGradeOptions } from '@/app/utils/orgStructure';
 import { TableSkeleton } from '@/app/components/feedback/PageSkeleton';
-
-const DEPARTMENT_LABEL: Record<string, string> = {
-  ops: 'Operations',
-  health: 'Health and Wellbeing',
-  education: 'Education and HR',
-  digital: 'Digital and Finance',
-};
+import { DEPARTMENT_LABELS, LEAVE_STATUS, LEAVE_STATUS_LABELS } from '@/lib/constants';
+import { toLeaveDetailRow, type LeaveRaw } from '@/app/utils/leave';
 
 interface LeaveReq {
   id: string;
@@ -40,60 +35,27 @@ interface LeaveReq {
   detailRow: LeaveDetailRow;
 }
 
-const STATUS_MAP: Record<string, { label: string }> = {
-  ST_LEAVE_PENDING: { label: 'Pending' },
-  ST_LEAVE_APPROVED: { label: 'Approved' },
-  ST_LEAVE_REJECTED: { label: 'Rejected' },
-  ST_MED_PENDING: { label: 'Pending' },
-};
+// Izin sakit (view-only) memakai kode status terpisah dari cuti (ST_MED_PENDING).
+const STATUS_LABELS: Record<string, string> = { ...LEAVE_STATUS_LABELS, ST_MED_PENDING: 'Pending' };
 
-const STATUS_OPTIONS = Object.values(STATUS_MAP).map((v) => v.label);
-
-interface LeaveRaw {
-  idCuti: string;
-  idStatus: string;
-  tanggalMulai: string;
-  tanggalSelesai: string;
-  tanggalPengajuan?: string | null;
-  jumlahHari?: number | null;
-  keterangan?: string | null;
-  catatan?: string | null;
-  karyawan?: { nama?: string | null; department?: string | null; masterGrade?: { namaGrade?: string | null } | null };
-  masterJenisCuti?: { namaJenis?: string | null };
-}
+const STATUS_OPTIONS = Object.values(STATUS_LABELS);
 
 function mapRows(rows: LeaveRaw[]): LeaveReq[] {
   return rows.map((c) => {
-    const name = c.karyawan?.nama ?? '-';
-    const department = (c.karyawan?.department && DEPARTMENT_LABEL[c.karyawan.department]) || c.karyawan?.department || '-';
-    const grade = c.karyawan?.masterGrade?.namaGrade ?? '-';
-    const type = c.masterJenisCuti?.namaJenis ?? 'Leave';
-    const dates = `${new Date(c.tanggalMulai).toLocaleDateString('id-ID')} - ${new Date(c.tanggalSelesai).toLocaleDateString('id-ID')}`;
+    const detailRow = toLeaveDetailRow(c);
     return {
       id: c.idCuti,
       idCuti: c.idCuti,
-      name,
-      department,
-      grade,
-      type,
-      dates,
-      status: c.idStatus,
+      name: detailRow.name,
+      department: detailRow.department,
+      grade: detailRow.grade,
+      type: detailRow.type,
+      dates: detailRow.dates,
+      status: c.idStatus ?? LEAVE_STATUS.PENDING,
       details: null,
       action: null,
       jenis: 'cuti',
-      detailRow: {
-        idCuti: c.idCuti,
-        name,
-        department,
-        grade,
-        type,
-        dates,
-        jumlahHari: c.jumlahHari,
-        tanggalPengajuan: c.tanggalPengajuan,
-        keterangan: c.keterangan,
-        catatan: c.catatan,
-        jenis: 'cuti',
-      },
+      detailRow,
     };
   });
 }
@@ -110,7 +72,7 @@ interface SickRaw {
 function mapSickRows(rows: SickRaw[]): LeaveReq[] {
   return rows.map((s) => {
     const name = s.karyawan?.nama ?? '-';
-    const department = (s.karyawan?.department && DEPARTMENT_LABEL[s.karyawan.department]) || s.karyawan?.department || '-';
+    const department = (s.karyawan?.department && DEPARTMENT_LABELS[s.karyawan.department]) || s.karyawan?.department || '-';
     const grade = s.karyawan?.masterGrade?.namaGrade ?? '-';
     const dates = `${s.tanggalMulai ? new Date(s.tanggalMulai).toLocaleDateString('id-ID') : '-'} - ${s.tanggalSelesai ? new Date(s.tanggalSelesai).toLocaleDateString('id-ID') : '-'}`;
     return {
@@ -154,10 +116,10 @@ const emptyFilters: Filters = { search: '', department: '', grade: '', type: '',
 export default function PartnerLeaveApprovalPage() {
   const [requests, setRequests] = useState<LeaveReq[]>([]);
   const [loading, setLoading] = useState(true);
-  const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+  const [message, setMessage] = useState<StatusState | null>(null);
   const [detailRow, setDetailRow] = useState<LeaveDetailRow | null>(null);
   const [rejectTarget, setRejectTarget] = useState<string | null>(null);
-  const [rejecting, setRejecting] = useState(false);
+  const [processingId, setProcessingId] = useState<string | null>(null);
   const { draft, applied, setField, handleSearch, handleReset } = useFilters<Filters>(emptyFilters);
   const gradeOptions = useMemo(() => getAllGradeOptions(), []);
   const typeOptions = useMemo(() => Array.from(new Set(requests.map((r) => r.type))).sort(), [requests]);
@@ -189,12 +151,14 @@ export default function PartnerLeaveApprovalPage() {
       if (applied.department && r.department !== applied.department) return false;
       if (applied.grade && r.grade !== applied.grade) return false;
       if (applied.type && r.type !== applied.type) return false;
-      if (applied.status && (STATUS_MAP[r.status]?.label ?? r.status) !== applied.status) return false;
+      if (applied.status && (STATUS_LABELS[r.status] ?? r.status) !== applied.status) return false;
       return matchSearch;
     });
   }, [requests, applied]);
 
   const handleAction = async (id: string, action: 'approve' | 'reject', catatan?: string) => {
+    if (processingId) return; // cegah double-processing
+    setProcessingId(id);
     const res = await fetch(`/api/leave/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -207,14 +171,14 @@ export default function PartnerLeaveApprovalPage() {
       const data = await res.json().catch(() => ({}));
       setMessage({ ok: false, text: data?.error ?? 'Failed to process request' });
     }
+    setProcessingId(null);
   };
 
   const handleConfirmReject = async (reason: string) => {
     if (!rejectTarget) return;
-    setRejecting(true);
-    await handleAction(rejectTarget, 'reject', reason);
-    setRejecting(false);
+    const id = rejectTarget;
     setRejectTarget(null);
+    await handleAction(id, 'reject', reason);
   };
 
   const renderAction = (r: LeaveReq) => {
@@ -227,7 +191,7 @@ export default function PartnerLeaveApprovalPage() {
     }
     return (
       <ApprovalActions
-        disabled={r.status !== 'ST_LEAVE_PENDING'}
+        disabled={r.status !== LEAVE_STATUS.PENDING || processingId === r.id}
         onApprove={() => handleAction(r.id, 'approve')}
         onReject={() => setRejectTarget(r.id)}
       />
@@ -243,8 +207,8 @@ export default function PartnerLeaveApprovalPage() {
       key: 'status',
       label: 'Status',
       render: (r) => (
-        <StatusPill color={statusColor(STATUS_MAP[r.status]?.label ?? r.status)}>
-          {STATUS_MAP[r.status]?.label ?? r.status}
+        <StatusPill color={statusColor(STATUS_LABELS[r.status] ?? r.status)}>
+          {STATUS_LABELS[r.status] ?? r.status}
         </StatusPill>
       ),
     },
@@ -291,7 +255,7 @@ export default function PartnerLeaveApprovalPage() {
             columns={columns}
             rows={filtered}
             defaultSortKey="name"
-            emptyMessage="Tidak ada pengajuan."
+            emptyMessage="No leave requests match your filters."
           />
         </SectionCard>
       </div>
@@ -300,7 +264,7 @@ export default function PartnerLeaveApprovalPage() {
         <RejectReasonModal
           onCancel={() => setRejectTarget(null)}
           onConfirm={handleConfirmReject}
-          submitting={rejecting}
+          submitting={!!processingId}
         />
       )}
 

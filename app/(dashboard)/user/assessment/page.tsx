@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation';
 import PageTopBar from '@/app/components/layout/PageTopBar';
 import SectionCard from '@/app/components/layout/SectionCard';
 import Button from '@/app/components/forms/Button';
-import StatusModal from '@/app/components/feedback/StatusModal';
+import StatusModal, { StatusState } from '@/app/components/feedback/StatusModal';
+import TextAreaField from '@/app/components/forms/TextAreaField';
 import { ASSESSMENT_LEVELS } from '@/lib/assessment-template';
 import { CardStackSkeleton } from '@/app/components/feedback/PageSkeleton';
 
@@ -45,7 +46,7 @@ export default function AssessmentPage() {
   const [technicalSkills, setTechnicalSkills] = useState('');
   const [selfDevelopmentAreas, setSelfDevelopmentAreas] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [status, setStatus] = useState<{ ok: boolean; text: string } | null>(null);
+  const [status, setStatus] = useState<StatusState | null>(null);
   const topRef = useRef<HTMLDivElement>(null);
   const isFirstScroll = useRef(true);
 
@@ -254,30 +255,20 @@ export default function AssessmentPage() {
               <div>
                 <p className="text-[16px] font-semibold text-amana-primary-500 mb-3">Self Assessment & Need for development</p>
                 <div className="flex flex-col gap-4">
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[16px] font-semibold text-amana-neutral-500">
-                      Please list your 1-3 most significant technical skills
-                    </label>
-                    <textarea
-                      value={technicalSkills}
-                      onChange={(e) => setTechnicalSkills(e.target.value)}
-                      rows={3}
-                      placeholder="e.g. Python, SQL, Project Management..."
-                      className="w-full border border-amana-neutral-300 rounded-[13px] px-3 py-2.5 text-[16px] text-amana-neutral-500 placeholder:text-amana-neutral-300 bg-amana-neutral-100 transition-colors duration-200 focus:outline-none focus:border-amana-primary-500"
-                    />
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[16px] font-semibold text-amana-neutral-500">
-                      Self-Development Areas
-                    </label>
-                    <textarea
-                      value={selfDevelopmentAreas}
-                      onChange={(e) => setSelfDevelopmentAreas(e.target.value)}
-                      rows={3}
-                      placeholder="e.g. Leadership, Public Speaking, Time Management..."
-                      className="w-full border border-amana-neutral-300 rounded-[13px] px-3 py-2.5 text-[16px] text-amana-neutral-500 placeholder:text-amana-neutral-300 bg-amana-neutral-100 transition-colors duration-200 focus:outline-none focus:border-amana-primary-500"
-                    />
-                  </div>
+                  <TextAreaField
+                    label="Please list your 1-3 most significant technical skills"
+                    value={technicalSkills}
+                    onChange={setTechnicalSkills}
+                    rows={3}
+                    placeholder="e.g. Python, SQL, Project Management..."
+                  />
+                  <TextAreaField
+                    label="Self-Development Areas"
+                    value={selfDevelopmentAreas}
+                    onChange={setSelfDevelopmentAreas}
+                    rows={3}
+                    placeholder="e.g. Leadership, Public Speaking, Time Management..."
+                  />
                 </div>
               </div>
             )}

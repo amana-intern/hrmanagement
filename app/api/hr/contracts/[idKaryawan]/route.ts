@@ -7,8 +7,8 @@ import { OFFBOARDING_FORM_URL, sendEmail } from '@/lib/notify';
 const nota = () => `NOTIF-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
 // PATCH /api/hr/contracts/[idKaryawan] — Renewal / Offboarding oleh PARTNER (pilar dept).
-// Aksi bersifat notifikasi ke HR & Karyawan (proses kontrak/meeting dilakukan manusia di luar sistem).
-// Partner TIDAK mengubah data kontrak.
+// Mencatat keputusan (needAction) di kontrak terbaru karyawan agar muncul di antrian
+// "Need Action" HR, sekaligus mengirim notifikasi ke HR & Karyawan.
 export async function PATCH(request: NextRequest, ctx: { params: Promise<{ idKaryawan: string }> }) {
   try {
     const auth = await requireAuth();
@@ -25,7 +25,7 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ idKar
 
     const karyawan = await prisma.karyawan.findUnique({
       where: { idKaryawan },
-      include: { user: { include: { role: true } } },
+      include: { user: { include: { role: true } }, kontrakKaryawan: { orderBy: { tanggalMulai: 'asc' } } },
     });
     if (!karyawan) return Response.json({ error: 'Employee not found' }, { status: 404 });
 
@@ -33,6 +33,10 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ idKar
     if (karyawan.department !== auth.department) {
       return Response.json({ error: 'Not your department' }, { status: 403 });
     }
+
+    const latestContract = karyawan.kontrakKaryawan.length
+      ? karyawan.kontrakKaryawan[karyawan.kontrakKaryawan.length - 1]
+      : null;
 
     // Cari user HR (role ADMIN_HR) utk notifikasi
     const hrUser = await prisma.user.findFirst({
@@ -72,6 +76,14 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ idKar
         };
 
     await prisma.$transaction(async (tx) => {
+      // Catat keputusan di kontrak terbaru agar muncul di antrian "Need Action" HR.
+      if (latestContract) {
+        await tx.kontrakKaryawan.update({
+          where: { idKontrak: latestContract.idKontrak },
+          data: { needAction: action, needActionAt: new Date(), needActionBy: auth.nama },
+        });
+      }
+
       // Notifikasi ke Karyawan
       await tx.notification.create({
         data: {

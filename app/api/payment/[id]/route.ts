@@ -3,6 +3,7 @@ import { requireAuth } from '@/lib/dal';
 import { prisma } from '@/lib/prisma';
 import { ROLES } from '@/lib/roles';
 import { sendEmail } from '@/lib/notify';
+import { PAYMENT_STATUS } from '@/lib/constants';
 
 const nota = () => `NOTIF-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 const hist = () => `HIST-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -41,14 +42,14 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
 
     if (auth.idRole === ROLES.ADMIN_OPS) {
       if (action === 'review_approve') {
-        if (payment.idStatus !== 'ST_PAY_PENDING_OPS') {
+        if (payment.idStatus !== PAYMENT_STATUS.PENDING_OPS) {
           return Response.json({ error: 'Invalid status' }, { status: 409 });
         }
         const updated = await prisma.$transaction(async (tx) => {
           const u = await tx.paymentRequest.update({
             where: { idRequest: id },
             data: {
-              idStatus: 'ST_PAY_PENDING_PARTNER',
+              idStatus: PAYMENT_STATUS.PENDING_PARTNER,
               disetujuiOleh: auth.idUser,
               tanggalApproval: new Date(),
             },
@@ -74,14 +75,14 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
         return Response.json({ ok: true, payment: updated });
       }
       if (action === 'schedule') {
-        if (payment.idStatus !== 'ST_PAY_APPROVED') {
+        if (payment.idStatus !== PAYMENT_STATUS.APPROVED) {
           return Response.json({ error: 'Invalid status' }, { status: 409 });
         }
         const tanggal = tanggalPembayaran ? new Date(tanggalPembayaran) : new Date();
         const updated = await prisma.$transaction(async (tx) => {
           const u = await tx.paymentRequest.update({
             where: { idRequest: id },
-            data: { idStatus: 'ST_PAY_SCHEDULED', tanggalJadwalPembayaran: tanggal },
+            data: { idStatus: PAYMENT_STATUS.SCHEDULED, tanggalJadwalPembayaran: tanggal },
           });
           await tx.approvalHistory.create({
             data: { idHistory: hist(), idReferensi: id, modul: 'PAYMENT', actorIdUser: auth.idUser, action, catatan },
@@ -104,13 +105,13 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
         return Response.json({ ok: true, payment: updated });
       }
       if (action === 'paid') {
-        if (payment.idStatus !== 'ST_PAY_SCHEDULED') {
+        if (payment.idStatus !== PAYMENT_STATUS.SCHEDULED) {
           return Response.json({ error: 'Invalid status' }, { status: 409 });
         }
         const updated = await prisma.$transaction(async (tx) => {
           const u = await tx.paymentRequest.update({
             where: { idRequest: id },
-            data: { idStatus: 'ST_PAY_PAID', tanggalLunas: new Date() },
+            data: { idStatus: PAYMENT_STATUS.PAID, tanggalLunas: new Date() },
           });
           await tx.approvalHistory.create({
             data: { idHistory: hist(), idReferensi: id, modul: 'PAYMENT', actorIdUser: auth.idUser, action, catatan },
@@ -132,7 +133,7 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
         const updated = await prisma.$transaction(async (tx) => {
           const u = await tx.paymentRequest.update({
             where: { idRequest: id },
-            data: { idStatus: 'ST_PAY_REJECTED', disetujuiOleh: auth.idUser, tanggalApproval: new Date(), catatan },
+            data: { idStatus: PAYMENT_STATUS.REJECTED, disetujuiOleh: auth.idUser, tanggalApproval: new Date(), catatan },
           });
           await tx.approvalHistory.create({
             data: { idHistory: hist(), idReferensi: id, modul: 'PAYMENT', actorIdUser: auth.idUser, action, catatan },
@@ -151,11 +152,15 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
     }
 
     if (auth.idRole === ROLES.PARTNER) {
-      if (action === 'final_approve' && payment.idStatus === 'ST_PAY_PENDING_PARTNER') {
+      // Verifikasi pilar: partner hanya boleh memproses payment request di department-nya sendiri.
+      if (payment.karyawan?.department !== auth.department) {
+        return Response.json({ error: 'Not your department' }, { status: 403 });
+      }
+      if (action === 'final_approve' && payment.idStatus === PAYMENT_STATUS.PENDING_PARTNER) {
         const updated = await prisma.$transaction(async (tx) => {
           const u = await tx.paymentRequest.update({
             where: { idRequest: id },
-            data: { idStatus: 'ST_PAY_APPROVED', disetujuiOleh: auth.idUser, tanggalApproval: new Date() },
+            data: { idStatus: PAYMENT_STATUS.APPROVED, disetujuiOleh: auth.idUser, tanggalApproval: new Date() },
           });
           await tx.approvalHistory.create({
             data: { idHistory: hist(), idReferensi: id, modul: 'PAYMENT', actorIdUser: auth.idUser, action, catatan },
@@ -173,14 +178,14 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
         );
         return Response.json({ ok: true, payment: updated });
       }
-      if (action === 'reject' && payment.idStatus === 'ST_PAY_PENDING_PARTNER') {
+      if (action === 'reject' && payment.idStatus === PAYMENT_STATUS.PENDING_PARTNER) {
         if (!catatan) {
           return Response.json({ error: 'Rejection reason is required' }, { status: 400 });
         }
         const updated = await prisma.$transaction(async (tx) => {
           const u = await tx.paymentRequest.update({
             where: { idRequest: id },
-            data: { idStatus: 'ST_PAY_REJECTED', disetujuiOleh: auth.idUser, tanggalApproval: new Date(), catatan },
+            data: { idStatus: PAYMENT_STATUS.REJECTED, disetujuiOleh: auth.idUser, tanggalApproval: new Date(), catatan },
           });
           await tx.approvalHistory.create({
             data: { idHistory: hist(), idReferensi: id, modul: 'PAYMENT', actorIdUser: auth.idUser, action, catatan },

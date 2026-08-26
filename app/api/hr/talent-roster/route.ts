@@ -1,7 +1,7 @@
 import { requireAuth } from '@/lib/dal';
 import { prisma } from '@/lib/prisma';
 import { ROLES } from '@/lib/roles';
-import { ASSESSMENT_STATUS } from '@/lib/constants';
+import { ASSESSMENT_STATUS, CONTRACT_STATUS } from '@/lib/constants';
 import bcrypt from 'bcryptjs';
 
 // GET /api/hr/talent-roster — data roster live + assessment (terbuka/latest) + hasil per karyawan.
@@ -321,7 +321,6 @@ export async function POST(request: Request) {
           tanggalLahir: tanggalLahir ? new Date(tanggalLahir) : null,
           tanggalMasuk: tanggalMulai,
           sisaCutiTahunan: 12,
-          accrualRate: 1,
           tipeKontrak: cleanTipe,
           noTelepon: String(noTelepon ?? '').trim() || null,
         },
@@ -343,7 +342,7 @@ export async function POST(request: Request) {
             tanggalBerakhir: tanggalAkhir,
             carryOver: 0,
             annualQuota: 12,
-            idStatus: 'ST_KON_ACTIVE',
+            idStatus: CONTRACT_STATUS.ACTIVE,
           },
         });
       }

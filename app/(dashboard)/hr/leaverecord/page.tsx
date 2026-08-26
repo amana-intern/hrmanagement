@@ -13,9 +13,10 @@ import Button from '@/app/components/forms/Button';
 import LeaveDetailModal, { LeaveDetailRow } from '@/app/components/LeaveDetailModal';
 import { statusColor } from '@/app/utils/statusColor';
 import { useFilters } from '@/app/utils/useFilters';
-import { DEPARTMENT_LABELS } from '@/lib/constants';
+import { LEAVE_STATUS, LEAVE_STATUS_LABELS } from '@/lib/constants';
 import { downloadTSV } from '@/lib/sheets';
 import { TableSkeleton } from '@/app/components/feedback/PageSkeleton';
+import { toLeaveDetailRow, type LeaveRaw as RawLeave } from '@/app/utils/leave';
 
 interface LeaveRecord {
   id: string;
@@ -27,25 +28,6 @@ interface LeaveRecord {
   status: string;
   detailRow: LeaveDetailRow;
 }
-
-interface RawLeave {
-  idCuti: string;
-  karyawan?: { nama?: string | null; department?: string | null; masterGrade?: { namaGrade?: string | null } | null };
-  masterJenisCuti?: { namaJenis?: string | null } | null;
-  tanggalMulai?: string | null;
-  tanggalSelesai?: string | null;
-  jumlahHari?: number | null;
-  keterangan?: string | null;
-  catatan?: string | null;
-  tanggalPengajuan?: string | null;
-  idStatus?: string | null;
-}
-
-const STATUS_LABELS: Record<string, string> = {
-  ST_LEAVE_PENDING: 'Pending',
-  ST_LEAVE_APPROVED: 'Approved',
-  ST_LEAVE_REJECTED: 'Rejected',
-};
 
 const iso = (d: Date) => d.toISOString().slice(0, 10);
 
@@ -72,34 +54,18 @@ export default function LeaveRecordPage() {
         const data = await res.json();
         setRows(
           ((data as { list?: RawLeave[] }).list ?? []).map((c) => {
-            const name = c.karyawan?.nama ?? '-';
-            const department = (c.karyawan?.department && DEPARTMENT_LABELS[c.karyawan.department]) || c.karyawan?.department || '-';
-            const grade = c.karyawan?.masterGrade?.namaGrade ?? '-';
-            const type = c.masterJenisCuti?.namaJenis ?? 'Leave';
+            const detailRow = toLeaveDetailRow(c);
             const startDate = c.tanggalMulai ? iso(new Date(c.tanggalMulai)) : '';
             const endDate = c.tanggalSelesai ? iso(new Date(c.tanggalSelesai)) : '';
-            const dates = `${startDate ? new Date(startDate + 'T00:00:00').toLocaleDateString('id-ID') : '-'} - ${endDate ? new Date(endDate + 'T00:00:00').toLocaleDateString('id-ID') : '-'}`;
             return {
               id: c.idCuti,
-              name,
-              grade,
-              type,
+              name: detailRow.name,
+              grade: detailRow.grade,
+              type: detailRow.type,
               startDate,
               endDate,
-              status: c.idStatus ?? 'ST_LEAVE_PENDING',
-              detailRow: {
-                idCuti: c.idCuti,
-                name,
-                department,
-                grade,
-                type,
-                dates,
-                jumlahHari: c.jumlahHari,
-                tanggalPengajuan: c.tanggalPengajuan,
-                keterangan: c.keterangan,
-                catatan: c.catatan,
-                jenis: 'cuti',
-              },
+              status: c.idStatus ?? LEAVE_STATUS.PENDING,
+              detailRow,
             };
           })
         );
@@ -114,7 +80,7 @@ export default function LeaveRecordPage() {
     return rows.filter((r) => {
       if (applied.name && !r.name.toLowerCase().includes(applied.name.toLowerCase())) return false;
       if (applied.type && r.type !== applied.type) return false;
-      if (applied.status && STATUS_LABELS[r.status] !== applied.status) return false;
+      if (applied.status && LEAVE_STATUS_LABELS[r.status] !== applied.status) return false;
       if (f && r.startDate && new Date(r.startDate) < f) return false;
       if (t && r.startDate && new Date(r.startDate) > t) return false;
       return true;
@@ -128,7 +94,7 @@ export default function LeaveRecordPage() {
       const end = r.endDate ? new Date(r.endDate + 'T00:00:00') : null;
       const duration =
         start && end ? Math.max(Math.round((end.getTime() - start.getTime()) / 86400000) + 1, 0) : '';
-      return [r.name, r.grade, r.type, r.startDate, r.endDate, duration, STATUS_LABELS[r.status] ?? r.status];
+      return [r.name, r.grade, r.type, r.startDate, r.endDate, duration, LEAVE_STATUS_LABELS[r.status] ?? r.status];
     });
     downloadTSV(`leave-record_${applied.from || 'all'}_${applied.to || 'all'}.tsv`, [header, ...lines]);
   };
@@ -140,7 +106,7 @@ export default function LeaveRecordPage() {
     {
       key: 'status',
       label: 'Status',
-      render: (r) => <StatusPill color={statusColor(STATUS_LABELS[r.status] ?? r.status)}>{STATUS_LABELS[r.status] ?? r.status}</StatusPill>,
+      render: (r) => <StatusPill color={statusColor(LEAVE_STATUS_LABELS[r.status] ?? r.status)}>{LEAVE_STATUS_LABELS[r.status] ?? r.status}</StatusPill>,
     },
     {
       key: 'id',

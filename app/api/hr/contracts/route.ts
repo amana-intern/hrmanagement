@@ -3,6 +3,7 @@ import { requireAuth } from '@/lib/dal';
 import { prisma } from '@/lib/prisma';
 import { ROLES } from '@/lib/roles';
 import { accruedMonths, consumedDays, resolvePeriod } from '@/lib/leave';
+import { CONTRACT_STATUS } from '@/lib/constants';
 
 // GET /api/hr/contracts — daftar karyawan + kontrak terbaru + daysLeft.
 // HR: semua departemen. Partner: hanya pilar (department) sendiri.
@@ -51,6 +52,8 @@ export async function GET() {
         daysLeft,
         idKontrak: latest?.idKontrak ?? null,
         statusKontrak: latest?.idStatus ?? null,
+        needAction: latest?.needAction ?? null,
+        needActionBy: latest?.needActionBy ?? null,
       };
     });
 
@@ -113,7 +116,7 @@ export async function POST(request: NextRequest) {
         tanggalBerakhir: new Date(tanggalBerakhir),
         carryOver,
         annualQuota,
-        idStatus: 'ST_KON_ACTIVE',
+        idStatus: CONTRACT_STATUS.ACTIVE,
       },
     });
 

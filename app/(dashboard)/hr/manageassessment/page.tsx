@@ -9,7 +9,7 @@ import Button from '@/app/components/forms/Button';
 import TextField from '@/app/components/forms/TextField';
 import SelectField from '@/app/components/forms/SelectField';
 import Modal from '@/app/components/feedback/Modal';
-import StatusModal from '@/app/components/feedback/StatusModal';
+import StatusModal, { StatusState } from '@/app/components/feedback/StatusModal';
 import SectionCard from '@/app/components/layout/SectionCard';
 import DataTable from '@/app/components/data-display/DataTable';
 import { TableSkeleton } from '@/app/components/feedback/PageSkeleton';
@@ -83,7 +83,7 @@ export default function ManageAssessmentPage() {
   const [assessments, setAssessments] = useState<Assessment[]>([]);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
-  const [status, setStatus] = useState<{ ok: boolean; text: string } | null>(null);
+  const [status, setStatus] = useState<StatusState | null>(null);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [judul, setJudul] = useState('');

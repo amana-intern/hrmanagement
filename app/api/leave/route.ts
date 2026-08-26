@@ -1,7 +1,7 @@
 import { requireAuth } from '@/lib/dal';
 import { prisma } from '@/lib/prisma';
 import { canUseEmployeeFeatures, ROLES } from '@/lib/roles';
-import { LEAVE_TYPES } from '@/lib/constants';
+import { LEAVE_TYPES, LEAVE_STATUS } from '@/lib/constants';
 import { computeLeaveBalance, parseDateOnly } from '@/lib/leave';
 
 // POST: Employee/Admin membuat pengajuan cuti.
@@ -91,7 +91,7 @@ export async function POST(request: Request) {
         where: {
           idKaryawan: auth.idKaryawan,
           idJenisCuti: LEAVE_TYPES.SPECIAL,
-          idStatus: { in: ['ST_LEAVE_PENDING', 'ST_LEAVE_APPROVED'] },
+          idStatus: { in: [LEAVE_STATUS.PENDING, LEAVE_STATUS.APPROVED] },
           tanggalMulai: {
             gte: new Date(start.getFullYear(), start.getMonth(), 1),
             lte: new Date(start.getFullYear(), start.getMonth() + 1, 0),
@@ -117,7 +117,7 @@ export async function POST(request: Request) {
         tanggalSelesai: end,
         jumlahHari,
         idJenisCuti,
-        idStatus: 'ST_LEAVE_PENDING',
+        idStatus: LEAVE_STATUS.PENDING,
         tanggalPengajuan: new Date(),
         keterangan,
       },

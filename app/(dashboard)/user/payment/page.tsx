@@ -11,6 +11,7 @@ import Button from '@/app/components/forms/Button';
 import TextField from '@/app/components/forms/TextField';
 import SelectField from '@/app/components/forms/SelectField';
 import SharedUploadBox from '@/app/components/forms/UploadBox';
+import StatusModal, { StatusState } from '@/app/components/feedback/StatusModal';
 import { easeOut } from '@/app/utils/motion';
 import { PAYMENT_KATEGORI, PAYMENT_STATUS } from '@/lib/constants';
 
@@ -99,24 +100,30 @@ export default function PaymentPage() {
 
   const [outgoingPayments, setOutgoingPayments] = useState<OutgoingPayment[]>([]);
   const [loadingPayments, setLoadingPayments] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [message, setMessage] = useState<StatusState | null>(null);
+
+  const loadOutgoingPayments = async () => {
+    const res = await fetch('/api/payment/list?scope=mine', { cache: 'no-store' });
+    if (res.ok) {
+      const data = await res.json();
+      setOutgoingPayments(
+        ((data.list ?? []) as Record<string, unknown>[]).map((p) => ({
+          id: (p as { idRequest?: string }).idRequest ?? String(Math.random()),
+          timeSubmission: (p as { createdAt?: string | null }).createdAt ?? null,
+          toWhom: (p as { masterKategoriPayment?: { namaKategori?: string | null } | null }).masterKategoriPayment?.namaKategori ?? null,
+          submittedToWhom: (p as { projectID?: string | null }).projectID ?? null,
+          idStatus: (p as { idStatus?: string | null }).idStatus ?? null,
+          namaStatus: (p as { masterStatus?: { namaStatus?: string | null } | null }).masterStatus?.namaStatus ?? null,
+        }))
+      );
+    }
+  };
 
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch('/api/payment/list?scope=mine', { cache: 'no-store' });
-        if (res.ok) {
-          const data = await res.json();
-          setOutgoingPayments(
-            ((data.list ?? []) as Record<string, unknown>[]).map((p) => ({
-              id: (p as { idRequest?: string }).idRequest ?? String(Math.random()),
-              timeSubmission: (p as { createdAt?: string | null }).createdAt ?? null,
-              toWhom: (p as { masterKategoriPayment?: { namaKategori?: string | null } | null }).masterKategoriPayment?.namaKategori ?? null,
-              submittedToWhom: (p as { projectID?: string | null }).projectID ?? null,
-              idStatus: (p as { idStatus?: string | null }).idStatus ?? null,
-              namaStatus: (p as { masterStatus?: { namaStatus?: string | null } | null }).masterStatus?.namaStatus ?? null,
-            }))
-          );
-        }
+        await loadOutgoingPayments();
       } catch {}
       setLoadingPayments(false);
     })();
@@ -141,6 +148,8 @@ export default function PaymentPage() {
   const isPerDiemComplete = perDiemEvent.trim() !== '' && perDiemParticipants.trim() !== '' && files['perdiem-file'] != null;
 
   const handleSubmitPayment = async () => {
+    if (submitting) return;
+    setSubmitting(true);
     const kategoriMap: Record<string, string> = {
       Vendor: PAYMENT_KATEGORI.VENDOR,
       'Individual(s)': PAYMENT_KATEGORI.INDIVIDUAL,
@@ -193,32 +202,21 @@ export default function PaymentPage() {
 
       const data = await res.json();
       if (res.ok) {
-        alert(`Payment submitted successfully!\n\nType: ${paymentFor}\nStatus: Pending Ops`);
         setStep(1);
         setRole('');
         setPracticeGroup('');
         setPartner('');
         setPaymentUnder('');
         setPaymentFor('');
-        const list = await fetch('/api/payment/list?scope=mine', { cache: 'no-store' });
-        if (list.ok) {
-          const ldata = await list.json();
-          setOutgoingPayments(
-            ((ldata.list ?? []) as Record<string, unknown>[]).map((p) => ({
-              id: (p as { idRequest?: string }).idRequest ?? String(Math.random()),
-              timeSubmission: (p as { createdAt?: string | null }).createdAt ?? null,
-              toWhom: (p as { masterKategoriPayment?: { namaKategori?: string | null } | null }).masterKategoriPayment?.namaKategori ?? null,
-              submittedToWhom: (p as { projectID?: string | null }).projectID ?? null,
-              idStatus: (p as { idStatus?: string | null }).idStatus ?? null,
-              namaStatus: (p as { masterStatus?: { namaStatus?: string | null } | null }).masterStatus?.namaStatus ?? null,
-            }))
-          );
-        }
+        await loadOutgoingPayments();
+        setMessage({ ok: true, text: `Payment submitted successfully! Type: ${paymentFor}, Status: Pending Ops.` });
       } else {
-        alert(data.error || 'Gagal mengirim pengajuan');
+        setMessage({ ok: false, text: data.error || 'Failed to submit request' });
       }
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Terjadi kesalahan jaringan');
+      setMessage({ ok: false, text: err instanceof Error ? err.message : 'A network error occurred' });
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -236,7 +234,7 @@ export default function PaymentPage() {
           <SectionCard title="Outgoing Payments" scroll>
             {outgoingPayments.length === 0 ? (
               <p className="py-8 text-center text-[14px] text-amana-neutral-400 font-medium">
-                {loadingPayments ? 'Memuat data...' : "You haven't requested any payments yet"}
+                {loadingPayments ? 'Loading...' : "You haven't requested any payments yet"}
               </p>
             ) : (
               <DataTable columns={paymentColumns} rows={outgoingPayments} defaultSortKey="timeSubmission" />
@@ -295,7 +293,11 @@ export default function PaymentPage() {
         >
           <SectionCard scroll className="overflow-y-auto scroll-smooth">
             <div className="flex-shrink-0 flex items-center gap-3 pb-1.5 mb-3 border-b border-amana-primary-500">
-              <button onClick={() => setStep(1)} className="text-amana-primary-500 hover:text-amana-danger-500">
+              <button
+                onClick={() => setStep(1)}
+                aria-label="Back to previous step"
+                className="text-amana-primary-500 hover:text-amana-danger-500"
+              >
                 <ChevronLeft className="w-6 h-6" />
               </button>
               <h3 className="text-[20px] font-semibold text-amana-primary-500">Step 2: Payment Details</h3>
@@ -324,8 +326,8 @@ export default function PaymentPage() {
                     <UploadBox label="Upload Invoice Document (.pdf)" fileKey="vendor-invoice" files={files} onFileChange={handleFileChange} />
                   </div>
                   <div className="flex justify-end pt-4 border-t border-amana-neutral-200">
-                    <Button variant="primary" size="lg" disabled={!isVendorComplete} onClick={handleSubmitPayment}>
-                      Submit Payment
+                    <Button variant="primary" size="lg" disabled={!isVendorComplete || submitting} onClick={handleSubmitPayment}>
+                      {submitting ? 'Submitting...' : 'Submit Payment'}
                     </Button>
                   </div>
                 </div>
@@ -373,8 +375,8 @@ export default function PaymentPage() {
                     <UploadBox label="Upload Invoice Document (.pdf)" fileKey="ind-invoice" files={files} onFileChange={handleFileChange} />
                   </div>
                   <div className="flex justify-end pt-4 border-t border-amana-neutral-200">
-                    <Button variant="primary" size="lg" disabled={!isIndividualComplete} onClick={handleSubmitPayment}>
-                      Submit Payment
+                    <Button variant="primary" size="lg" disabled={!isIndividualComplete || submitting} onClick={handleSubmitPayment}>
+                      {submitting ? 'Submitting...' : 'Submit Payment'}
                     </Button>
                   </div>
                 </div>
@@ -415,8 +417,8 @@ export default function PaymentPage() {
                     <UploadBox label="Upload Participant List (.pdf)" fileKey="perdiem-file" files={files} onFileChange={handleFileChange} />
                   </div>
                   <div className="flex justify-end pt-4 border-t border-amana-neutral-200">
-                    <Button variant="primary" size="lg" disabled={!isPerDiemComplete} onClick={handleSubmitPayment}>
-                      Submit Payment
+                    <Button variant="primary" size="lg" disabled={!isPerDiemComplete || submitting} onClick={handleSubmitPayment}>
+                      {submitting ? 'Submitting...' : 'Submit Payment'}
                     </Button>
                   </div>
                 </div>
@@ -425,6 +427,8 @@ export default function PaymentPage() {
           </SectionCard>
         </motion.div>
       )}
+
+      <StatusModal state={message} onClose={() => setMessage(null)} />
     </div>
   );
 }

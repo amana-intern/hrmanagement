@@ -91,7 +91,6 @@ model Karyawan {
   department      String?           @db.VarChar
   noTelepon       String?           @db.VarChar
   sisaCutiTahunan Int?              @default(12)
-  accrualRate     Float?            @db.DoublePrecision
   tipeKontrak     String?           @default("KONTRAK") @db.VarChar
   user            User?             @relation
   masterGrade     MasterGrade?      @relation(fields: [idGrade], references: [idGrade])
@@ -156,8 +155,10 @@ model KontrakKaryawan {
   idStatus           String?       @db.VarChar
   carryOver          Int?          @default(0)
   annualQuota        Int?          @default(12)
-  dokumenAddendumURL String?       @db.VarChar
-  addendumEmbedding  String?       @db.Text
+  // Keputusan Partner (renewal | offboarding) yang masih perlu diproses HR.
+  needAction         String?       @db.VarChar
+  needActionAt       DateTime?
+  needActionBy       String?       @db.VarChar
   karyawan           Karyawan?     @relation(fields: [idKaryawan], references: [idKaryawan])
   masterStatus       MasterStatus? @relation(fields: [idStatus], references: [idStatus])
 }
@@ -167,8 +168,6 @@ model TalentProfile {
   idKaryawan      String?       @unique @db.VarChar
   idStatusAsesmen String?       @db.VarChar
   fileCVURL       String?       @db.VarChar
-  cvEmbedding     String?       @db.Text
-  isIndexedAI     Boolean?
   karyawan        Karyawan?     @relation(fields: [idKaryawan], references: [idKaryawan])
   masterStatus    MasterStatus? @relation(fields: [idStatusAsesmen], references: [idStatus])
 }

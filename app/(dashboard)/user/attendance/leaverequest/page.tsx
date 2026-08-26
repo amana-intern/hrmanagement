@@ -8,7 +8,7 @@ import StatBox from '@/app/components/data-display/StatBox';
 import SelectField from '@/app/components/forms/SelectField';
 import TextField from '@/app/components/forms/TextField';
 import Button from '@/app/components/forms/Button';
-import StatusModal from '@/app/components/feedback/StatusModal';
+import StatusModal, { StatusState } from '@/app/components/feedback/StatusModal';
 import { LEAVE_TYPES } from '@/lib/constants';
 
 const specialLeaveList = [
@@ -40,7 +40,7 @@ export default function LeaveRequestPage() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+  const [message, setMessage] = useState<StatusState | null>(null);
   const [leaveBalance, setLeaveBalance] = useState<number | null>(null);
   const [specialLeaveUsed, setSpecialLeaveUsed] = useState<number | null>(null);
   const [unpaidLeaveUsed, setUnpaidLeaveUsed] = useState<number | null>(null);

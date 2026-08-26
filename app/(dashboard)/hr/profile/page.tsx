@@ -6,7 +6,7 @@ import ProfileOverview, {
   type SummaryPanelConfig,
   type ProfileBio,
 } from '@/app/components/data-display/ProfileOverview';
-import { useTodos } from '@/lib/useTodos';
+import { useProfileMe } from '@/lib/useProfileMe';
 
 interface DashboardData {
   attendance: {
@@ -32,23 +32,19 @@ interface Me {
 }
 
 export default function HRProfilePage() {
-  const [me, setMe] = useState<Me | null>(null);
+  const { me, loading, todos, addTodo, toggleTodo, deleteTodo } = useProfileMe<Me>();
   const [data, setData] = useState<DashboardData | null>(null);
-  const { todos, loadTodos, addTodo, toggleTodo, deleteTodo } = useTodos();
+  const [loadingDashboard, setLoadingDashboard] = useState(true);
 
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch('/api/me', { cache: 'no-store' });
-        if (res.ok) setMe(((await res.json()).user ?? null) as Me | null);
-      } catch {}
-      try {
         const res = await fetch('/api/hr/dashboard', { cache: 'no-store' });
         if (res.ok) setData((await res.json()) as DashboardData);
       } catch {}
-      await loadTodos();
+      setLoadingDashboard(false);
     })();
-  }, [loadTodos]);
+  }, []);
 
   const stat = (value: number, label: string, caption: string): Stat => ({ value, label, caption });
 
@@ -84,6 +80,7 @@ export default function HRProfilePage() {
       showGreeting
       showLogout
       showCareerHistory
+      loading={loading || loadingDashboard}
       panels={[attendancePanel, careerPanel]}
       bio={bio}
       todos={todos}

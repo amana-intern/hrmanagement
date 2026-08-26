@@ -10,7 +10,8 @@ import Button from '@/app/components/forms/Button';
 import Modal from '@/app/components/feedback/Modal';
 import StatusPill from '@/app/components/data-display/StatusPill';
 import TextField from '@/app/components/forms/TextField';
-import StatusModal from '@/app/components/feedback/StatusModal';
+import TextAreaField from '@/app/components/forms/TextAreaField';
+import StatusModal, { StatusState } from '@/app/components/feedback/StatusModal';
 import { TableSkeleton } from '@/app/components/feedback/PageSkeleton';
 
 interface Job {
@@ -50,7 +51,7 @@ export default function JobListingsPage() {
 
   const [newJob, setNewJob] = useState({ title: '', description: '', formLink: '' });
   const [editFields, setEditFields] = useState({ title: '', description: '', formLink: '' });
-  const [status, setStatus] = useState<{ ok: boolean; text: string } | null>(null);
+  const [status, setStatus] = useState<StatusState | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -88,7 +89,7 @@ export default function JobListingsPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
-    if (!res.ok) throw new Error('Gagal memperbarui lowongan');
+    if (!res.ok) throw new Error('Failed to update job listing');
   };
 
   const handleAddJob = async (asDraft: boolean) => {
@@ -107,7 +108,7 @@ export default function JobListingsPage() {
         }),
       });
       if (!res.ok) {
-        setErrorMsg('Gagal menambahkan lowongan');
+        setErrorMsg('Failed to add job listing');
         return;
       }
       await load();
@@ -135,38 +136,50 @@ export default function JobListingsPage() {
       setEditJob(null);
       setStatus({ ok: true, text: asDraft ? `Job listing "${editFields.title}" saved as draft` : `Job listing "${editFields.title}" successfully published` });
     } catch {
-      setErrorMsg('Gagal memperbarui lowongan');
+      setErrorMsg('Failed to update job listing');
     } finally {
       setBusy(false);
     }
   };
 
   const handleTakedown = async (job: Job) => {
-    const res = await fetch(`/api/joblistings/${job.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ idStatus: 'CLOSED' }),
-    });
-    if (!res.ok) {
-      setStatus({ ok: false, text: 'Failed to close job listing' });
-      return;
+    if (busy) return;
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/joblistings/${job.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idStatus: 'CLOSED' }),
+      });
+      if (!res.ok) {
+        setStatus({ ok: false, text: 'Failed to close job listing' });
+        return;
+      }
+      setShowTakedownModal(null);
+      setEditJob(null);
+      await load();
+      setStatus({ ok: true, text: `Job listing "${job.title}" successfully closed` });
+    } finally {
+      setBusy(false);
     }
-    setShowTakedownModal(null);
-    setEditJob(null);
-    await load();
-    setStatus({ ok: true, text: `Job listing "${job.title}" successfully closed` });
   };
 
   const handleDelete = async (job: Job) => {
-    const res = await fetch(`/api/joblistings/${job.id}`, { method: 'DELETE' });
-    if (!res.ok) {
-      setStatus({ ok: false, text: 'Failed to delete job listing' });
-      return;
+    if (busy) return;
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/joblistings/${job.id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        setStatus({ ok: false, text: 'Failed to delete job listing' });
+        return;
+      }
+      setShowDeleteModal(null);
+      setEditJob(null);
+      await load();
+      setStatus({ ok: true, text: `Job listing "${job.title}" successfully deleted` });
+    } finally {
+      setBusy(false);
     }
-    setShowDeleteModal(null);
-    setEditJob(null);
-    await load();
-    setStatus({ ok: true, text: `Job listing "${job.title}" successfully deleted` });
   };
 
   const openEdit = (job: Job) => {
@@ -232,7 +245,7 @@ export default function JobListingsPage() {
           {errorMsg && (
             <p className="pb-2 text-[13px] font-medium text-amana-danger-500">{errorMsg}</p>
           )}
-          <DataTable columns={columns} rows={filtered} defaultSortKey="title" emptyMessage="Belum ada lowongan." />
+          <DataTable columns={columns} rows={filtered} defaultSortKey="title" emptyMessage="No job listings yet." />
         </SectionCard>
       </div>
 
@@ -240,16 +253,12 @@ export default function JobListingsPage() {
         <Modal title="Add New Job" onClose={() => setShowAddModal(false)} maxWidth="max-w-2xl" className="max-h-[90vh]">
           <div className="flex-1 min-h-0 overflow-y-auto scroll-smooth p-5 flex flex-col gap-4">
             <TextField label="Job Title" value={newJob.title} onChange={(v) => setNewJob((p) => ({ ...p, title: v }))} placeholder="e.g. Senior Consultant" />
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[16px] font-semibold text-amana-neutral-500">Job Description</label>
-              <textarea
-                value={newJob.description}
-                onChange={(e) => setNewJob((p) => ({ ...p, description: e.target.value }))}
-                placeholder="Describe the role and responsibilities..."
-                rows={4}
-                className="w-full border border-amana-neutral-300 rounded-[13px] px-3 py-2.5 text-[16px] text-amana-neutral-500 placeholder:text-amana-neutral-300 transition-colors duration-200 focus:outline-none focus:border-amana-primary-500 resize-none"
-              />
-            </div>
+            <TextAreaField
+              label="Job Description"
+              value={newJob.description}
+              onChange={(v) => setNewJob((p) => ({ ...p, description: v }))}
+              placeholder="Describe the role and responsibilities..."
+            />
             <TextField label="Google Form Link" value={newJob.formLink} onChange={(v) => setNewJob((p) => ({ ...p, formLink: v }))} placeholder="https://docs.google.com/forms/..." />
           </div>
 
@@ -272,16 +281,12 @@ export default function JobListingsPage() {
         <Modal title={`Edit Job - ${editJob.title}`} onClose={() => setEditJob(null)} maxWidth="max-w-2xl" className="max-h-[90vh]">
           <div className="flex-1 min-h-0 overflow-y-auto scroll-smooth p-5 flex flex-col gap-4">
             <TextField label="Job Title" value={editFields.title} onChange={(v) => setEditFields((p) => ({ ...p, title: v }))} placeholder="e.g. Senior Consultant" />
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[16px] font-semibold text-amana-neutral-500">Job Description</label>
-              <textarea
-                value={editFields.description}
-                onChange={(e) => setEditFields((p) => ({ ...p, description: e.target.value }))}
-                placeholder="Describe the role and responsibilities..."
-                rows={4}
-                className="w-full border border-amana-neutral-300 rounded-[13px] px-3 py-2.5 text-[16px] text-amana-neutral-500 placeholder:text-amana-neutral-300 transition-colors duration-200 focus:outline-none focus:border-amana-primary-500 resize-none"
-              />
-            </div>
+            <TextAreaField
+              label="Job Description"
+              value={editFields.description}
+              onChange={(v) => setEditFields((p) => ({ ...p, description: v }))}
+              placeholder="Describe the role and responsibilities..."
+            />
             <TextField label="Google Form Link" value={editFields.formLink} onChange={(v) => setEditFields((p) => ({ ...p, formLink: v }))} placeholder="https://docs.google.com/forms/..." />
           </div>
 
@@ -327,8 +332,8 @@ export default function JobListingsPage() {
               This will close the listing and remove it from active job boards.
             </p>
             <div className="flex justify-end gap-3 pt-2">
-              <Button variant="danger" size="lg" onClick={() => handleTakedown(showTakedownModal)}>
-                Yes, Takedown
+              <Button variant="danger" size="lg" disabled={busy} onClick={() => handleTakedown(showTakedownModal)}>
+                {busy ? 'Processing...' : 'Yes, Takedown'}
               </Button>
             </div>
           </div>
@@ -343,8 +348,8 @@ export default function JobListingsPage() {
               This will permanently remove the listing.
             </p>
             <div className="flex justify-end gap-3 pt-2">
-              <Button variant="danger" size="lg" onClick={() => handleDelete(showDeleteModal)}>
-                Delete
+              <Button variant="danger" size="lg" disabled={busy} onClick={() => handleDelete(showDeleteModal)}>
+                {busy ? 'Processing...' : 'Delete'}
               </Button>
             </div>
           </div>

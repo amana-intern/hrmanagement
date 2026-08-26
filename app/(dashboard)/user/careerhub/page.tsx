@@ -11,7 +11,7 @@ import TextField from '@/app/components/forms/TextField';
 import UploadBox from '@/app/components/forms/UploadBox';
 import Modal from '@/app/components/feedback/Modal';
 import ConfirmModal from '@/app/components/feedback/ConfirmModal';
-import StatusModal from '@/app/components/feedback/StatusModal';
+import StatusModal, { StatusState } from '@/app/components/feedback/StatusModal';
 import PdfPreviewModal, { PdfPreviewTarget } from '@/app/components/feedback/PdfPreviewModal';
 import { cn } from '@/app/utils/cn';
 import { canUseEmployeeFeatures } from '@/lib/roles';
@@ -102,7 +102,7 @@ export default function CareerHubPage() {
   const [deletingCert, setDeletingCert] = useState(false);
   const [idRole, setIdRole] = useState('');
   const [loading, setLoading] = useState(true);
-  const [status, setStatus] = useState<{ ok: boolean; text: string } | null>(null);
+  const [status, setStatus] = useState<StatusState | null>(null);
 
   const uploadFile = async (file: File): Promise<string> => {
     const fd = new FormData();

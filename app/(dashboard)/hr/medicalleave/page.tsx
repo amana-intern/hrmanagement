@@ -9,19 +9,13 @@ import type { DataTableColumn } from '@/app/components/data-display/DataTable';
 import { SearchTextField, SearchSelectField } from '@/app/components/forms/SearchFields';
 import TextField from '@/app/components/forms/TextField';
 import Button from '@/app/components/forms/Button';
-import StatusModal from '@/app/components/feedback/StatusModal';
+import StatusModal, { StatusState } from '@/app/components/feedback/StatusModal';
 import PdfPreviewModal, { PdfPreviewTarget } from '@/app/components/feedback/PdfPreviewModal';
 import { useFilters } from '@/app/utils/useFilters';
 import { DEPARTMENT_OPTIONS, getAllGradeOptions } from '@/app/utils/orgStructure';
 import { downloadTSV, copyTSV } from '@/lib/sheets';
 import { TableSkeleton } from '@/app/components/feedback/PageSkeleton';
-
-const DEPARTMENT_LABEL: Record<string, string> = {
-  ops: 'Operations',
-  health: 'Health and Wellbeing',
-  education: 'Education and HR',
-  digital: 'Digital and Finance',
-};
+import { DEPARTMENT_LABELS } from '@/lib/constants';
 
 interface SickLog {
   id: string;
@@ -62,7 +56,7 @@ const diseaseBarColor = 'bg-amana-danger-400';
 export default function MedicalLeavePage() {
   const [logs, setLogs] = useState<SickLog[]>([]);
   const [loading, setLoading] = useState(true);
-  const [status, setStatus] = useState<{ ok: boolean; text: string } | null>(null);
+  const [status, setStatus] = useState<StatusState | null>(null);
   const [previewPdf, setPreviewPdf] = useState<PdfPreviewTarget | null>(null);
   const { draft, applied, setField, handleSearch, handleReset } = useFilters<Filters>(emptyFilters);
   const gradeOptions = useMemo(() => getAllGradeOptions(), []);
@@ -84,7 +78,7 @@ export default function MedicalLeavePage() {
               id: l.idIzinSakit,
               name: l.karyawan?.nama ?? '-',
               department:
-                (l.karyawan?.department && DEPARTMENT_LABEL[l.karyawan.department]) || l.karyawan?.department || '-',
+                (l.karyawan?.department && DEPARTMENT_LABELS[l.karyawan.department]) || l.karyawan?.department || '-',
               grade: l.karyawan?.masterGrade?.namaGrade ?? '-',
               startDate,
               endDate,

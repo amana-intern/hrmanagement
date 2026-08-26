@@ -86,6 +86,49 @@ export function CareerHubSkeleton() {
   );
 }
 
+/** Skeleton for ProfileOverview: two summary panels + Employee Bio + To-Do List. */
+export function ProfileSkeleton() {
+  return (
+    <div className="w-full h-full flex flex-col gap-3">
+      <TopBarSkeleton />
+      <div className="flex-1 min-h-0 flex flex-col lg:flex-row gap-4">
+        <div className="flex flex-col gap-3 w-full lg:w-3/5 min-h-0">
+          {[0, 1].map((i) => (
+            <div key={i} className="flex-1 min-h-0 flex flex-col bg-amana-neutral-100 rounded-[5px] border border-amana-primary-500 shadow-sm px-4 py-2.5">
+              <Skeleton className="h-5 w-40 pb-1.5 mb-2" />
+              <div className="flex gap-2 mb-2">
+                {[0, 1, 2].map((j) => (
+                  <Skeleton key={j} className="h-16 flex-1" />
+                ))}
+              </div>
+              <Skeleton className="flex-1" />
+            </div>
+          ))}
+        </div>
+        <div className="flex flex-col gap-4 w-full lg:w-2/5 min-h-0">
+          <div className="flex-shrink-0 bg-amana-neutral-100 rounded-[5px] border border-amana-primary-500 shadow-sm px-4 py-2.5">
+            <Skeleton className="h-5 w-32 mb-3" />
+            <div className="flex items-center gap-3">
+              <div className="flex-1 flex flex-col gap-2 items-end">
+                <Skeleton className="h-7 w-40" />
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-4 w-36" />
+                <Skeleton className="h-4 w-28" />
+              </div>
+              <Skeleton className="w-[92px] h-[123px] flex-shrink-0" />
+            </div>
+            <Skeleton className="h-9 w-full mt-3" />
+          </div>
+          <div className="flex-1 min-h-0 flex flex-col bg-amana-neutral-100 rounded-[5px] border border-amana-primary-500 shadow-sm px-4 py-2.5">
+            <Skeleton className="h-5 w-28 mb-3" />
+            <Skeleton className="flex-1" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /** Generic stacked-card skeleton for form/result pages (e.g. Assessment, Assessment Result). */
 export function CardStackSkeleton({ blocks = 3 }: { blocks?: number }) {
   return (

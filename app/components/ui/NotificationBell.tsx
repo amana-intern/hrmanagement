@@ -100,13 +100,13 @@ export default function NotificationBell() {
     <div className="relative" ref={panelRef}>
       <button
         onClick={() => setOpen((o) => !o)}
-        className="relative flex items-center justify-center w-5 h-5 text-amana-primary-500 hover:text-amana-primary-300 transition-colors"
+        className="relative flex items-center justify-center w-9 h-9 rounded-lg border border-amana-primary-500 bg-amana-neutral-100 text-amana-primary-500 hover:bg-amana-primary-500 hover:text-amana-neutral-100 transition-colors"
         aria-label="Notifications"
         title="Notifications"
       >
-        <Bell className="w-5 h-5" />
+        <Bell className="w-[18px] h-[18px]" />
         {unread > 0 && (
-          <span className="absolute -top-1 -right-1 bg-amana-danger-500 text-white text-[10px] font-bold min-w-5 h-5 rounded-full flex items-center justify-center px-1">
+          <span className="absolute -top-1.5 -right-1.5 bg-amana-danger-500 text-white text-[10px] font-bold min-w-5 h-5 rounded-full flex items-center justify-center px-1">
             {unread > 9 ? '9+' : unread}
           </span>
         )}

@@ -6,6 +6,8 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Check, PowerOff, Trash2 } from 'lucide-react';
 import PageTopBar from '../layout/PageTopBar';
 import Button from '../forms/Button';
+import NotificationBell from '../ui/NotificationBell';
+import { ProfileSkeleton } from '../feedback/PageSkeleton';
 import Collapse from '../layout/Collapse';
 import StatBox, { type Stat } from './StatBox';
 import CareerHistoryModal, { type CareerHistoryEntry } from './CareerHistoryModal';
@@ -67,9 +69,10 @@ function SummaryPanel({ title, stats, updates }: SummaryPanelConfig) {
 function EmployeeBio({ name, role, email, phone, photoSrc, onViewDetails }: ProfileBio & { onViewDetails?: () => void }) {
   return (
     <div className="flex-shrink-0 bg-amana-neutral-100 rounded-[5px] border border-amana-primary-500 shadow-sm px-4 py-2.5">
-      <h3 className="text-[20px] font-semibold text-amana-primary-500 pb-1.5 mb-3 border-b border-amana-primary-500">
-        Employee Bio
-      </h3>
+      <div className="flex items-center justify-between gap-2 pb-1.5 mb-3 border-b border-amana-primary-500">
+        <h3 className="text-[20px] font-semibold text-amana-primary-500">Employee Bio</h3>
+        <NotificationBell />
+      </div>
       <div className="flex items-center gap-3">
         <div className="flex-1 min-w-0 text-right">
           <p className="text-[35px] font-light text-amana-primary-500 leading-tight break-words">{name}</p>
@@ -272,6 +275,8 @@ export interface ProfileOverviewProps {
   showLogout?: boolean;
   /** Show a "View Details" button on the Employee Bio card, opening the user's own Career History. */
   showCareerHistory?: boolean;
+  /** Show a skeleton instead of the panels/bio while the caller's data is still loading. */
+  loading?: boolean;
 }
 
 export default function ProfileOverview({
@@ -286,6 +291,7 @@ export default function ProfileOverview({
   showGreeting = false,
   showLogout = false,
   showCareerHistory = false,
+  loading = false,
 }: ProfileOverviewProps) {
   const router = useRouter();
   const [loggingOut, setLoggingOut] = useState(false);
@@ -321,12 +327,13 @@ export default function ProfileOverview({
     setLoadingHistory(false);
   };
 
+  if (loading) return <ProfileSkeleton />;
+
   return (
     <div className="w-full h-full flex flex-col gap-3">
       <div className="flex-shrink-0">
         <PageTopBar
           showGreeting={showGreeting}
-          showNotifications
           right={
             <span className="flex flex-col items-end gap-1">
               {showLogout && (

@@ -2,22 +2,18 @@
 
 import { ReactNode, useEffect, useState } from 'react';
 import { useBreadcrumb } from './BreadcrumbContext';
-import NotificationBell from '../ui/NotificationBell';
 
 export default function PageTopBar({
   section,
   page,
   right,
   showGreeting = false,
-  showNotifications = false,
 }: {
   /** Grey breadcrumb prefix, e.g. "Career Hub". Renders "{section} > {page}" — auto-derived from the current sidebar entry when omitted; pass `right` instead for anything else. */
   section?: string;
   page?: string;
   right?: ReactNode;
   showGreeting?: boolean;
-  /** Show the notification bell in its own row above the breadcrumb. */
-  showNotifications?: boolean;
 }) {
   const [dateLabel, setDateLabel] = useState('');
   const [greeting, setGreeting] = useState('');
@@ -68,14 +64,9 @@ export default function PageTopBar({
 
   return (
     <div className="flex-shrink-0 -mt-2 md:-mt-3 lg:-mt-4 bg-amana-neutral-100 rounded-b-[5px] shadow-sm px-3 py-2.5">
-      {(showGreeting || showNotifications) && (
+      {showGreeting && (
         <div className="flex items-center justify-between leading-tight">
-          {showGreeting ? (
-            <p className="text-[16px] font-semibold text-amana-primary-500 leading-tight">{greeting}</p>
-          ) : (
-            <span />
-          )}
-          {showNotifications && <NotificationBell />}
+          <p className="text-[16px] font-semibold text-amana-primary-500 leading-tight">{greeting}</p>
         </div>
       )}
       <div className="flex items-center gap-2.5 leading-tight">

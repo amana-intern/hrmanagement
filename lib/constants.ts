@@ -32,6 +32,13 @@ export const LEAVE_STATUS = {
   REJECTED: 'ST_LEAVE_REJECTED',
 } as const;
 
+// MasterStatus — cuti — label tampilan.
+export const LEAVE_STATUS_LABELS: Record<string, string> = {
+  [LEAVE_STATUS.PENDING]: 'Pending',
+  [LEAVE_STATUS.APPROVED]: 'Approved',
+  [LEAVE_STATUS.REJECTED]: 'Rejected',
+};
+
 // MasterStatus — payment request
 export const PAYMENT_STATUS = {
   PENDING_OPS: 'ST_PAY_PENDING_OPS',
@@ -41,6 +48,26 @@ export const PAYMENT_STATUS = {
   SCHEDULED: 'ST_PAY_SCHEDULED',
   PAID: 'ST_PAY_PAID',
 } as const;
+
+// MasterStatus — payment request — label & warna badge tampilan (dipakai oleh
+// halaman OPS & Partner agar status yang sama selalu tampil sama).
+export const PAYMENT_STATUS_LABELS: Record<string, string> = {
+  [PAYMENT_STATUS.PENDING_OPS]: 'Pending Ops',
+  [PAYMENT_STATUS.PENDING_PARTNER]: 'Pending Partner',
+  [PAYMENT_STATUS.REJECTED]: 'Rejected',
+  [PAYMENT_STATUS.APPROVED]: 'Approved',
+  [PAYMENT_STATUS.SCHEDULED]: 'Scheduled',
+  [PAYMENT_STATUS.PAID]: 'Paid',
+};
+
+export const PAYMENT_STATUS_COLORS: Record<string, string> = {
+  [PAYMENT_STATUS.PENDING_OPS]: 'bg-amana-warning-500',
+  [PAYMENT_STATUS.PENDING_PARTNER]: 'bg-amana-primary-500',
+  [PAYMENT_STATUS.REJECTED]: 'bg-amana-danger-500',
+  [PAYMENT_STATUS.APPROVED]: 'bg-amana-success-500',
+  [PAYMENT_STATUS.SCHEDULED]: 'bg-amana-primary-500',
+  [PAYMENT_STATUS.PAID]: 'bg-amana-neutral-400',
+};
 
 // MasterStatus — kontrak
 export const CONTRACT_STATUS = {

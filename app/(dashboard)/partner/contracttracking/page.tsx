@@ -5,8 +5,9 @@ import ContractTrackingPage from '@/app/components/data-display/ContractTracking
 import type { Contract } from '@/app/components/data-display/ContractTrackingPage';
 import type { DataTableColumn } from '@/app/components/data-display/DataTable';
 import Button from '@/app/components/forms/Button';
-import StatusModal from '@/app/components/feedback/StatusModal';
+import StatusModal, { StatusState } from '@/app/components/feedback/StatusModal';
 import { TableSkeleton } from '@/app/components/feedback/PageSkeleton';
+import { DEPARTMENT_LABELS } from '@/lib/constants';
 
 interface ServerContract {
   idKaryawan: string;
@@ -16,18 +17,11 @@ interface ServerContract {
   daysLeft: number | null;
 }
 
-const DEPARTMENT_LABELS: Record<string, string> = {
-  health: 'Health & Wellbeing',
-  digital: 'Digital & Finance',
-  education: 'Education & HR',
-  ops: 'Operations',
-};
-
 export default function PartnerContractTrackingPage() {
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [loading, setLoading] = useState(true);
   const [processingId, setProcessingId] = useState<string | null>(null);
-  const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+  const [message, setMessage] = useState<StatusState | null>(null);
 
   useEffect(() => {
     (async () => {

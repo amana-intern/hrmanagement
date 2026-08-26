@@ -8,7 +8,7 @@ import type { DataTableColumn } from '@/app/components/data-display/DataTable';
 import Button from '@/app/components/forms/Button';
 import TextField from '@/app/components/forms/TextField';
 import ConfirmModal from '@/app/components/feedback/ConfirmModal';
-import StatusModal from '@/app/components/feedback/StatusModal';
+import StatusModal, { StatusState } from '@/app/components/feedback/StatusModal';
 import { TableSkeleton } from '@/app/components/feedback/PageSkeleton';
 
 interface BlockedDate {
@@ -29,7 +29,7 @@ export default function BlockedDatesPage() {
   const [newEndDate, setNewEndDate] = useState('');
   const [newReason, setNewReason] = useState('');
   const [saving, setSaving] = useState(false);
-  const [status, setStatus] = useState<{ ok: boolean; text: string } | null>(null);
+  const [status, setStatus] = useState<StatusState | null>(null);
   const [rowToDelete, setRowToDelete] = useState<BlockedDate | null>(null);
   const [deleting, setDeleting] = useState(false);
 

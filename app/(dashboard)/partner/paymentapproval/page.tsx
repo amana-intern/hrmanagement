@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useState } from 'react';
 import PageTopBar from '@/app/components/layout/PageTopBar';
 import SectionCard from '@/app/components/layout/SectionCard';
 import SearchPanel from '@/app/components/data-display/SearchPanel';
@@ -12,159 +12,45 @@ import { SearchTextField, SearchSelectField } from '@/app/components/forms/Searc
 import Button from '@/app/components/forms/Button';
 import StatusModal from '@/app/components/feedback/StatusModal';
 import RejectReasonModal from '@/app/components/feedback/RejectReasonModal';
-import { useFilters } from '@/app/utils/useFilters';
-import { statusColor } from '@/app/utils/statusColor';
 import PaymentDetailModal, { PaymentDetailRow } from '@/app/components/PaymentDetailModal';
-import { PAYMENT_KATEGORI } from '@/lib/constants';
+import { usePaymentRequests } from '@/app/utils/usePaymentRequests';
+import { paymentStatusLabel, paymentStatusColor, type PayReq } from '@/app/utils/payment';
+import { PAYMENT_STATUS, PAYMENT_STATUS_LABELS } from '@/lib/constants';
 import { TableSkeleton } from '@/app/components/feedback/PageSkeleton';
 
-interface PayReq {
-  id: string;
-  idRequest: string;
-  user: string;
-  type: string;
-  amount: string;
-  projectID: string;
-  status: string;
-  details: null;
-  action: null;
-  detailRow: PaymentDetailRow;
-}
-
-interface PaymentRaw {
-  idRequest: string;
-  idStatus: string;
-  idKategoriPayment: string;
-  nominal: string | number;
-  projectID: string | null;
-  detail: string | null;
-  createdAt: string | null;
-  attachments?: { fileName?: string | null; fileURL?: string | null; kategori?: string | null }[];
-  karyawan?: { nama?: string | null };
-  masterKategoriPayment?: { namaKategori?: string | null };
-}
-
-function amountLabel(c: PaymentRaw): string {
-  if (c.idKategoriPayment === PAYMENT_KATEGORI.PER_DIEM) {
-    try {
-      const detail = typeof c.detail === 'string' ? JSON.parse(c.detail) : c.detail;
-      const p = Number(detail?.perDiemParticipants);
-      if (Number.isFinite(p) && p > 0) return `${p} peserta`;
-    } catch {}
-    return 'Lihat file';
-  }
-  return `Rp ${Number(c.nominal).toLocaleString('id-ID')}`;
-}
-
-const STATUS_MAP: Record<string, { label: string }> = {
-  ST_PAY_PENDING_OPS: { label: 'Pending Ops' },
-  ST_PAY_PENDING_PARTNER: { label: 'Pending Partner' },
-  ST_PAY_APPROVED: { label: 'Approved' },
-  ST_PAY_REJECTED: { label: 'Rejected' },
-  ST_PAY_SCHEDULED: { label: 'Scheduled' },
-  ST_PAY_PAID: { label: 'Paid' },
-};
-
-const STATUS_OPTIONS = Object.values(STATUS_MAP).map((v) => v.label);
-
-function mapRows(rows: PaymentRaw[]): PayReq[] {
-  return rows.map((c) => ({
-    id: c.idRequest,
-    idRequest: c.idRequest,
-    user: c.karyawan?.nama ?? '-',
-    type: c.masterKategoriPayment?.namaKategori ?? '-',
-    amount: amountLabel(c),
-    projectID: c.projectID ?? '-',
-    status: c.idStatus,
-    details: null,
-    action: null,
-    detailRow: {
-      idRequest: c.idRequest,
-      idKategoriPayment: c.idKategoriPayment,
-      nominal: c.nominal,
-      projectID: c.projectID,
-      detail: c.detail,
-      createdAt: c.createdAt,
-      attachments: c.attachments ?? [],
-      masterKategoriPayment: c.masterKategoriPayment,
-    },
-  }));
-}
-
-interface Filters {
-  search: string;
-  status: string;
-}
-
-const emptyFilters: Filters = { search: '', status: '' };
+const STATUS_OPTIONS = Object.values(PAYMENT_STATUS_LABELS);
 
 export default function PartnerPaymentApprovalPage() {
-  const [requests, setRequests] = useState<PayReq[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+  const {
+    loading,
+    filtered,
+    message,
+    setMessage,
+    processingId,
+    submitAction,
+    draft,
+    setField,
+    handleSearch,
+    handleReset,
+  } = usePaymentRequests('partner');
   const [detailRow, setDetailRow] = useState<PaymentDetailRow | null>(null);
   const [rejectTarget, setRejectTarget] = useState<string | null>(null);
-  const [rejecting, setRejecting] = useState(false);
-  const { draft, applied, setField, handleSearch, handleReset } = useFilters<Filters>(emptyFilters);
-
-  const load = async () => {
-    const res = await fetch('/api/payment/list?scope=partner', { cache: 'no-store' });
-    if (res.ok) {
-      const data = await res.json();
-      setRequests(mapRows((data.list ?? []) as PaymentRaw[]));
-    } else {
-      const data = await res.json().catch(() => null);
-      setMessage({ ok: false, text: data?.error || 'Failed to load data' });
-    }
-  };
-
-  useEffect(() => {
-    (async () => {
-      await load();
-      setLoading(false);
-    })();
-  }, []);
-
-  const filtered = useMemo(() => {
-    const q = applied.search.trim().toLowerCase();
-    return requests.filter((r) => {
-      const matchSearch =
-        !q ||
-        r.idRequest.toLowerCase().includes(q) ||
-        r.user.toLowerCase().includes(q) ||
-        r.projectID.toLowerCase().includes(q);
-      const matchStatus =
-        !applied.status || (STATUS_MAP[r.status]?.label ?? r.status) === applied.status;
-      return matchSearch && matchStatus;
-    });
-  }, [requests, applied]);
 
   const handleAction = async (id: string, action: 'final_approve' | 'reject', catatan?: string) => {
-    const res = await fetch(`/api/payment/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action, catatan: catatan?.trim() }),
-    });
-    if (res.ok) {
-      await load();
-      setMessage({ ok: true, text: action === 'final_approve' ? 'Request successfully approved.' : 'Request successfully rejected.' });
-    } else {
-      const data = await res.json().catch(() => ({}));
-      setMessage({ ok: false, text: data?.error ?? 'Failed to process request' });
-    }
+    const ok = await submitAction(id, action, catatan ? { catatan: catatan.trim() } : undefined);
+    if (ok) setMessage({ ok: true, text: action === 'final_approve' ? 'Request successfully approved.' : 'Request successfully rejected.' });
   };
 
   const handleConfirmReject = async (reason: string) => {
     if (!rejectTarget) return;
-    setRejecting(true);
-    await handleAction(rejectTarget, 'reject', reason);
-    setRejecting(false);
+    const id = rejectTarget;
     setRejectTarget(null);
+    await handleAction(id, 'reject', reason);
   };
 
   const renderAction = (r: PayReq) => (
     <ApprovalActions
-      disabled={r.status !== 'ST_PAY_PENDING_PARTNER'}
+      disabled={r.status !== PAYMENT_STATUS.PENDING_PARTNER || processingId === r.id}
       onApprove={() => handleAction(r.id, 'final_approve')}
       onReject={() => setRejectTarget(r.id)}
     />
@@ -185,11 +71,7 @@ export default function PartnerPaymentApprovalPage() {
       key: 'status',
       label: 'Status',
       width: '120px',
-      render: (r) => (
-        <StatusPill color={statusColor(STATUS_MAP[r.status]?.label ?? r.status)}>
-          {STATUS_MAP[r.status]?.label ?? r.status}
-        </StatusPill>
-      ),
+      render: (r) => <StatusPill color={paymentStatusColor(r.status)}>{paymentStatusLabel(r.status)}</StatusPill>,
     },
     {
       key: 'details',
@@ -231,13 +113,13 @@ export default function PartnerPaymentApprovalPage() {
             columns={columns}
             rows={filtered}
             defaultSortKey="idRequest"
-            emptyMessage="Tidak ada pengajuan."
+            emptyMessage="No payment requests match your filters."
           />
         </SectionCard>
       </div>
 
       {rejectTarget && (
-        <RejectReasonModal onCancel={() => setRejectTarget(null)} onConfirm={handleConfirmReject} submitting={rejecting} />
+        <RejectReasonModal onCancel={() => setRejectTarget(null)} onConfirm={handleConfirmReject} submitting={!!processingId} />
       )}
 
       <StatusModal state={message} onClose={() => setMessage(null)} />

@@ -44,22 +44,40 @@ export async function GET(request: Request) {
       include: { karyawan: true },
     });
 
+    // Pre-compute which contracts actually need a reminder this run, so the
+    // dedup check and partner lookup below can each run as a single batched
+    // query instead of once per contract.
+    const items = contracts
+      .map((contract) => {
+        const karyawan = contract.karyawan;
+        if (!karyawan || !contract.tanggalBerakhir) return null;
+        const daysRemaining = Math.ceil((contract.tanggalBerakhir.getTime() - now.getTime()) / DAY_MS);
+        const threshold = thresholdFor(daysRemaining);
+        if (!threshold) return null;
+        return { contract, karyawan, daysRemaining, threshold, tipe: `CONTRACT_REMINDER_${threshold}` };
+      })
+      .filter((i): i is NonNullable<typeof i> => i !== null);
+
+    const existing = items.length
+      ? await prisma.notification.findMany({
+          where: {
+            idReferensi: { in: items.map((i) => i.contract.idKontrak) },
+            tipe: { in: Array.from(new Set(items.map((i) => i.tipe))) },
+          },
+          select: { idReferensi: true, tipe: true },
+        })
+      : [];
+    const alreadyNotified = new Set(existing.map((e) => `${e.tipe}:${e.idReferensi}`));
+
+    const departments = Array.from(new Set(items.map((i) => i.karyawan.department).filter((d): d is string => !!d)));
+    const partnerEntries = await Promise.all(departments.map(async (d) => [d, await getDeptPartner(d)] as const));
+    const partnerByDept = new Map(partnerEntries);
+
     const sent: string[] = [];
     const skipped: string[] = [];
 
-    for (const contract of contracts) {
-      const karyawan = contract.karyawan;
-      if (!karyawan || !contract.tanggalBerakhir) continue;
-
-      const daysRemaining = Math.ceil((contract.tanggalBerakhir.getTime() - now.getTime()) / DAY_MS);
-      const threshold = thresholdFor(daysRemaining);
-      if (!threshold) continue;
-
-      const tipe = `CONTRACT_REMINDER_${threshold}`;
-      const exists = await prisma.notification.findFirst({
-        where: { tipe, idReferensi: contract.idKontrak },
-      });
-      if (exists) {
+    for (const { contract, karyawan, daysRemaining, threshold, tipe } of items) {
+      if (alreadyNotified.has(`${tipe}:${contract.idKontrak}`)) {
         skipped.push(`${contract.idKontrak} (already notified)`);
         continue;
       }
@@ -70,7 +88,7 @@ export async function GET(request: Request) {
       const pesanHR = `The contract of ${nama} ends on ${tanggal} (${daysRemaining} days remaining). Please review the renewal or offboarding decision.`;
       const pesanKaryawan = `Your contract ends on ${tanggal} (${daysRemaining} days remaining).`;
 
-      const partner = await getDeptPartner(karyawan.department);
+      const partner = karyawan.department ? partnerByDept.get(karyawan.department) ?? null : null;
       const recipients = [
         { idKaryawan: hrUser?.karyawan?.idKaryawan ?? null, email: hrUser?.email ?? null, pesan: pesanHR },
         { idKaryawan: partner?.idKaryawan ?? null, email: partner?.email ?? null, pesan: pesanHR },

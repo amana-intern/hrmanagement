@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { ROLES } from '@/lib/roles';
 import { persistLeaveBalance } from '@/lib/leave';
 import { sendEmail } from '@/lib/notify';
+import { LEAVE_STATUS } from '@/lib/constants';
 
 // PATCH /api/leave/[id] — Partner approve/reject cuti (pilar department).
 // Matriks approver (Fitur 9):
@@ -46,7 +47,7 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
       return Response.json({ error: 'Not your department' }, { status: 403 });
     }
 
-    const newStatus = action === 'approve' ? 'ST_LEAVE_APPROVED' : 'ST_LEAVE_REJECTED';
+    const newStatus = action === 'approve' ? LEAVE_STATUS.APPROVED : LEAVE_STATUS.REJECTED;
 
     const updated = await prisma.$transaction(async (tx) => {
       const u = await tx.pengajuanCuti.update({

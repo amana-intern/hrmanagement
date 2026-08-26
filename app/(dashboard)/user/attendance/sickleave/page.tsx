@@ -6,7 +6,7 @@ import SectionCard from '@/app/components/layout/SectionCard';
 import TextField from '@/app/components/forms/TextField';
 import UploadBox from '@/app/components/forms/UploadBox';
 import Button from '@/app/components/forms/Button';
-import StatusModal from '@/app/components/feedback/StatusModal';
+import StatusModal, { StatusState } from '@/app/components/feedback/StatusModal';
 
 export default function SickLeavePage() {
   const [startDate, setStartDate] = useState('');
@@ -14,7 +14,7 @@ export default function SickLeavePage() {
   const [symptom, setSymptom] = useState('');
   const [medicalFile, setMedicalFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+  const [message, setMessage] = useState<StatusState | null>(null);
 
   const isFormValid = startDate !== '' && endDate !== '' && medicalFile !== null;
 

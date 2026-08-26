@@ -1,8 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import ProfileOverview, { type Stat, type SummaryPanelConfig, type ProfileBio } from '@/app/components/data-display/ProfileOverview';
-import { useTodos } from '@/lib/useTodos';
+import { useProfileMe } from '@/lib/useProfileMe';
 
 interface Me {
   nama: string;
@@ -27,18 +26,7 @@ interface Me {
 }
 
 export default function UserProfilePage() {
-  const [me, setMe] = useState<Me | null>(null);
-  const { todos, loadTodos, addTodo, toggleTodo, deleteTodo } = useTodos();
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const res = await fetch('/api/me', { cache: 'no-store' });
-        if (res.ok) setMe(((await res.json()).user ?? null) as Me | null);
-      } catch {}
-      await loadTodos();
-    })();
-  }, [loadTodos]);
+  const { me, loading, todos, addTodo, toggleTodo, deleteTodo } = useProfileMe<Me>();
 
   const stat = (value: number | string, label: string, caption: string): Stat => ({ value, label, caption });
 
@@ -82,6 +70,7 @@ export default function UserProfilePage() {
       showGreeting
       showLogout
       showCareerHistory
+      loading={loading}
       panels={[attendancePanel, careerPanel]}
       bio={bio}
       todos={todos}

@@ -4,6 +4,7 @@ import path from 'path';
 import { requireAuth } from '@/lib/dal';
 import { prisma } from '@/lib/prisma';
 import { canUseEmployeeFeatures } from '@/lib/roles';
+import { PAYMENT_STATUS } from '@/lib/constants';
 
 const UPLOAD_DIR = path.join(process.cwd(), 'public', 'uploads');
 const MAX_BYTES = 5 * 1024 * 1024;
@@ -64,7 +65,7 @@ export async function POST(request: NextRequest) {
           projectID,
           nominal,
           idKategoriPayment,
-          idStatus: 'ST_PAY_PENDING_OPS',
+          idStatus: PAYMENT_STATUS.PENDING_OPS,
           tanggalPengajuan: new Date(),
           catatan,
           detail: detailStr,
@@ -88,7 +89,7 @@ export async function POST(request: NextRequest) {
         projectID,
         nominal: Number(nominal),
         idKategoriPayment,
-        idStatus: 'ST_PAY_PENDING_OPS',
+        idStatus: PAYMENT_STATUS.PENDING_OPS,
         tanggalPengajuan: new Date(),
         catatan: catatan ?? null,
       },

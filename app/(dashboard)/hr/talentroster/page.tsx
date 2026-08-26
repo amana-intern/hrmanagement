@@ -9,7 +9,7 @@ import DataTable from '@/app/components/data-display/DataTable';
 import type { DataTableColumn } from '@/app/components/data-display/DataTable';
 import Button from '@/app/components/forms/Button';
 import Modal from '@/app/components/feedback/Modal';
-import StatusModal from '@/app/components/feedback/StatusModal';
+import StatusModal, { StatusState } from '@/app/components/feedback/StatusModal';
 import PdfPreviewModal, { PdfPreviewTarget } from '@/app/components/feedback/PdfPreviewModal';
 import EmployeeDetailsModal, { AssessmentBadge } from '@/app/components/data-display/EmployeeDetailsModal';
 import CareerHistoryModal, { type CareerHistoryEntry } from '@/app/components/data-display/CareerHistoryModal';
@@ -85,7 +85,7 @@ export default function TalentRosterPage() {
   const [assessmentModal, setAssessmentModal] = useState<Employee | null>(null);
   const [detailsModal, setDetailsModal] = useState<Employee | null>(null);
   const [previewPdf, setPreviewPdf] = useState<PdfPreviewTarget | null>(null);
-  const [status, setStatus] = useState<{ ok: boolean; text: string } | null>(null);
+  const [status, setStatus] = useState<StatusState | null>(null);
 
   const [careerHistoryModal, setCareerHistoryModal] = useState<Employee | null>(null);
   const [careerHistory, setCareerHistory] = useState<CareerHistoryEntry[]>([]);

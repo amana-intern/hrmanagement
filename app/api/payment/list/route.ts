@@ -35,7 +35,8 @@ export async function GET(request: Request) {
         };
       }
     } else if (auth.idRole === ROLES.PARTNER) {
-      // Board Partner: semua status sampai lunas — item tetap tampil sebagai riwayat
+      // Board Partner: semua status sampai lunas — item tetap tampil sebagai riwayat,
+      // dibatasi ke department (pilar) Partner sendiri.
       where.idStatus = {
         in: [
           PAYMENT_STATUS.PENDING_PARTNER,
@@ -45,12 +46,13 @@ export async function GET(request: Request) {
           PAYMENT_STATUS.PAID,
         ],
       };
+      where.karyawan = { department: auth.department ?? undefined };
     }
 
     const list = await prisma.paymentRequest.findMany({
       where,
       include: {
-        karyawan: { include: { masterGrade: true } },
+        karyawan: true,
         masterKategoriPayment: true,
         masterStatus: true,
         attachments: true,
