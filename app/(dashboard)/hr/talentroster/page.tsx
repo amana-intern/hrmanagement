@@ -221,7 +221,7 @@ export default function TalentRosterPage() {
           tanggalMasuk: newUser.tanggalMasuk || undefined,
           tanggalBerakhir: newUser.tanggalBerakhir || undefined,
           tipeKontrak: newUser.tipeKontrak,
-          akses: newUser.akses,
+          akses: isPromotedAccess ? newUser.akses : '',
         }),
       });
       const data = await res.json();
@@ -286,7 +286,7 @@ export default function TalentRosterPage() {
           department: editForm.department,
           namaGrade: gradeVal,
           namaRole: roleVal,
-          akses: editForm.akses,
+          akses: isPromotedEditAccess ? editForm.akses : '',
         }),
       });
       const data = await res.json();

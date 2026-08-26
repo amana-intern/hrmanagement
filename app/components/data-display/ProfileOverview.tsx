@@ -326,6 +326,7 @@ export default function ProfileOverview({
       <div className="flex-shrink-0">
         <PageTopBar
           showGreeting={showGreeting}
+          showNotifications
           right={
             <span className="flex flex-col items-end gap-1">
               {showLogout && (

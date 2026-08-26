@@ -18,7 +18,7 @@ export async function POST(request: Request) {
       return Response.json({ error: 'Forbidden' }, { status: 403 });
     }
     if (!auth.idKaryawan) {
-      return Response.json({ error: 'Akun bukan karyawan' }, { status: 400 });
+      return Response.json({ error: 'Account is not an employee' }, { status: 400 });
     }
 
     const body = await request.json();
@@ -26,16 +26,16 @@ export async function POST(request: Request) {
     const keterangan = String(body?.keterangan ?? '').trim() || null;
 
     if (!tanggalMulai || !tanggalSelesai || !idJenisCuti) {
-      return Response.json({ error: 'Semua field wajib diisi' }, { status: 400 });
+      return Response.json({ error: 'All fields are required' }, { status: 400 });
     }
 
     const start = parseDateOnly(tanggalMulai);
     const end = parseDateOnly(tanggalSelesai);
     if (!start || !end) {
-      return Response.json({ error: 'Format tanggal tidak valid' }, { status: 400 });
+      return Response.json({ error: 'Invalid date format' }, { status: 400 });
     }
     if (end < start) {
-      return Response.json({ error: 'Tanggal selesai tidak boleh lebih awal dari tanggal mulai' }, { status: 400 });
+      return Response.json({ error: 'End date cannot be earlier than start date' }, { status: 400 });
     }
     const jumlahHari = Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
 
@@ -51,22 +51,29 @@ export async function POST(request: Request) {
     if (blocked.length > 0) {
       const rangeLabel = (b: (typeof blocked)[number]) =>
         b.tanggalAkhir
-          ? `${b.tanggal?.toLocaleDateString('id-ID')} s/d ${b.tanggalAkhir.toLocaleDateString('id-ID')}`
-          : (b.tanggal?.toLocaleDateString('id-ID') ?? '');
+          ? `${b.tanggal?.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })} - ${b.tanggalAkhir.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}`
+          : (b.tanggal?.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) ?? '');
       return Response.json(
         {
-          error: `Tanggal ${blocked.map(rangeLabel).filter(Boolean).join(', ')} sedang diblokir${blocked[0]?.alasan ? ` (${blocked[0].alasan})` : ''}.`,
+          error: `Dates ${blocked.map(rangeLabel).filter(Boolean).join(', ')} are blocked${blocked[0]?.alasan ? ` (${blocked[0].alasan})` : ''}.`,
         },
         { status: 400 }
       );
     }
 
-    // Fitur 10: Unpaid hanya boleh saat saldo Paid = 0
-    if (idJenisCuti === LEAVE_TYPES.UNPAID) {
+    // Fitur 10: Unpaid hanya boleh saat saldo Paid = 0; Paid tidak boleh melebihi sisa kuota.
+    if (idJenisCuti === LEAVE_TYPES.PAID || idJenisCuti === LEAVE_TYPES.UNPAID) {
       const balance = await computeLeaveBalance(auth.idKaryawan);
-      if (balance.sisa > 0) {
+      if (idJenisCuti === LEAVE_TYPES.PAID) {
+        if (jumlahHari > balance.sisa) {
+          return Response.json(
+            { error: `Your remaining Paid Leave balance is ${balance.sisa} days, not enough for a ${jumlahHari}-day request.` },
+            { status: 400 }
+          );
+        }
+      } else if (balance.sisa > 0) {
         return Response.json(
-          { error: `Unpaid leave hanya bisa diajukan saat saldo Paid = 0. Sisa Anda: ${balance.sisa} hari.` },
+          { error: `Unpaid leave can only be submitted when your Paid balance is 0. Remaining: ${balance.sisa} days.` },
           { status: 400 }
         );
       }
@@ -78,7 +85,7 @@ export async function POST(request: Request) {
       keterangan?.toLowerCase().includes('menstruation')
     ) {
       if (jumlahHari > 2) {
-        return Response.json({ error: 'Cuti menstruasi maksimal 2 hari.' }, { status: 400 });
+        return Response.json({ error: 'Menstruation leave is limited to 2 days.' }, { status: 400 });
       }
       const monthUsage = await prisma.pengajuanCuti.findMany({
         where: {
@@ -96,7 +103,7 @@ export async function POST(request: Request) {
         .reduce((s, c) => s + (c.jumlahHari ?? 0), 0);
       if (usedThisMonth + jumlahHari > 2) {
         return Response.json(
-          { error: `Cuti menstruasi bulan ini sudah ${usedThisMonth} hari (maks 2 hari/bulan).` },
+          { error: `Menstruation leave used this month: ${usedThisMonth} day(s) (max 2 days/month).` },
           { status: 400 }
         );
       }
@@ -119,6 +126,6 @@ export async function POST(request: Request) {
     return Response.json({ ok: true, cuti }, { status: 201 });
   } catch (e) {
     const status = (e as { status?: number }).status ?? 500;
-    return Response.json({ error: 'Terjadi kesalahan' }, { status });
+    return Response.json({ error: 'Something went wrong' }, { status });
   }
 }

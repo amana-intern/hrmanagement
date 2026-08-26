@@ -13,13 +13,13 @@ export async function DELETE(_request: Request, ctx: { params: Promise<{ idBloki
 
     const existing = await prisma.tanggalBlokir.findUnique({ where: { idBlokir } });
     if (!existing) {
-      return Response.json({ error: 'Tanggal tidak ditemukan' }, { status: 404 });
+      return Response.json({ error: 'Date not found' }, { status: 404 });
     }
 
     await prisma.tanggalBlokir.delete({ where: { idBlokir } });
     return Response.json({ ok: true });
   } catch (e) {
     const status = (e as { status?: number }).status ?? 500;
-    return Response.json({ error: 'Terjadi kesalahan' }, { status });
+    return Response.json({ error: 'Something went wrong' }, { status });
   }
 }

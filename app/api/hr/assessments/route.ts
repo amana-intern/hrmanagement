@@ -43,7 +43,7 @@ export async function GET() {
     return Response.json({ list: result });
   } catch (e) {
     const status = (e as { status?: number }).status ?? 500;
-    return Response.json({ error: 'Terjadi kesalahan' }, { status });
+    return Response.json({ error: 'Something went wrong' }, { status });
   }
 }
 
@@ -59,7 +59,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { judul, deskripsi, tanggalBuka, tanggalTutup, categories, open } = body || {};
     if (!judul) {
-      return Response.json({ error: 'Judul wajib diisi' }, { status: 400 });
+      return Response.json({ error: 'Title is required' }, { status: 400 });
     }
 
     const catList: {
@@ -139,6 +139,6 @@ export async function POST(request: Request) {
     return Response.json({ ok: true, assessment }, { status: 201 });
   } catch (e) {
     const status = (e as { status?: number }).status ?? 500;
-    return Response.json({ error: 'Terjadi kesalahan' }, { status });
+    return Response.json({ error: 'Something went wrong' }, { status });
   }
 }

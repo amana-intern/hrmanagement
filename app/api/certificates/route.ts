@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { judul, fileName, fileURL } = body || {};
     if (!judul) {
-      return Response.json({ error: 'Judul wajib diisi' }, { status: 400 });
+      return Response.json({ error: 'Title is required' }, { status: 400 });
     }
 
     const cert = await prisma.sertifikatKaryawan.create({
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     return Response.json({ ok: true, certificate: cert }, { status: 201 });
   } catch (e) {
     const status = (e as { status?: number }).status ?? 500;
-    return Response.json({ error: 'Terjadi kesalahan' }, { status });
+    return Response.json({ error: 'Something went wrong' }, { status });
   }
 }
 
@@ -50,6 +50,6 @@ export async function GET() {
     return Response.json({ list });
   } catch (e) {
     const status = (e as { status?: number }).status ?? 500;
-    return Response.json({ error: 'Terjadi kesalahan' }, { status });
+    return Response.json({ error: 'Something went wrong' }, { status });
   }
 }

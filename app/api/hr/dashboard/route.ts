@@ -5,7 +5,7 @@ import { ASSESSMENT_STATUS, CONTRACT_STATUS, LEAVE_STATUS } from '@/lib/constant
 
 function fmt(d: Date | null | undefined): string {
   if (!d) return '-';
-  return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short' });
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 }
 
 // GET /api/hr/dashboard — ringkasan dashboard HR dari database:
@@ -41,10 +41,10 @@ export async function GET() {
 
     const attendanceUpdates = [
       ...recentLeaves.map((l) => ({
-        text: `${l.masterStatus?.namaStatus ?? 'Cuti'} · ${l.karyawan?.nama ?? '-'} (${fmt(l.tanggalMulai)})`,
+        text: `${l.masterStatus?.namaStatus ?? 'Leave'} · ${l.karyawan?.nama ?? '-'} (${fmt(l.tanggalMulai)})`,
       })),
       ...recentSick.map((s) => ({
-        text: `Izin sakit · ${s.karyawan?.nama ?? '-'} (${fmt(s.tanggalMulai)})`,
+        text: `Sick leave · ${s.karyawan?.nama ?? '-'} (${fmt(s.tanggalMulai)})`,
       })),
     ].slice(0, 5);
 
@@ -93,7 +93,7 @@ export async function GET() {
         text: `Assessment · ${s.karyawan?.nama ?? '-'} (${fmt(s.tanggalSelesai)})`,
       })),
       ...recentCerts.map((c) => ({
-        text: `Sertifikat · ${c.karyawan?.nama ?? '-'} (${c.judul ?? '-'})`,
+        text: `Certificate · ${c.karyawan?.nama ?? '-'} (${c.judul ?? '-'})`,
       })),
     ].slice(0, 5);
 
@@ -118,9 +118,9 @@ export async function GET() {
     ]);
 
     const todos = [
-      ...pendingLeaves.map((l) => ({ text: `Approve cuti ${l.karyawan?.nama ?? '-'}` })),
+      ...pendingLeaves.map((l) => ({ text: `Approve leave for ${l.karyawan?.nama ?? '-'}` })),
       ...expiringContracts.map((c) => ({
-        text: `Kontrak ${c.karyawan?.nama ?? '-'} berakhir ${fmt(c.tanggalBerakhir)}`,
+        text: `Contract for ${c.karyawan?.nama ?? '-'} ends on ${fmt(c.tanggalBerakhir)}`,
       })),
     ];
 
@@ -141,6 +141,6 @@ export async function GET() {
     });
   } catch (e) {
     const status = (e as { status?: number }).status ?? 500;
-    return Response.json({ error: 'Terjadi kesalahan' }, { status });
+    return Response.json({ error: 'Something went wrong' }, { status });
   }
 }

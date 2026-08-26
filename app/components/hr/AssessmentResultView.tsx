@@ -121,7 +121,7 @@ export default function AssessmentResultView({ categories, assessment }: Assessm
   const developmentAreas = toList(assessment?.selfDevelopmentAreas);
 
   if (!assessment) {
-    return <p className="text-sm text-amana-neutral-400">Belum ada data assessment.</p>;
+    return <p className="text-sm text-amana-neutral-400">No assessment data available.</p>;
   }
 
   const selfAssessmentSection = (
@@ -226,7 +226,7 @@ export default function AssessmentResultView({ categories, assessment }: Assessm
                 );
               })
             ) : (
-              <p className="text-[14px] text-amana-neutral-400 py-1.5">Tidak ada kompetensi pada bidang ini.</p>
+              <p className="text-[14px] text-amana-neutral-400 py-1.5">No competencies in this field.</p>
             )}
           </div>
         </div>

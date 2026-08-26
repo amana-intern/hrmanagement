@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
     const { email, password } = body || {};
 
     if (!email || !password) {
-      return Response.json({ error: 'Email & password wajib diisi' }, { status: 400 });
+      return Response.json({ error: 'Email & password are required' }, { status: 400 });
     }
 
     const user = await prisma.user.findUnique({
@@ -25,12 +25,12 @@ export async function POST(request: NextRequest) {
     });
 
     if (!user || !user.passwordHash) {
-      return Response.json({ error: 'Email atau password salah' }, { status: 401 });
+      return Response.json({ error: 'Invalid email or password' }, { status: 401 });
     }
 
     const valid = await bcrypt.compare(password, user.passwordHash);
     if (!valid) {
-      return Response.json({ error: 'Email atau password salah' }, { status: 401 });
+      return Response.json({ error: 'Invalid email or password' }, { status: 401 });
     }
 
     const nama = user.karyawan?.nama ?? user.email;
@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Login error:', error);
-    return Response.json({ error: 'Terjadi kesalahan, coba lagi nanti' }, { status: 500 });
+    return Response.json({ error: 'Something went wrong, please try again later' }, { status: 500 });
   }
 }
 

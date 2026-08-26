@@ -143,6 +143,7 @@ model IzinSakit {
   gejala                 String?                 @db.VarChar
   buktiSakitURL          String?                 @db.VarChar
   idKategoriPenyakit     String?                 @db.VarChar
+  createdAt              DateTime                @default(now()) @db.Timestamp()
   karyawan               Karyawan?               @relation(fields: [idKaryawan], references: [idKaryawan])
   masterKategoriPenyakit MasterKategoriPenyakit? @relation(fields: [idKategoriPenyakit], references: [idKategori])
 }

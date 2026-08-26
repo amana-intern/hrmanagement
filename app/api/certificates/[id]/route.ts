@@ -13,9 +13,9 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
     const { id } = await ctx.params;
 
     const existing = await prisma.sertifikatKaryawan.findUnique({ where: { idSertifikat: id } });
-    if (!existing) return Response.json({ error: 'Sertifikat tidak ditemukan' }, { status: 404 });
+    if (!existing) return Response.json({ error: 'Certificate not found' }, { status: 404 });
     if (existing.idKaryawan !== auth.idKaryawan) {
-      return Response.json({ error: 'Bukan sertifikat Anda' }, { status: 403 });
+      return Response.json({ error: 'Not your certificate' }, { status: 403 });
     }
 
     const body = await request.json();
@@ -33,7 +33,7 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
     return Response.json({ ok: true, certificate: cert });
   } catch (e) {
     const status = (e as { status?: number }).status ?? 500;
-    return Response.json({ error: 'Terjadi kesalahan' }, { status });
+    return Response.json({ error: 'Something went wrong' }, { status });
   }
 }
 
@@ -46,7 +46,7 @@ export async function DELETE(_request: NextRequest, ctx: { params: Promise<{ id:
     const { id } = await ctx.params;
 
     const existing = await prisma.sertifikatKaryawan.findUnique({ where: { idSertifikat: id } });
-    if (!existing) return Response.json({ error: 'Sertifikat tidak ditemukan' }, { status: 404 });
+    if (!existing) return Response.json({ error: 'Certificate not found' }, { status: 404 });
     if (existing.idKaryawan !== auth.idKaryawan) {
       return Response.json({ error: 'Forbidden' }, { status: 403 });
     }
@@ -55,6 +55,6 @@ export async function DELETE(_request: NextRequest, ctx: { params: Promise<{ id:
     return Response.json({ ok: true });
   } catch (e) {
     const status = (e as { status?: number }).status ?? 500;
-    return Response.json({ error: 'Terjadi kesalahan' }, { status });
+    return Response.json({ error: 'Something went wrong' }, { status });
   }
 }
