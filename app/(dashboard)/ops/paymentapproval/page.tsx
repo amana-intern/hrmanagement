@@ -57,8 +57,11 @@ function amountLabel(c: PaymentRaw): string {
 
 const STATUS_MAP: Record<string, { label: string; color: string }> = {
   ST_PAY_PENDING_OPS: { label: 'Pending Ops', color: 'bg-amana-warning-500' },
-  ST_PAY_PENDING_PARTNER: { label: 'Waiting Partner', color: 'bg-amana-primary-500' },
+  ST_PAY_PENDING_PARTNER: { label: 'Pending Partner', color: 'bg-amana-primary-500' },
   ST_PAY_REJECTED: { label: 'Rejected', color: 'bg-amana-danger-500' },
+  ST_PAY_APPROVED: { label: 'Approved', color: 'bg-amana-success-500' },
+  ST_PAY_SCHEDULED: { label: 'Scheduled', color: 'bg-amana-primary-500' },
+  ST_PAY_PAID: { label: 'Paid', color: 'bg-amana-neutral-400' },
 };
 
 const STATUS_OPTIONS = Object.values(STATUS_MAP).map((v) => v.label);

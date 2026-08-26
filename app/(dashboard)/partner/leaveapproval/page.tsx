@@ -11,6 +11,8 @@ import ApprovalActions from '@/app/components/data-display/ApprovalActions';
 import { SearchTextField, SearchSelectField } from '@/app/components/forms/SearchFields';
 import StatusModal from '@/app/components/feedback/StatusModal';
 import RejectReasonModal from '@/app/components/feedback/RejectReasonModal';
+import Button from '@/app/components/forms/Button';
+import LeaveDetailModal, { LeaveDetailRow } from '@/app/components/LeaveDetailModal';
 import { statusColor } from '@/app/utils/statusColor';
 import { useFilters } from '@/app/utils/useFilters';
 import { DEPARTMENT_OPTIONS, getAllGradeOptions } from '@/app/utils/orgStructure';
@@ -32,8 +34,10 @@ interface LeaveReq {
   type: string;
   dates: string;
   status: string;
+  details: null;
   action: null;
   jenis: 'cuti' | 'sakit';
+  detailRow: LeaveDetailRow;
 }
 
 const STATUS_MAP: Record<string, { label: string }> = {
@@ -50,23 +54,48 @@ interface LeaveRaw {
   idStatus: string;
   tanggalMulai: string;
   tanggalSelesai: string;
+  tanggalPengajuan?: string | null;
+  jumlahHari?: number | null;
+  keterangan?: string | null;
+  catatan?: string | null;
   karyawan?: { nama?: string | null; department?: string | null; masterGrade?: { namaGrade?: string | null } | null };
   masterJenisCuti?: { namaJenis?: string | null };
 }
 
 function mapRows(rows: LeaveRaw[]): LeaveReq[] {
-  return rows.map((c) => ({
-    id: c.idCuti,
-    idCuti: c.idCuti,
-    name: c.karyawan?.nama ?? '-',
-    department: (c.karyawan?.department && DEPARTMENT_LABEL[c.karyawan.department]) || c.karyawan?.department || '-',
-    grade: c.karyawan?.masterGrade?.namaGrade ?? '-',
-    type: c.masterJenisCuti?.namaJenis ?? 'Leave',
-    dates: `${new Date(c.tanggalMulai).toLocaleDateString('id-ID')} - ${new Date(c.tanggalSelesai).toLocaleDateString('id-ID')}`,
-    status: c.idStatus,
-    action: null,
-    jenis: 'cuti',
-  }));
+  return rows.map((c) => {
+    const name = c.karyawan?.nama ?? '-';
+    const department = (c.karyawan?.department && DEPARTMENT_LABEL[c.karyawan.department]) || c.karyawan?.department || '-';
+    const grade = c.karyawan?.masterGrade?.namaGrade ?? '-';
+    const type = c.masterJenisCuti?.namaJenis ?? 'Leave';
+    const dates = `${new Date(c.tanggalMulai).toLocaleDateString('id-ID')} - ${new Date(c.tanggalSelesai).toLocaleDateString('id-ID')}`;
+    return {
+      id: c.idCuti,
+      idCuti: c.idCuti,
+      name,
+      department,
+      grade,
+      type,
+      dates,
+      status: c.idStatus,
+      details: null,
+      action: null,
+      jenis: 'cuti',
+      detailRow: {
+        idCuti: c.idCuti,
+        name,
+        department,
+        grade,
+        type,
+        dates,
+        jumlahHari: c.jumlahHari,
+        tanggalPengajuan: c.tanggalPengajuan,
+        keterangan: c.keterangan,
+        catatan: c.catatan,
+        jenis: 'cuti',
+      },
+    };
+  });
 }
 
 interface SickRaw {
@@ -74,22 +103,42 @@ interface SickRaw {
   tanggalMulai?: string | null;
   tanggalSelesai?: string | null;
   gejala?: string | null;
+  buktiSakitURL?: string | null;
   karyawan?: { nama?: string | null; department?: string | null; masterGrade?: { namaGrade?: string | null } | null };
 }
 
 function mapSickRows(rows: SickRaw[]): LeaveReq[] {
-  return rows.map((s) => ({
-    id: s.idIzinSakit,
-    idCuti: s.idIzinSakit,
-    name: s.karyawan?.nama ?? '-',
-    department: (s.karyawan?.department && DEPARTMENT_LABEL[s.karyawan.department]) || s.karyawan?.department || '-',
-    grade: s.karyawan?.masterGrade?.namaGrade ?? '-',
-    type: 'Sick Leave',
-    dates: `${s.tanggalMulai ? new Date(s.tanggalMulai).toLocaleDateString('id-ID') : '-'} - ${s.tanggalSelesai ? new Date(s.tanggalSelesai).toLocaleDateString('id-ID') : '-'}`,
-    status: 'ST_MED_PENDING',
-    action: null,
-    jenis: 'sakit',
-  }));
+  return rows.map((s) => {
+    const name = s.karyawan?.nama ?? '-';
+    const department = (s.karyawan?.department && DEPARTMENT_LABEL[s.karyawan.department]) || s.karyawan?.department || '-';
+    const grade = s.karyawan?.masterGrade?.namaGrade ?? '-';
+    const dates = `${s.tanggalMulai ? new Date(s.tanggalMulai).toLocaleDateString('id-ID') : '-'} - ${s.tanggalSelesai ? new Date(s.tanggalSelesai).toLocaleDateString('id-ID') : '-'}`;
+    return {
+      id: s.idIzinSakit,
+      idCuti: s.idIzinSakit,
+      name,
+      department,
+      grade,
+      type: 'Sick Leave',
+      dates,
+      status: 'ST_MED_PENDING',
+      details: null,
+      action: null,
+      jenis: 'sakit',
+      detailRow: {
+        idCuti: s.idIzinSakit,
+        name,
+        department,
+        grade,
+        type: 'Sick Leave',
+        dates,
+        tanggalPengajuan: s.tanggalMulai,
+        gejala: s.gejala,
+        buktiSakitURL: s.buktiSakitURL,
+        jenis: 'sakit',
+      },
+    };
+  });
 }
 
 interface Filters {
@@ -106,6 +155,7 @@ export default function PartnerLeaveApprovalPage() {
   const [requests, setRequests] = useState<LeaveReq[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+  const [detailRow, setDetailRow] = useState<LeaveDetailRow | null>(null);
   const [rejectTarget, setRejectTarget] = useState<string | null>(null);
   const [rejecting, setRejecting] = useState(false);
   const { draft, applied, setField, handleSearch, handleReset } = useFilters<Filters>(emptyFilters);
@@ -186,7 +236,6 @@ export default function PartnerLeaveApprovalPage() {
 
   const columns: DataTableColumn<LeaveReq>[] = [
     { key: 'name', label: 'Name', width: '200px' },
-    { key: 'department', label: 'Department' },
     { key: 'grade', label: 'Grade' },
     { key: 'type', label: 'Leave Type' },
     { key: 'dates', label: 'Dates' },
@@ -197,6 +246,16 @@ export default function PartnerLeaveApprovalPage() {
         <StatusPill color={statusColor(STATUS_MAP[r.status]?.label ?? r.status)}>
           {STATUS_MAP[r.status]?.label ?? r.status}
         </StatusPill>
+      ),
+    },
+    {
+      key: 'details',
+      label: 'Details',
+      width: '140px',
+      render: (r) => (
+        <Button variant="primary" size="sm" onClick={() => setDetailRow(r.detailRow)}>
+          View Details
+        </Button>
       ),
     },
     { key: 'action', label: 'Action', width: '240px', render: renderAction },
@@ -246,6 +305,8 @@ export default function PartnerLeaveApprovalPage() {
       )}
 
       <StatusModal state={message} onClose={() => setMessage(null)} />
+
+      <LeaveDetailModal open={!!detailRow} row={detailRow} onClose={() => setDetailRow(null)} />
     </>
   );
 }

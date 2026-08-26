@@ -10,9 +10,10 @@ import StatusPill from '@/app/components/data-display/StatusPill';
 import { SearchTextField } from '@/app/components/forms/SearchFields';
 import TextField from '@/app/components/forms/TextField';
 import Button from '@/app/components/forms/Button';
-import Modal from '@/app/components/feedback/Modal';
+import LeaveDetailModal, { LeaveDetailRow } from '@/app/components/LeaveDetailModal';
 import { statusColor } from '@/app/utils/statusColor';
 import { useFilters } from '@/app/utils/useFilters';
+import { DEPARTMENT_LABELS } from '@/lib/constants';
 import { downloadTSV } from '@/lib/sheets';
 import { TableSkeleton } from '@/app/components/feedback/PageSkeleton';
 
@@ -23,16 +24,13 @@ interface LeaveRecord {
   type: string;
   startDate: string;
   endDate: string;
-  totalDays: number | null;
-  reason: string;
-  note: string;
-  submittedDate: string;
   status: string;
+  detailRow: LeaveDetailRow;
 }
 
 interface RawLeave {
   idCuti: string;
-  karyawan?: { nama?: string | null; masterGrade?: { namaGrade?: string | null } | null };
+  karyawan?: { nama?: string | null; department?: string | null; masterGrade?: { namaGrade?: string | null } | null };
   masterJenisCuti?: { namaJenis?: string | null } | null;
   tanggalMulai?: string | null;
   tanggalSelesai?: string | null;
@@ -64,7 +62,7 @@ const emptyFilters: Filters = { name: '', type: '', status: '', from: '', to: ''
 export default function LeaveRecordPage() {
   const [rows, setRows] = useState<LeaveRecord[]>([]);
   const [loading, setLoading] = useState(true);
-  const [detailsModal, setDetailsModal] = useState<LeaveRecord | null>(null);
+  const [detailRow, setDetailRow] = useState<LeaveDetailRow | null>(null);
   const { draft, applied, setField, setFieldAndApply, handleSearch, handleReset } = useFilters<Filters>(emptyFilters);
 
   useEffect(() => {
@@ -73,19 +71,37 @@ export default function LeaveRecordPage() {
       if (res.ok) {
         const data = await res.json();
         setRows(
-          ((data as { list?: RawLeave[] }).list ?? []).map((c) => ({
-            id: c.idCuti,
-            name: c.karyawan?.nama ?? '-',
-            grade: c.karyawan?.masterGrade?.namaGrade ?? '-',
-            type: c.masterJenisCuti?.namaJenis ?? 'Leave',
-            startDate: c.tanggalMulai ? iso(new Date(c.tanggalMulai)) : '',
-            endDate: c.tanggalSelesai ? iso(new Date(c.tanggalSelesai)) : '',
-            totalDays: c.jumlahHari ?? null,
-            reason: c.keterangan ?? '-',
-            note: c.catatan ?? '',
-            submittedDate: c.tanggalPengajuan ? iso(new Date(c.tanggalPengajuan)) : '',
-            status: c.idStatus ?? 'ST_LEAVE_PENDING',
-          }))
+          ((data as { list?: RawLeave[] }).list ?? []).map((c) => {
+            const name = c.karyawan?.nama ?? '-';
+            const department = (c.karyawan?.department && DEPARTMENT_LABELS[c.karyawan.department]) || c.karyawan?.department || '-';
+            const grade = c.karyawan?.masterGrade?.namaGrade ?? '-';
+            const type = c.masterJenisCuti?.namaJenis ?? 'Leave';
+            const startDate = c.tanggalMulai ? iso(new Date(c.tanggalMulai)) : '';
+            const endDate = c.tanggalSelesai ? iso(new Date(c.tanggalSelesai)) : '';
+            const dates = `${startDate ? new Date(startDate + 'T00:00:00').toLocaleDateString('id-ID') : '-'} - ${endDate ? new Date(endDate + 'T00:00:00').toLocaleDateString('id-ID') : '-'}`;
+            return {
+              id: c.idCuti,
+              name,
+              grade,
+              type,
+              startDate,
+              endDate,
+              status: c.idStatus ?? 'ST_LEAVE_PENDING',
+              detailRow: {
+                idCuti: c.idCuti,
+                name,
+                department,
+                grade,
+                type,
+                dates,
+                jumlahHari: c.jumlahHari,
+                tanggalPengajuan: c.tanggalPengajuan,
+                keterangan: c.keterangan,
+                catatan: c.catatan,
+                jenis: 'cuti',
+              },
+            };
+          })
         );
       }
       setLoading(false);
@@ -130,7 +146,7 @@ export default function LeaveRecordPage() {
       key: 'id',
       label: 'Details',
       render: (r) => (
-        <Button variant="primary" size="sm" className="w-full whitespace-nowrap" onClick={() => setDetailsModal(r)}>
+        <Button variant="primary" size="sm" className="w-full whitespace-nowrap" onClick={() => setDetailRow(r.detailRow)}>
           View
         </Button>
       ),
@@ -189,36 +205,7 @@ export default function LeaveRecordPage() {
         />
       </SectionCard>
 
-      {detailsModal && (
-        <Modal title="Leave Details" onClose={() => setDetailsModal(null)} maxWidth="max-w-lg">
-          <div className="p-5 flex flex-col">
-            {[
-              ['Employee', detailsModal.name],
-              ['Grade', detailsModal.grade],
-              ['Leave Type', detailsModal.type],
-              ['Reason', detailsModal.reason],
-              ['Start Date', detailsModal.startDate ? new Date(detailsModal.startDate + 'T00:00:00').toLocaleDateString('id-ID') : '-'],
-              ['End Date', detailsModal.endDate ? new Date(detailsModal.endDate + 'T00:00:00').toLocaleDateString('id-ID') : '-'],
-              [
-                'Total Days',
-                detailsModal.totalDays != null
-                  ? `${detailsModal.totalDays} day(s)`
-                  : detailsModal.startDate && detailsModal.endDate
-                    ? `${Math.max(Math.round((new Date(detailsModal.endDate).getTime() - new Date(detailsModal.startDate).getTime()) / 86400000) + 1, 0)} day(s)`
-                    : '-',
-              ],
-              ['Submitted On', detailsModal.submittedDate ? new Date(detailsModal.submittedDate + 'T00:00:00').toLocaleDateString('id-ID') : '-'],
-              ['Status', STATUS_LABELS[detailsModal.status] ?? detailsModal.status],
-              ...(detailsModal.note ? [['Approver Note', detailsModal.note]] : []),
-            ].map(([label, value]) => (
-              <div key={label} className="flex items-start justify-between gap-4 py-2 border-b border-amana-neutral-200 last:border-b-0">
-                <span className="text-[14px] font-semibold text-amana-neutral-400 flex-shrink-0">{label}</span>
-                <span className="text-[15px] text-amana-neutral-500 text-right">{value}</span>
-              </div>
-            ))}
-          </div>
-        </Modal>
-      )}
+      <LeaveDetailModal open={!!detailRow} row={detailRow} onClose={() => setDetailRow(null)} />
     </div>
   );
 }

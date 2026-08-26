@@ -134,7 +134,6 @@ export default function PaymentDetailModal({ row, open, onClose }: PaymentDetail
         <Modal title={`Detail Pengajuan - ${row.idRequest}`} onClose={onClose} maxWidth="max-w-2xl" className="max-h-[92vh]">
           <div className="px-5 py-2 max-h-[70vh] overflow-y-auto bg-amana-neutral-100">
             <Field label="To Whom" value={row.masterKategoriPayment?.namaKategori ?? row.idKategoriPayment} />
-            <Field label="Event / Vendor Name" value={row.projectID} />
             {body}
           </div>
         </Modal>

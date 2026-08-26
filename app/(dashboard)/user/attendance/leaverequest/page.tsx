@@ -178,11 +178,11 @@ export default function LeaveRequestPage() {
         </div>
 
         {selectedLeave === 'Unpaid Leave' && (
-          <div className={`mb-4 px-4 py-3 rounded-lg border text-[13px] font-medium ${(leaveBalance ?? 0) > 0 ? 'bg-amana-warning-100 border-amana-warning-300 text-amana-warning-500' : 'bg-amana-success-100 border-amana-success-300 text-amana-success-500'}`}>
+          <p className="mb-4 text-[13px] text-amana-neutral-400">
             {(leaveBalance ?? 0) > 0
-              ? `Unpaid leave hanya bisa diajukan saat saldo Paid = 0. Saldo Anda masih ${leaveBalance} hari.`
-              : 'Saldo Paid Anda 0, silakan ajukan Unpaid leave.'}
-          </div>
+              ? `Unpaid leave can only be requested once your Paid Leave balance is 0. You still have ${leaveBalance} day(s) remaining.`
+              : 'Your Paid Leave balance is 0, you may proceed with Unpaid Leave.'}
+          </p>
         )}
 
         <div className="flex justify-end pt-4 border-t border-amana-neutral-200">

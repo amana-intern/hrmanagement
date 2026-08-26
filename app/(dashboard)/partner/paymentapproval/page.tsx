@@ -57,9 +57,12 @@ function amountLabel(c: PaymentRaw): string {
 }
 
 const STATUS_MAP: Record<string, { label: string }> = {
+  ST_PAY_PENDING_OPS: { label: 'Pending Ops' },
   ST_PAY_PENDING_PARTNER: { label: 'Pending Partner' },
   ST_PAY_APPROVED: { label: 'Approved' },
   ST_PAY_REJECTED: { label: 'Rejected' },
+  ST_PAY_SCHEDULED: { label: 'Scheduled' },
+  ST_PAY_PAID: { label: 'Paid' },
 };
 
 const STATUS_OPTIONS = Object.values(STATUS_MAP).map((v) => v.label);
