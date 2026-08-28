@@ -33,6 +33,14 @@ export async function requireAuth() {
 
   if (!user) throw new AuthError('User not found', 401);
 
+  // Multi-department: array semua pilar; fallback ke kolom department tunggal.
+  const departments =
+    user.karyawan?.departments && user.karyawan.departments.length > 0
+      ? user.karyawan.departments
+      : user.karyawan?.department
+        ? [user.karyawan.department]
+        : [];
+
   return {
     idUser: user.idUser,
     idRole: (user.idRole ?? '') as Role,
@@ -42,6 +50,7 @@ export async function requireAuth() {
     nama: user.karyawan?.nama ?? user.email,
     grade: user.karyawan?.masterGrade?.namaGrade ?? null,
     department: user.karyawan?.department ?? null,
+    departments,
     noTelepon: user.karyawan?.noTelepon ?? null,
     pictureUrl: user.pictureUrl ?? null,
     rolePermissions: user.role?.rolePermissions.map((rp) => rp.idPermission) ?? [],

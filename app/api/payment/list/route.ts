@@ -29,9 +29,12 @@ export async function GET(request: Request) {
       }
     } else if (auth.idRole === ROLES.PARTNER) {
       // Board Partner: PENDING_PARTNER + APPROVED + REJECTED (item tetap tampil)
+      // Filter: hanya payment request yang ditujukan untuk partner di department yang sama
+      const depts = auth.departments.length ? auth.departments : [auth.department ?? ''];
       where.idStatus = {
         in: [PAYMENT_STATUS.PENDING_PARTNER, PAYMENT_STATUS.APPROVED, PAYMENT_STATUS.REJECTED],
       };
+      where.partnerDepartment = { in: depts };
     }
 
     const list = await prisma.paymentRequest.findMany({

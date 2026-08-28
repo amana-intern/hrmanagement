@@ -27,6 +27,7 @@ export async function POST(request: NextRequest) {
       const idKategoriPayment = form.get('idKategoriPayment')?.toString() ?? '';
       const catatan = form.get('catatan')?.toString() ?? null;
       const detailStr = form.get('detail')?.toString() ?? null;
+      const partnerDepartment = form.get('partnerDepartment')?.toString() ?? null;
 
       if (!projectID || !nominalStr || !idKategoriPayment) {
         return Response.json({ error: 'ProjectID, amount, and category are required' }, { status: 400 });
@@ -68,6 +69,7 @@ export async function POST(request: NextRequest) {
           tanggalPengajuan: new Date(),
           catatan,
           detail: detailStr,
+          partnerDepartment,
           attachments: { create: attachments },
         },
       });
@@ -77,7 +79,7 @@ export async function POST(request: NextRequest) {
 
     // Fallback JSON (mantan payload minimal)
     const body = await request.json();
-    const { projectID, nominal, idKategoriPayment, catatan } = body || {};
+    const { projectID, nominal, idKategoriPayment, catatan, partnerDepartment } = body || {};
     if (!projectID || !nominal || !idKategoriPayment) {
       return Response.json({ error: 'ProjectID, amount, and category are required' }, { status: 400 });
     }
@@ -91,6 +93,7 @@ export async function POST(request: NextRequest) {
         idStatus: 'ST_PAY_PENDING_OPS',
         tanggalPengajuan: new Date(),
         catatan: catatan ?? null,
+        partnerDepartment: partnerDepartment ?? null,
       },
     });
     return Response.json({ ok: true, payment }, { status: 201 });

@@ -90,6 +90,7 @@ model Karyawan {
   tanggalMasuk    DateTime?         @db.Date
   idGrade         String?           @db.VarChar
   department      String?           @db.VarChar
+  departments     String[]          @default([])
   noTelepon       String?           @db.VarChar
   sisaCutiTahunan Int?              @default(12)
   accrualRate     Float?            @db.DoublePrecision
@@ -156,13 +157,15 @@ model KontrakKaryawan {
   tanggalMulai       DateTime?     @db.Date
   tanggalBerakhir    DateTime?     @db.Date
   idStatus           String?       @db.VarChar
-  carryOver          Int?          @default(0)
+  carryOver          Float?        @default(0)
   annualQuota        Int?          @default(12)
   dokumenAddendumURL String?       @db.VarChar
   addendumEmbedding  String?       @db.Text
   needAction         String?       @db.VarChar
   needActionAt       DateTime?
   needActionBy       String?       @db.VarChar
+  cutiKompensasi     Float?        @default(0)
+  cutiTerpakaiAwal   Float?        @default(0)
   karyawan           Karyawan?     @relation(fields: [idKaryawan], references: [idKaryawan])
   masterStatus       MasterStatus? @relation(fields: [idStatus], references: [idStatus])
 }
@@ -193,6 +196,7 @@ model PaymentRequest {
   tanggalApproval          DateTime?              @db.Timestamp()
   tanggalJadwalPembayaran  DateTime?              @db.Timestamp()
   tanggalLunas             DateTime?              @db.Timestamp()
+  partnerDepartment        String?                @db.VarChar
   karyawan                 Karyawan?              @relation(fields: [idKaryawan], references: [idKaryawan])
   masterKategoriPayment    MasterKategoriPayment? @relation(fields: [idKategoriPayment], references: [idKategori])
   masterStatus             MasterStatus?          @relation(fields: [idStatus], references: [idStatus])

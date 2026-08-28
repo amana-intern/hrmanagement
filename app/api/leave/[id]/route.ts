@@ -39,10 +39,11 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
 
     if (!cuti) return Response.json({ error: 'Request not found' }, { status: 404 });
 
-    // Verifikasi pilar: partner hanya approve cuti di department yang sama.
+    // Verifikasi pilar: partner hanya approve cuti di salah satu pilar miliknya.
     // Admin HR/OPS yang mengajukan punya department masing-masing
     // (Admin HR -> education, Admin OPS -> ops), sehingga sesuai matriks.
-    if (cuti.karyawan?.department !== auth.department) {
+    const applicantDept = cuti.karyawan?.department;
+    if (!applicantDept || !(auth.departments ?? []).includes(applicantDept)) {
       return Response.json({ error: 'Not your department' }, { status: 403 });
     }
 
@@ -97,13 +98,14 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
 
     // Email notifikasi hasil persetujuan ke pemohon (isi sama dengan bell).
     const applicantEmail = cuti.karyawan?.user?.email;
+    const applicantName = cuti.karyawan?.nama ?? 'Employee';
     if (applicantEmail) {
       const subject = action === 'approve' ? 'Leave approved' : 'Leave rejected';
       const range = `${cuti.tanggalMulai?.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })} - ${cuti.tanggalSelesai?.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}`;
       const text =
         action === 'approve'
-          ? `Hello ${cuti.karyawan.nama ?? 'Employee'},\n\nYour leave request (${range}) has been approved.\n\nThank you.`
-          : `Hello ${cuti.karyawan.nama ?? 'Employee'},\n\nYour leave request (${range}) was rejected.\nReason: ${catatan}\n\nThank you.`;
+          ? `Hello ${applicantName},\n\nYour leave request (${range}) has been approved.\n\nThank you.`
+          : `Hello ${applicantName},\n\nYour leave request (${range}) was rejected.\nReason: ${catatan}\n\nThank you.`;
       await sendEmail({ to: applicantEmail, subject, text });
     }
 

@@ -21,6 +21,8 @@ export interface Period {
   end: Date;
   carryOver: number;
   annualQuota: number;
+  cutiKompensasi: number;
+  cutiTerpakaiAwal: number;
 }
 
 // 1 hari per bulan sejak awal periode, dibatasi kuota tahunan.
@@ -59,6 +61,8 @@ export function resolvePeriod(
     end,
     carryOver: active?.carryOver ?? 0,
     annualQuota: active?.annualQuota ?? 12,
+    cutiKompensasi: active?.cutiKompensasi ?? 0,
+    cutiTerpakaiAwal: active?.cutiTerpakaiAwal ?? 0,
   };
 }
 
@@ -67,6 +71,8 @@ export type ContractRow = {
   tanggalBerakhir: Date | null;
   carryOver: number | null;
   annualQuota: number | null;
+  cutiKompensasi?: number | null;
+  cutiTerpakaiAwal?: number | null;
 };
 
 // Total hari cuti PAID yang sudah disetujui dalam rentang tanggal.
@@ -105,7 +111,14 @@ export async function computeLeaveBalance(idKaryawan: string): Promise<LeaveBala
     include: { kontrakKaryawan: true },
   });
   if (!k) {
-    return { sisa: 0, accrued: 0, consumed: 0, carryOver: 0, annualQuota: 12, period: { start: new Date(), end: new Date(), carryOver: 0, annualQuota: 12 } };
+    return {
+      sisa: 0,
+      accrued: 0,
+      consumed: 0,
+      carryOver: 0,
+      annualQuota: 12,
+      period: { start: new Date(), end: new Date(), carryOver: 0, annualQuota: 12, cutiKompensasi: 0, cutiTerpakaiAwal: 0 },
+    };
   }
 
   const contracts: ContractRow[] = k.kontrakKaryawan
@@ -115,12 +128,18 @@ export async function computeLeaveBalance(idKaryawan: string): Promise<LeaveBala
       tanggalBerakhir: c.tanggalBerakhir,
       carryOver: c.carryOver,
       annualQuota: c.annualQuota,
+      cutiKompensasi: c.cutiKompensasi,
+      cutiTerpakaiAwal: c.cutiTerpakaiAwal,
     }));
 
   const period = resolvePeriod(k.tanggalMasuk, contracts);
   const consumed = await consumedDays(idKaryawan, period.start, period.end, { includeFuture: true });
   const accrued = accruedMonths(period.start, new Date(), period.annualQuota);
-  const sisa = Math.max(period.carryOver + accrued - consumed, 0);
+  // Saldo = carry-over + kompensasi + accrual - pemakaian (riwayat pengajuan + offset historis).
+  const sisa = Math.max(
+    Math.floor(period.carryOver + period.cutiKompensasi + accrued - consumed - period.cutiTerpakaiAwal),
+    0
+  );
 
   return { sisa, accrued, consumed, carryOver: period.carryOver, annualQuota: period.annualQuota, period };
 }

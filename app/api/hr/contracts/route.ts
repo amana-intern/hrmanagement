@@ -13,7 +13,10 @@ export async function GET() {
       return Response.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const where = auth.idRole === ROLES.PARTNER ? { department: auth.department ?? '' } : {};
+    const where =
+      auth.idRole === ROLES.PARTNER
+        ? { department: { in: auth.departments.length ? auth.departments : [auth.department ?? ''] } }
+        : {};
 
     const list = await prisma.karyawan.findMany({
       where,
@@ -115,11 +118,20 @@ export async function POST(request: NextRequest) {
           tanggalBerakhir: previous.tanggalBerakhir,
           carryOver: previous.carryOver,
           annualQuota: previous.annualQuota,
+          cutiKompensasi: previous.cutiKompensasi,
+          cutiTerpakaiAwal: previous.cutiTerpakaiAwal,
         },
       ]);
       const consumed = await consumedDays(idKaryawan, prevPeriod.start, previous.tanggalBerakhir);
       const accrued = accruedMonths(prevPeriod.start, previous.tanggalBerakhir, prevPeriod.annualQuota);
-      const remaining = Math.max(prevPeriod.carryOver + accrued - consumed, 0);
+      const remaining = Math.max(
+        prevPeriod.carryOver +
+          prevPeriod.cutiKompensasi +
+          accrued -
+          consumed -
+          prevPeriod.cutiTerpakaiAwal,
+        0
+      );
       carryOver = Math.min(remaining, Math.floor(prevPeriod.annualQuota / 2)); // n/2
       annualQuota = 12;
     }

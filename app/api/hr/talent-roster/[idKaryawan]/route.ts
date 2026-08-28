@@ -75,7 +75,7 @@ export async function PATCH(
     const oldRole = karyawan.user?.role?.namaRole ?? null;
     let newGradeName: string | null = oldGrade;
 
-    const data: { idGrade?: string | null; department?: string | null; noTelepon?: string | null; tanggalLahir?: Date | null } = {};
+    const data: { idGrade?: string | null; department?: string | null; departments?: string[]; noTelepon?: string | null; tanggalLahir?: Date | null } = {};
 
     // Update nomor telepon & tanggal lahir (boleh untuk diri sendiri maupun orang lain).
     if (noTelepon !== undefined) {
@@ -91,6 +91,8 @@ export async function PATCH(
 
     if (department !== undefined) {
       data.department = String(department ?? '').trim() || null;
+      // Reset array pilar mengikuti department baru (dual-pillar khusus diatur manual via DB).
+      data.departments = data.department ? [data.department] : [];
     }
 
     // Resolusi grade (buat baru bila belum ada), sama seperti POST.

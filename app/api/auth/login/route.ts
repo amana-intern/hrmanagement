@@ -1,5 +1,4 @@
 import { NextRequest } from 'next/server';
-import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/prisma';
 import { createSession, deleteSession } from '@/lib/session';
 import { hasPendingFirstAssessment } from '@/lib/assessment-gate';
@@ -8,10 +7,10 @@ import { canUseEmployeeFeatures } from '@/lib/roles';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { email, password } = body || {};
+    const { email } = body || {};
 
-    if (!email || !password) {
-      return Response.json({ error: 'Email & password are required' }, { status: 400 });
+    if (!email) {
+      return Response.json({ error: 'Email is required' }, { status: 400 });
     }
 
     const user = await prisma.user.findUnique({
@@ -24,13 +23,8 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    if (!user || !user.passwordHash) {
-      return Response.json({ error: 'Incorrect email or password' }, { status: 401 });
-    }
-
-    const valid = await bcrypt.compare(password, user.passwordHash);
-    if (!valid) {
-      return Response.json({ error: 'Incorrect email or password' }, { status: 401 });
+    if (!user) {
+      return Response.json({ error: 'Email not found' }, { status: 401 });
     }
 
     const nama = user.karyawan?.nama ?? user.email;

@@ -24,6 +24,7 @@ interface ServerContract {
 
 const DEPARTMENT_LABELS: Record<string, string> = {
   health: 'Health & Wellbeing',
+  strategy: 'Strategy and Transformation',
   digital: 'Digital & Finance',
   education: 'Education & HR',
   ops: 'Operations',

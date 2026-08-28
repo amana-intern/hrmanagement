@@ -20,6 +20,7 @@ import { formatDateWIB } from '@/app/utils/formatDate';
 const DEPARTMENT_LABEL: Record<string, string> = {
   ops: 'Operations',
   health: 'Health and Wellbeing',
+  strategy: 'Strategy and Transformation',
   education: 'Education and HR',
   digital: 'Digital and Finance',
 };

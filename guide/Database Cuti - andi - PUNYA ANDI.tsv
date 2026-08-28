@@ -1,36 +1,36 @@
-										
-	Nama Karyawan	Department	Tanggal Mulai  Kontrak	Tanggal Berakhir  Kontrak	Total Saldo  Cuti Tahunan	Saldo Cuti  Carry Over (ke durasi kontrak  berikutnya)	Cuti Kompensasi (Pengganti hari libur yang dipakai untuk kerja)	Total Cuti Keseluruhan	Total Cuti Terpakai	Sisa Cuti
-	Prasetya Dwicahya	Strategy and Transformation	1 April 2025	31 December 2099	12	0		12	0	12
-	Endiyan Rakhmanda	Digital	1 April 2025	31 December 2099	12	0		12	2	10
-	Nya' Zata Amani	Education	1 April 2025	31 December 2099	12	0		12	2.5	9.5
-	Samuel Josafat Olam	Health & Wellbeing	1 April 2025	31 December 2099	12	0		12	7	5
-	Rifdah Azzura Fasya	Health & Wellbeing	1 August 2025	31 July 2026	12	9		21	11	10
-	Permata Imani Silitonga	Health & Wellbeing	1 April 2025	29 October 2025	7	0		7	6	6
-	Try Fathur Rachman	Digital	1 April 2025	12 November 2025	5	0		5	0.5	8.5
-	Anezka Roseline Wee	Strategy and Transformation	1 April 2026	31 March 2027	12	4.5		16.5	2	14.5
-	Rifdah Azzura Fasya	Health & Wellbeing	1 August 2026	31 July 2027	12	5.5		17.5	0	17.5
-	Athar Raihan Muhammad	Strategy and Transformation	25 August 2025	26 August 2026	12	0		12	8	4
-	Andara Cantika Rahmadina	Digital	26 August 2025	25 August 2026	12	0	1	13	2	11
-	Hilmy Hanif	Digital	1 September 2025	31 August 2026	12	7	6	25	15	10
-	Dilani Maryam	Digital	1 September 2025	31 August 2026	12	4		16	10	6
-	Nadhira Zahrany Wishnuputri	Health & Wellbeing	1 October 2025	30 September 2026	12	0		12	1	11
-	Naufal Hilmi	Strategy and Transformation	1 October 2025	30 September 2026	12	0		12	3	9
-	Permata Imani Silitonga	Health & Wellbeing	1 November 2025	31 October 2026	12	3		15	7	8
-	Diyon Iskandar Setiawan	Education	1 November 2025	31 October 2026	12	0		12	3	9
-	Aulia Chairunisa	Digital	1 December 2025	30 November 2026	12	0	1	13	6	7
-	Samuel Kharis Harianto	Strategy and Transformation	02 January 2026	01 January 2027	12	0		12	1	11
-	Melvin Ezekiel	Health & Wellbeing	15 January 2026	14 September 2027	12	0		12	0	12
-	Kaysea Safadristi Narendragharini	Education	27 January 2026	26 January 2027	12	0		12	2.5	9.5
-	Giodio Nathanael Pratama Mitaart	Digital	01 April 2026	31 March 2027	12	0		12	0	12
-	Hilda Julaika	Operations	01 April 2026	31 March 2027	12	0		12	1	11
-	Farani Nazwa Chairunisa Irsan	Digital	19 April 2026	18 April 2027	12	0		12	0	12
-	Isna Farhani	Operations	01 April 2026	31 March 2027	12	0		12	0	12
-	Witania Cahyadi	Operations	01 January 2026	31 December 2027	12	0		12	1	11
-	Jennie Tania	Operations	06 July 2026	05 July 2027	12	0		12	0	12
-	Siti Nabila Azuraa Basri	Operations	06 July 2026	05 July 2027	12	0		12	0	12
-	Clarence Fulgentius Tjandera	Strategy and Transformation	02 July 2026	01 July 2027	12	0		12	0	12
-	Nurul Fikriyah	Operations	02 July 2026	01 July 2027	12	0		12	0	12
-	Adzkia Zahra izzati	Health & Wellbeing	01 July 2026	30 June 2027	12	0	1	13	1	12
-	Iqbal Fahmi	Health & Wellbeing	13 July 2026	12 July 2027	12	0		12	0	12
-	Dwi Ardiansyah	Education	01 August 2026	31 July 2027	12	0		12	0	12
-	Syifa Fauziah	Health & Wellbeing	17 August 2026	16 August 2027	12	0		12	0	12
+											
+	Nama Karyawan	Department	Tanggal Mulai  Kontrak	Tanggal Berakhir  Kontrak	Total Saldo  Cuti Tahunan	Saldo Cuti  Carry Over (ke durasi kontrak  berikutnya)	Cuti Kompensasi (Pengganti hari libur yang dipakai untuk kerja)	Total Cuti Keseluruhan	Total Cuti Terpakai	Sisa Cuti	Catatan
+	Prasetya Dwicahya	Strategy and Transformation	1 April 2025	31 December 2099	12	0		12	0	12	Partner
+	Endiyan Rakhmanda	Digital	1 April 2025	31 December 2099	12	0		12	2	10	Partner
+	Nya' Zata Amani	Education	1 April 2025	31 December 2099	12	0		12	2.5	9.5	Partner
+	Samuel Josafat Olam	Health & Wellbeing	1 April 2025	31 December 2099	12	0		12	7	5	
+	Rifdah Azzura Fasya	Health & Wellbeing	1 August 2025	31 July 2026	12	9		21	11	10	
+	Permata Imani Silitonga	Health & Wellbeing	1 April 2025	29 October 2025	7	0		7	6	6	
+	Try Fathur Rachman	Digital	1 April 2025	12 November 2025	5	0		5	0.5	8.5	
+	Anezka Roseline Wee	Strategy and Transformation	1 April 2026	31 March 2027	12	4.5		16.5	2	14.5	
+	Rifdah Azzura Fasya	Health & Wellbeing	1 August 2026	31 July 2027	12	5.5		17.5	0	17.5	
+	Athar Raihan Muhammad	Strategy and Transformation	25 August 2025	26 August 2026	12	0		12	8	4	
+	Andara Cantika Rahmadina	Digital	26 August 2025	25 August 2026	12	0	1	13	2	11	
+	Hilmy Hanif	Digital	1 September 2025	31 August 2026	12	7	6	25	15	10	
+	Dilani Maryam	Digital	1 September 2025	31 August 2026	12	4		16	10	6	
+	Nadhira Zahrany Wishnuputri	Health & Wellbeing	1 October 2025	30 September 2026	12	0		12	1	11	
+	Naufal Hilmi	Strategy and Transformation	1 October 2025	30 September 2026	12	0		12	3	9	
+	Permata Imani Silitonga	Health & Wellbeing	1 November 2025	31 October 2026	12	3		15	7	8	
+	Diyon Iskandar Setiawan	Education	1 November 2025	31 October 2026	12	0		12	3	9	
+	Aulia Chairunisa	Digital	1 December 2025	30 November 2026	12	0	1	13	6	7	
+	Samuel Kharis Harianto	Strategy and Transformation	02 January 2026	01 January 2027	12	0		12	1	11	
+	Melvin Ezekiel	Health & Wellbeing	15 January 2026	14 September 2027	12	0		12	0	12	
+	Kaysea Safadristi Narendragharini	Education	27 January 2026	26 January 2027	12	0		12	2.5	9.5	
+	Giodio Nathanael Pratama Mitaart	Digital	01 April 2026	31 March 2027	12	0		12	0	12	
+	Hilda Julaika	Operations	01 April 2026	31 March 2027	12	0		12	1	11	
+	Farani Nazwa Chairunisa Irsan	Digital	19 April 2026	18 April 2027	12	0		12	0	12	
+	Isna Farhani	Operations	01 April 2026	31 March 2027	12	0		12	0	12	
+	Witania Cahyadi	Operations	01 January 2026	31 December 2027	12	0		12	1	11	Admin Ops
+	Jennie Tania	Operations	06 July 2026	05 July 2027	12	0		12	0	12	
+	Siti Nabila Azuraa Basri	Operations	06 July 2026	05 July 2027	12	0		12	0	12	
+	Clarence Fulgentius Tjandera	Strategy and Transformation	02 July 2026	01 July 2027	12	0		12	0	12	
+	Nurul Fikriyah	Operations	02 July 2026	01 July 2027	12	0		12	0	12	
+	Adzkia Zahra izzati	Health & Wellbeing	01 July 2026	30 June 2027	12	0	1	13	1	12	
+	Iqbal Fahmi	Health & Wellbeing	13 July 2026	12 July 2027	12	0		12	0	12	
+	Dwi Ardiansyah	Education	01 August 2026	31 July 2027	12	0		12	0	12	
+	Syifa Fauziah	Health & Wellbeing	17 August 2026	16 August 2027	12	0		12	0	12	

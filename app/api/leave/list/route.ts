@@ -13,11 +13,8 @@ export async function GET() {
     const where: Record<string, unknown> = {};
 
     if (auth.idRole === ROLES.PARTNER) {
-      if (auth.department === 'ops') {
-        where.karyawan = { department: 'ops' };
-      } else {
-        where.karyawan = { department: auth.department ?? undefined };
-      }
+      const depts = auth.departments.length ? auth.departments : [auth.department ?? ''];
+      where.karyawan = { department: { in: depts } };
     } else if (isEmployeeRole(auth.idRole)) {
       where.idKaryawan = auth.idKaryawan ?? undefined;
     }
@@ -35,12 +32,10 @@ export async function GET() {
     // PARTNER: sertakan izin sakit satu pilar (view-only, tanpa status approval).
     let sickList: unknown[] = [];
     if (auth.idRole === ROLES.PARTNER) {
+      const depts = auth.departments.length ? auth.departments : [auth.department ?? ''];
       sickList = (await prisma.izinSakit.findMany({
         where: {
-          karyawan:
-            auth.department === 'ops'
-              ? { department: 'ops' }
-              : { department: auth.department ?? undefined },
+          karyawan: { department: { in: depts } },
         },
         include: { karyawan: { include: { masterGrade: true } } },
         orderBy: { tanggalMulai: 'desc' },

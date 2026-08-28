@@ -45,7 +45,7 @@ const paymentColumns: DataTableColumn<OutgoingPayment>[] = [
     render: (r) => <span className="whitespace-nowrap">{formatDateTimeWIB(r.timeSubmission)}</span>,
   },
   { key: 'toWhom', label: 'To Whom' },
-  { key: 'submittedToWhom', label: 'Submitted To Whom' },
+  { key: 'submittedToWhom', label: 'Event / Vendor Name' },
   {
     key: 'idStatus',
     label: 'Status',
@@ -101,6 +101,26 @@ export default function PaymentPage() {
 
   const [outgoingPayments, setOutgoingPayments] = useState<OutgoingPayment[]>([]);
   const [loadingPayments, setLoadingPayments] = useState(true);
+  const [partnerOptions, setPartnerOptions] = useState<string[]>([]);
+  const [partnerList, setPartnerList] = useState<{ nama: string; department: string }[]>([]);
+
+  // Fetch partner list dari API
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch('/api/partners', { cache: 'no-store' });
+        if (res.ok) {
+          const data = await res.json();
+          const list = (data.list ?? []).map((p: { nama: string; department: string }) => ({
+            nama: p.nama,
+            department: p.department,
+          }));
+          setPartnerList(list);
+          setPartnerOptions(list.map((p: { nama: string }) => p.nama));
+        }
+      } catch {}
+    })();
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -185,6 +205,7 @@ export default function PaymentPage() {
     fd.append('idKategoriPayment', kategoriMap[paymentFor] ?? 'KPY03');
     fd.append('catatan', catatan);
     fd.append('detail', detail);
+    fd.append('partnerDepartment', partnerList.find((p) => p.nama === partner)?.department ?? '');
     Object.entries(files).forEach(([key, f]) => f && fd.append(key, f));
 
     try {
@@ -258,7 +279,8 @@ export default function PaymentPage() {
                 label="Related Partner"
                 value={partner}
                 onChange={setPartner}
-                options={["Nya' Zata Amani", 'Prasetya Dwicahya', 'Endiyan Rakhmanda', 'Kevin Tan']}
+                options={partnerOptions}
+                placeholder="Select partner..."
               />
               <div>
                 <SelectField

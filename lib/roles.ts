@@ -51,6 +51,7 @@ export const ROLE_LABEL: Record<Role, string> = {
 // Pemetaan department -> tampilan label (untuk display "Partner · Health" dll)
 export const DEPARTMENT_LABEL: Record<string, string> = {
   health: 'Health & Wellbeing',
+  strategy: 'Strategy and Transformation',
   digital: 'Digital & Finance',
   education: 'Education & HR',
   ops: 'Operations',

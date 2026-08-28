@@ -323,6 +323,7 @@ export async function POST(request: Request) {
           nama: cleanNama,
           idGrade: gradeId,
           department: department || null,
+          departments: department ? [department] : [],
           tanggalLahir: tanggalLahir ? new Date(tanggalLahir) : null,
           tanggalMasuk: tanggalMulai,
           sisaCutiTahunan: 12,

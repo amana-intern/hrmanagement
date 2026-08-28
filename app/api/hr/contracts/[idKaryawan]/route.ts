@@ -29,8 +29,8 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ idKar
     });
     if (!karyawan) return Response.json({ error: 'Employee not found' }, { status: 404 });
 
-    // Guard pilar: Partner hanya bisa aksi utk karyawan di department yang sama
-    if (karyawan.department !== auth.department) {
+    // Guard pilar: Partner hanya bisa aksi utk karyawan di salah satu pilar miliknya
+    if (!auth.departments.includes(karyawan.department ?? '')) {
       return Response.json({ error: 'Not your department' }, { status: 403 });
     }
 
