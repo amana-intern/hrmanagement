@@ -22,6 +22,12 @@ export function canUseEmployeeFeatures(role?: string | null): boolean {
   return role !== ROLES.PARTNER;
 }
 
+// Semua role (termasuk Partner) boleh mengakses Career Hub (assessment, CV, sertifikat).
+export function canUseCareerHub(role?: string | null): boolean {
+  if (!role) return false;
+  return [ROLES.EMPLOYEE, ROLES.PARTNER, ROLES.ADMIN_HR, ROLES.ADMIN_OPS].includes(role as typeof ROLES[keyof typeof ROLES]);
+}
+
 // Home route bagi tiap role setelah login
 export const ROLE_HOME: Record<Role, string> = {
   [ROLES.EMPLOYEE]: '/user/profile',

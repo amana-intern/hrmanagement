@@ -121,21 +121,25 @@ model SertifikatKaryawan {
 }
 
 model PengajuanCuti {
-  idCuti          String           @id @db.VarChar
-  idKaryawan      String?          @db.VarChar
-  tanggalMulai    DateTime?        @db.Timestamp()
-  tanggalSelesai  DateTime?        @db.Timestamp()
-  jumlahHari      Int?
-  idJenisCuti     String?          @db.VarChar
-  idStatus        String?          @db.VarChar
-  tanggalPengajuan DateTime?       @db.Timestamp()
-  disetujuiOleh   String?          @db.VarChar
-  tanggalApproval DateTime?        @db.Timestamp()
-  catatan         String?          @db.VarChar
-  keterangan      String?          @db.VarChar
-  karyawan        Karyawan?        @relation(fields: [idKaryawan], references: [idKaryawan])
-  masterJenisCuti MasterJenisCuti? @relation(fields: [idJenisCuti], references: [idJenisCuti])
-  masterStatus    MasterStatus?    @relation(fields: [idStatus], references: [idStatus])
+  idCuti               String           @id @db.VarChar
+  idKaryawan           String?          @db.VarChar
+  tanggalMulai         DateTime?        @db.Timestamp()
+  tanggalSelesai       DateTime?        @db.Timestamp()
+  jumlahHari           Int?
+  idJenisCuti          String?          @db.VarChar
+  idStatus             String?          @db.VarChar
+  tanggalPengajuan     DateTime?        @db.Timestamp()
+  disetujuiOleh        String?          @db.VarChar
+  tanggalApproval      DateTime?        @db.Timestamp()
+  catatan              String?          @db.VarChar
+  keterangan           String?          @db.VarChar
+  tanggalKerjaHariLibur DateTime?       @db.Timestamp()
+  tanggalSelesaiKerjaLibur DateTime?    @db.Timestamp()
+  tipeCutiKompensasi   String?          @db.VarChar
+  jumlahHariKompensasi Float?
+  karyawan             Karyawan?        @relation(fields: [idKaryawan], references: [idKaryawan])
+  masterJenisCuti      MasterJenisCuti? @relation(fields: [idJenisCuti], references: [idJenisCuti])
+  masterStatus         MasterStatus?    @relation(fields: [idStatus], references: [idStatus])
 }
 
 model IzinSakit {

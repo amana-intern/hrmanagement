@@ -3,19 +3,18 @@ import { writeFile, mkdir } from 'fs/promises';
 import path from 'path';
 import { requireAuth } from '@/lib/dal';
 import { prisma } from '@/lib/prisma';
-import { canUseEmployeeFeatures, ROLES } from '@/lib/roles';
+import { ROLES } from '@/lib/roles';
 
 const UPLOAD_DIR = path.join(process.cwd(), 'public', 'uploads');
 const MAX_BYTES = 5 * 1024 * 1024;
 const ALLOWED_EXT = ['.pdf', '.jpg', '.jpeg', '.png'];
 
-// POST /api/sick - Employee/Admin mengajukan izin sakit (FormData: tanggal, gejala, file)
+// POST /api/sick - Employee/Admin/Partner mengajukan izin sakit (FormData: tanggal, gejala, file)
 export async function POST(request: NextRequest) {
   try {
     const auth = await requireAuth();
-    const isAdmin = auth.idRole === ROLES.ADMIN_HR || auth.idRole === ROLES.ADMIN_OPS;
-    if ((!canUseEmployeeFeatures(auth.idRole) && !isAdmin) || !auth.idKaryawan) {
-      return Response.json({ error: 'Forbidden' }, { status: 403 });
+    if (!auth.idKaryawan) {
+      return Response.json({ error: 'Account is not an employee' }, { status: 400 });
     }
 
     const form = await request.formData();

@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { requireAuth } from '@/lib/dal';
 import { prisma } from '@/lib/prisma';
 import { ROLES } from '@/lib/roles';
+import { LEAVE_TYPES } from '@/lib/constants';
 import { persistLeaveBalance } from '@/lib/leave';
 import { sendEmail } from '@/lib/notify';
 
@@ -39,13 +40,23 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
 
     if (!cuti) return Response.json({ error: 'Request not found' }, { status: 404 });
 
+    // Cek apakah applicant adalah partner (sudah auto-approved)
+    const applicant = await prisma.user.findUnique({
+      where: { idUser: cuti.idKaryawan ?? '' },
+      select: { idRole: true },
+    });
+    if (applicant?.idRole === ROLES.PARTNER) {
+      return Response.json({ error: 'This leave was auto-approved by the partner who submitted it.' }, { status: 400 });
+    }
+
     // Verifikasi pilar: partner hanya approve cuti di salah satu pilar miliknya.
-    // Admin HR/OPS yang mengajukan punya department masing-masing
-    // (Admin HR -> education, Admin OPS -> ops), sehingga sesuai matriks.
     const applicantDept = cuti.karyawan?.department;
     if (!applicantDept || !(auth.departments ?? []).includes(applicantDept)) {
       return Response.json({ error: 'Not your department' }, { status: 403 });
     }
+
+    // Jika bukan kompensasi, tetap pakai jumlahHari sebagai hari cuti
+    const isCompensatory = cuti.idJenisCuti === LEAVE_TYPES.COMPENSATORY;
 
     const newStatus = action === 'approve' ? 'ST_LEAVE_APPROVED' : 'ST_LEAVE_REJECTED';
 
@@ -59,6 +70,25 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
           catatan,
         },
       });
+
+      // Approve kompensasi: tambahkan jumlahHariKompensasi ke cutiKompensasi di kontrak aktif
+      if (action === 'approve' && isCompensatory && cuti.karyawan?.idKaryawan && cuti.jumlahHariKompensasi) {
+        const activeContract = await tx.kontrakKaryawan.findFirst({
+          where: {
+            idKaryawan: cuti.karyawan.idKaryawan,
+            idStatus: 'ST_KON_ACTIVE',
+          },
+          orderBy: { tanggalMulai: 'desc' },
+        });
+        if (activeContract) {
+          await tx.kontrakKaryawan.update({
+            where: { idKontrak: activeContract.idKontrak },
+            data: {
+              cutiKompensasi: (activeContract.cutiKompensasi ?? 0) + cuti.jumlahHariKompensasi,
+            },
+          });
+        }
+      }
 
       await tx.approvalHistory.create({
         data: {
@@ -81,7 +111,7 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
             judul: action === 'approve' ? 'Leave approved' : 'Leave rejected',
             pesan:
               action === 'approve'
-                ? `Your leave request (${cuti.tanggalMulai?.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })} - ${cuti.tanggalSelesai?.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}) has been approved.`
+                ? `Your leave request (${cuti.tanggalMulai?.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })} - ${cuti.tanggalSelesai?.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}) has been approved.${isCompensatory ? ` Compensatory leave of ${cuti.jumlahHariKompensasi} day(s) has been added to your balance.` : ''}`
                 : `Your leave request (${cuti.tanggalMulai?.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })} - ${cuti.tanggalSelesai?.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}) was rejected. Reason: ${catatan}`,
             idReferensi: id,
           },
@@ -91,8 +121,12 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
       return u;
     });
 
-    // Approved -> kurangi saldo otomatis
-    if (action === 'approve' && cuti.karyawan?.idKaryawan) {
+    // Approved -> kurangi saldo otomatis (kecuali kompensasi, sudah dihandle di atas)
+    if (action === 'approve' && cuti.karyawan?.idKaryawan && !isCompensatory) {
+      await persistLeaveBalance(cuti.karyawan.idKaryawan);
+    }
+    // Approved kompensasi -> recalculate balance (karena cutiKompensasi sudah bertambah)
+    if (action === 'approve' && isCompensatory && cuti.karyawan?.idKaryawan) {
       await persistLeaveBalance(cuti.karyawan.idKaryawan);
     }
 

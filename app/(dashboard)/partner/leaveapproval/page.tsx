@@ -30,6 +30,7 @@ const DEPARTMENT_LABEL: Record<string, string> = {
 interface LeaveReq {
   id: string;
   idCuti: string;
+  idKaryawan: string | null;
   name: string;
   department: string;
   grade: string;
@@ -45,6 +46,10 @@ interface LeaveReq {
   status: string;
   action: null;
   jenis: 'cuti' | 'sakit';
+  tanggalKerjaHariLibur: string | null;
+  tanggalSelesaiKerjaLibur: string | null;
+  tipeCutiKompensasi: string | null;
+  jumlahHariKompensasi: number | null;
 }
 
 const STATUS_MAP: Record<string, { label: string }> = {
@@ -65,14 +70,19 @@ interface LeaveRaw {
   keterangan?: string | null;
   catatan?: string | null;
   tanggalPengajuan?: string | null;
-  karyawan?: { nama?: string | null; department?: string | null; masterGrade?: { namaGrade?: string | null } | null };
+  karyawan?: { idKaryawan?: string | null; nama?: string | null; department?: string | null; masterGrade?: { namaGrade?: string | null } | null };
   masterJenisCuti?: { namaJenis?: string | null };
+  tanggalKerjaHariLibur?: string | null;
+  tanggalSelesaiKerjaLibur?: string | null;
+  tipeCutiKompensasi?: string | null;
+  jumlahHariKompensasi?: number | null;
 }
 
 function mapRows(rows: LeaveRaw[]): LeaveReq[] {
   return rows.map((c) => ({
     id: c.idCuti,
     idCuti: c.idCuti,
+    idKaryawan: c.karyawan?.idKaryawan ?? null,
     name: c.karyawan?.nama ?? '-',
     department: (c.karyawan?.department && DEPARTMENT_LABEL[c.karyawan.department]) || c.karyawan?.department || '-',
     grade: c.karyawan?.masterGrade?.namaGrade ?? '-',
@@ -88,6 +98,10 @@ function mapRows(rows: LeaveRaw[]): LeaveReq[] {
     status: c.idStatus,
     action: null,
     jenis: 'cuti',
+    tanggalKerjaHariLibur: c.tanggalKerjaHariLibur ?? null,
+    tanggalSelesaiKerjaLibur: c.tanggalSelesaiKerjaLibur ?? null,
+    tipeCutiKompensasi: c.tipeCutiKompensasi ?? null,
+    jumlahHariKompensasi: c.jumlahHariKompensasi ?? null,
   }));
 }
 
@@ -98,13 +112,14 @@ interface SickRaw {
   gejala?: string | null;
   buktiSakitURL?: string | null;
   createdAt?: string | null;
-  karyawan?: { nama?: string | null; department?: string | null; masterGrade?: { namaGrade?: string | null } | null };
+  karyawan?: { idKaryawan?: string | null; nama?: string | null; department?: string | null; masterGrade?: { namaGrade?: string | null } | null };
 }
 
 function mapSickRows(rows: SickRaw[]): LeaveReq[] {
   return rows.map((s) => ({
     id: s.idIzinSakit,
     idCuti: s.idIzinSakit,
+    idKaryawan: s.karyawan?.idKaryawan ?? null,
     name: s.karyawan?.nama ?? '-',
     department: (s.karyawan?.department && DEPARTMENT_LABEL[s.karyawan.department]) || s.karyawan?.department || '-',
     grade: s.karyawan?.masterGrade?.namaGrade ?? '-',
@@ -123,6 +138,10 @@ function mapSickRows(rows: SickRaw[]): LeaveReq[] {
     status: 'ST_MED_PENDING',
     action: null,
     jenis: 'sakit',
+    tanggalKerjaHariLibur: null,
+    tanggalSelesaiKerjaLibur: null,
+    tipeCutiKompensasi: null,
+    jumlahHariKompensasi: null,
   }));
 }
 
@@ -153,7 +172,14 @@ export default function PartnerLeaveApprovalPage() {
       const data = await res.json();
       const cuti = mapRows((data.list ?? []) as LeaveRaw[]);
       const sick = mapSickRows((data.sickList ?? []) as SickRaw[]);
-      setRequests([...cuti, ...sick].sort((a, b) => new Date(b.startDate ?? 0).getTime() - new Date(a.startDate ?? 0).getTime()));
+      // Filter out partner's own leave (auto-approved, no need to approve)
+      const sessionRes = await fetch('/api/auth/session', { cache: 'no-store' });
+      const session = sessionRes.ok ? await sessionRes.json() : null;
+      const myIdKaryawan = session?.karyawan?.idKaryawan;
+      const filteredCuti = myIdKaryawan
+        ? cuti.filter((c) => c.idKaryawan !== myIdKaryawan)
+        : cuti;
+      setRequests([...filteredCuti, ...sick].sort((a, b) => new Date(b.startDate ?? 0).getTime() - new Date(a.startDate ?? 0).getTime()));
     } else {
       const data = await res.json().catch(() => ({}));
       setMessage({ ok: false, text: data?.error ?? 'Failed to load data' });
@@ -322,6 +348,15 @@ export default function PartnerLeaveApprovalPage() {
             <DetailField label="End Date" value={formatDateWIB(detailRow.endDate)} />
             {detailRow.totalDays != null && (
               <DetailField label="Total Days" value={`${detailRow.totalDays} day(s)`} />
+            )}
+            {detailRow.tanggalKerjaHariLibur && (
+              <DetailField label="Holiday Work Date" value={`${formatDateWIB(detailRow.tanggalKerjaHariLibur)}${detailRow.tanggalSelesaiKerjaLibur ? ` - ${formatDateWIB(detailRow.tanggalSelesaiKerjaLibur)}` : ''}`} />
+            )}
+            {detailRow.tipeCutiKompensasi && (
+              <DetailField label="Day Type" value={detailRow.tipeCutiKompensasi === 'FULL' ? 'Full Day (1 day)' : 'Half Day (0.5 day)'} />
+            )}
+            {detailRow.jumlahHariKompensasi != null && (
+              <DetailField label="Compensatory Days" value={`${detailRow.jumlahHariKompensasi} day(s)`} />
             )}
             <DetailField label={detailRow.jenis === 'sakit' ? 'Symptoms' : 'Reason'} value={detailRow.reason ?? '-'} />
             {detailRow.approverNote && <DetailField label="Approver Note" value={detailRow.approverNote} />}

@@ -3,7 +3,7 @@ import { writeFile, mkdir } from 'fs/promises';
 import path from 'path';
 import { requireAuth } from '@/lib/dal';
 import { prisma } from '@/lib/prisma';
-import { canUseEmployeeFeatures } from '@/lib/roles';
+import { canUseCareerHub } from '@/lib/roles';
 
 const UPLOAD_DIR = path.join(process.cwd(), 'public', 'uploads');
 const MAX_BYTES = 5 * 1024 * 1024;
@@ -13,7 +13,7 @@ const ALLOWED_EXT = ['.pdf'];
 export async function PATCH(request: NextRequest) {
   try {
     const auth = await requireAuth();
-    if (!canUseEmployeeFeatures(auth.idRole) || !auth.idKaryawan) {
+    if (!canUseCareerHub(auth.idRole) || !auth.idKaryawan) {
       return Response.json({ error: 'Forbidden' }, { status: 403 });
     }
 

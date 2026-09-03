@@ -29,9 +29,16 @@ const LEAVE_TYPE_MAP: Record<string, string> = {
   'Paid Leave': LEAVE_TYPES.PAID,
   'Special Leave': LEAVE_TYPES.SPECIAL,
   'Unpaid Leave': LEAVE_TYPES.UNPAID,
+  'Compensatory Leave': LEAVE_TYPES.COMPENSATORY,
 };
 
-const leaveOptions = ['Paid Leave', 'Unpaid Leave', 'Special Leave'];
+const leaveOptions = ['Paid Leave', 'Unpaid Leave', 'Special Leave', 'Compensatory Leave'];
+
+const dayTypeOptions = ['Full Day (1 day)', 'Half Day (0.5 day)'];
+const DAY_TYPE_MAP: Record<string, string> = {
+  'Full Day (1 day)': 'FULL',
+  'Half Day (0.5 day)': 'HALF',
+};
 
 export default function LeaveRequestPage() {
   const [selectedLeave, setSelectedLeave] = useState('');
@@ -39,11 +46,15 @@ export default function LeaveRequestPage() {
   const [reason, setReason] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [holidayWorkDate, setHolidayWorkDate] = useState('');
+  const [holidayWorkEndDate, setHolidayWorkEndDate] = useState('');
+  const [dayType, setDayType] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [leaveBalance, setLeaveBalance] = useState<number | null>(null);
   const [specialLeaveUsed, setSpecialLeaveUsed] = useState<number | null>(null);
   const [unpaidLeaveUsed, setUnpaidLeaveUsed] = useState<number | null>(null);
+  const [compensatoryLeaveUsed, setCompensatoryLeaveUsed] = useState<number | null>(null);
 
   const loadBalance = async () => {
     try {
@@ -53,6 +64,7 @@ export default function LeaveRequestPage() {
         setLeaveBalance(data.user?.leave?.sisaCuti ?? 0);
         setSpecialLeaveUsed(data.user?.leave?.specialLeaveUsed ?? 0);
         setUnpaidLeaveUsed(data.user?.leave?.unpaidLeaveUsed ?? 0);
+        setCompensatoryLeaveUsed(data.user?.leave?.compensatoryLeaveUsed ?? 0);
       }
     } catch {}
   };
@@ -67,11 +79,13 @@ export default function LeaveRequestPage() {
     { count: leaveBalance != null ? String(leaveBalance) : '...', label: 'Paid Leave', caption: 'Remaining Paid Leave Balance(s)' },
     { count: specialLeaveUsed != null ? String(specialLeaveUsed) : '...', label: 'Special Leave', caption: 'Special Leave used this year' },
     { count: unpaidLeaveUsed != null ? String(unpaidLeaveUsed) : '...', label: 'Unpaid Leave', caption: 'Unpaid Leave used this year' },
+    { count: compensatoryLeaveUsed != null ? String(compensatoryLeaveUsed) : '...', label: 'Compensatory', caption: 'Compensatory Leave earned (approved)' },
   ];
 
   const isFormValid =
     selectedLeave !== '' &&
     (selectedLeave !== 'Special Leave' || selectedSpecialLeave !== '') &&
+    (selectedLeave !== 'Compensatory Leave' || (holidayWorkDate !== '' && holidayWorkEndDate !== '' && dayType !== '')) &&
     startDate !== '' &&
     endDate !== '';
 
@@ -84,11 +98,34 @@ export default function LeaveRequestPage() {
     return Math.round((e.getTime() - s.getTime()) / 86400000) + 1;
   }, [startDate, endDate]);
 
+  // Jumlah hari kerja di hari libur (inklusif) — untuk cuti kompensasi
+  const holidayWorkDays = useMemo(() => {
+    if (selectedLeave !== 'Compensatory Leave' || !holidayWorkDate || !holidayWorkEndDate) return null;
+    const s = new Date(holidayWorkDate + 'T00:00:00');
+    const e = new Date(holidayWorkEndDate + 'T00:00:00');
+    if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime()) || e < s) return null;
+    return Math.round((e.getTime() - s.getTime()) / 86400000) + 1;
+  }, [selectedLeave, holidayWorkDate, holidayWorkEndDate]);
+
+  // Jumlah hari cuti kompensasi = hari kerja × multiplier
+  const compensatoryDays = useMemo(() => {
+    if (holidayWorkDays == null || !dayType) return null;
+    const multiplier = dayType === 'HALF' ? 0.5 : 1;
+    return holidayWorkDays * multiplier;
+  }, [holidayWorkDays, dayType]);
+
   // Warning keterlebihan saldo Paid Leave (live, saat rentang diisi).
   const balanceExceeded =
     selectedLeave === 'Paid Leave' &&
     requestedDays != null &&
     ((leaveBalance ?? 0) <= 0 || requestedDays > (leaveBalance ?? 0));
+
+  // Validasi: Half Day cuti kompensasi hanya boleh 1 hari kerja
+  const halfDayMultiDayError =
+    selectedLeave === 'Compensatory Leave' &&
+    dayType === 'HALF' &&
+    holidayWorkDays != null &&
+    holidayWorkDays > 1;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -97,13 +134,20 @@ export default function LeaveRequestPage() {
     const idJenisCuti = leaveOptions.includes(selectedLeave) ? LEAVE_TYPE_MAP[selectedLeave] : '';
     const keterangan = selectedLeave === 'Special Leave' ? selectedSpecialLeave : reason;
 
+    const body: Record<string, unknown> = { tanggalMulai: startDate, tanggalSelesai: endDate, idJenisCuti, keterangan };
+    if (selectedLeave === 'Compensatory Leave') {
+      body.tanggalKerjaHariLibur = holidayWorkDate;
+      body.tanggalSelesaiKerjaLibur = holidayWorkEndDate;
+      body.tipeCutiKompensasi = DAY_TYPE_MAP[dayType];
+    }
+
     setSubmitting(true);
     setMessage(null);
 
     const res = await fetch('/api/leave', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tanggalMulai: startDate, tanggalSelesai: endDate, idJenisCuti, keterangan }),
+      body: JSON.stringify(body),
     });
 
     const data = await res.json();
@@ -116,6 +160,9 @@ export default function LeaveRequestPage() {
       setReason('');
       setStartDate('');
       setEndDate('');
+      setHolidayWorkDate('');
+      setHolidayWorkEndDate('');
+      setDayType('');
       loadBalance();
     } else {
       setMessage({ ok: false, text: data.error || 'Failed to submit request.' });
@@ -127,18 +174,20 @@ export default function LeaveRequestPage() {
       <PageTopBar showGreeting />
 
       <SectionCard title="Leave Balance(s)">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           {leaveBalanceItems.map((item, idx) => (
             <StatBox key={idx} value={item.count} label={item.label} caption={item.caption} />
           ))}
         </div>
       </SectionCard>
 
-      <SectionCard as="form" onSubmit={handleSubmit} scroll>
+      <SectionCard as="form" onSubmit={handleSubmit} scroll className="flex-1 min-h-0">
         <div className="flex-shrink-0 flex items-center gap-2 pb-1.5 mb-2 border-b border-amana-primary-500">
           <h3 className="text-[20px] font-semibold text-amana-primary-500">Request Leave</h3>
           <CalendarCheck className="w-5 h-5 text-amana-primary-500" />
         </div>
+
+        <div className="flex-1 min-h-0 overflow-y-auto scroll-smooth pr-1">
 
         <div className="mb-4">
           <SelectField
@@ -148,6 +197,9 @@ export default function LeaveRequestPage() {
               setSelectedLeave(v);
               setSelectedSpecialLeave('');
               setReason('');
+              setHolidayWorkDate('');
+              setHolidayWorkEndDate('');
+              setDayType('');
             }}
             options={leaveOptions}
             placeholder="Click here to select your leave option..."
@@ -177,15 +229,56 @@ export default function LeaveRequestPage() {
           </div>
         )}
 
+        {selectedLeave === 'Compensatory Leave' && (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <TextField
+                label="Holiday Work Start Date"
+                type="date"
+                value={holidayWorkDate}
+                onChange={setHolidayWorkDate}
+              />
+              <TextField
+                label="Holiday Work End Date"
+                type="date"
+                value={holidayWorkEndDate}
+                onChange={setHolidayWorkEndDate}
+              />
+            </div>
+            <div className="mb-4">
+              <SelectField
+                label="Day Type"
+                value={dayType}
+                onChange={setDayType}
+                options={dayTypeOptions}
+                placeholder="Select full day or half day..."
+              />
+            </div>
+            {compensatoryDays != null && (
+              <div className="mb-4 px-4 py-3 rounded-lg border text-[13px] font-medium bg-amana-success-100 border-amana-success-300 text-amana-success-500">
+                {`Compensatory leave to be earned: ${compensatoryDays} day(s) (${holidayWorkDays} holiday work day(s) × ${dayType === 'HALF' ? '0.5' : '1'})`}
+              </div>
+            )}
+            <div className="mb-4">
+              <TextField
+                label="Reason"
+                value={reason}
+                onChange={setReason}
+                placeholder="Describe the work you did on the holiday..."
+              />
+            </div>
+          </>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <TextField
-            label="Start Date"
+            label={selectedLeave === 'Compensatory Leave' ? 'Compensatory Leave Start Date' : 'Start Date'}
             type="date"
             value={startDate}
             onChange={setStartDate}
           />
           <TextField
-            label="End Date"
+            label={selectedLeave === 'Compensatory Leave' ? 'Compensatory Leave End Date' : 'End Date'}
             type="date"
             value={endDate}
             onChange={setEndDate}
@@ -208,8 +301,15 @@ export default function LeaveRequestPage() {
           </div>
         )}
 
-        <div className="flex justify-end pt-4 border-t border-amana-neutral-200">
-          <Button type="submit" variant="primary" size="lg" className="w-full max-w-[280px]" disabled={!isFormValid || submitting}>
+        {halfDayMultiDayError && (
+          <div className="mb-4 px-4 py-3 rounded-lg border text-[13px] font-medium bg-amana-danger-100 border-amana-danger-500 text-amana-danger-500">
+            Half Day compensatory leave requires exactly 1 holiday work day. Please adjust your holiday work date range.
+          </div>
+        )}
+        </div>
+
+        <div className="flex-shrink-0 flex justify-end pt-4 border-t border-amana-neutral-200">
+          <Button type="submit" variant="primary" size="lg" className="w-full max-w-[280px]" disabled={!isFormValid || submitting || !!halfDayMultiDayError}>
             {submitting ? 'Submitting...' : 'Submit'}
           </Button>
         </div>

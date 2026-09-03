@@ -14,7 +14,7 @@ import ConfirmModal from '@/app/components/feedback/ConfirmModal';
 import StatusModal from '@/app/components/feedback/StatusModal';
 import PdfPreviewModal, { PdfPreviewTarget } from '@/app/components/feedback/PdfPreviewModal';
 import { cn } from '@/app/utils/cn';
-import { canUseEmployeeFeatures } from '@/lib/roles';
+import { canUseCareerHub } from '@/lib/roles';
 import { CareerHubSkeleton } from '@/app/components/feedback/PageSkeleton';
 
 interface Certification {
@@ -275,7 +275,7 @@ export default function CareerHubPage() {
       <div className="w-full h-full flex flex-col gap-3">
         <PageTopBar showGreeting />
 
-        {canUseEmployeeFeatures(idRole) && (
+        {canUseCareerHub(idRole) && (
           <SectionCard title="Assessment Test">
             {assessments.length === 0 ? (
               <p className="text-[16px] text-amana-neutral-400 text-center py-1.5">

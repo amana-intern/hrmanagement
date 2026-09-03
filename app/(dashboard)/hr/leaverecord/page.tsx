@@ -29,6 +29,10 @@ interface LeaveRecord {
   note: string;
   submittedDate: string;
   status: string;
+  tanggalKerjaHariLibur: string | null;
+  tanggalSelesaiKerjaLibur: string | null;
+  tipeCutiKompensasi: string | null;
+  jumlahHariKompensasi: number | null;
 }
 
 interface RawLeave {
@@ -42,6 +46,10 @@ interface RawLeave {
   catatan?: string | null;
   tanggalPengajuan?: string | null;
   idStatus?: string | null;
+  tanggalKerjaHariLibur?: string | null;
+  tanggalSelesaiKerjaLibur?: string | null;
+  tipeCutiKompensasi?: string | null;
+  jumlahHariKompensasi?: number | null;
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -86,6 +94,10 @@ export default function LeaveRecordPage() {
             note: c.catatan ?? '',
             submittedDate: c.tanggalPengajuan ? iso(new Date(c.tanggalPengajuan)) : '',
             status: c.idStatus ?? 'ST_LEAVE_PENDING',
+            tanggalKerjaHariLibur: c.tanggalKerjaHariLibur ?? null,
+            tanggalSelesaiKerjaLibur: c.tanggalSelesaiKerjaLibur ?? null,
+            tipeCutiKompensasi: c.tipeCutiKompensasi ?? null,
+            jumlahHariKompensasi: c.jumlahHariKompensasi ?? null,
           }))
         );
       }
@@ -208,6 +220,15 @@ export default function LeaveRecordPage() {
                     ? `${Math.max(Math.round((new Date(detailsModal.endDate).getTime() - new Date(detailsModal.startDate).getTime()) / 86400000) + 1, 0)} day(s)`
                     : '-',
               ],
+              ...(detailsModal.tanggalKerjaHariLibur
+                ? [['Holiday Work Date', `${formatDateWIB(detailsModal.tanggalKerjaHariLibur)}${detailsModal.tanggalSelesaiKerjaLibur ? ` - ${formatDateWIB(detailsModal.tanggalSelesaiKerjaLibur)}` : ''}`]]
+                : []),
+              ...(detailsModal.tipeCutiKompensasi
+                ? [['Day Type', detailsModal.tipeCutiKompensasi === 'FULL' ? 'Full Day (1 day)' : 'Half Day (0.5 day)']]
+                : []),
+              ...(detailsModal.jumlahHariKompensasi != null
+                ? [['Compensatory Days', `${detailsModal.jumlahHariKompensasi} day(s)`]]
+                : []),
               ['Submitted On', detailsModal.submittedDate ? formatDateWIB(detailsModal.submittedDate) : '-'],
               ['Status', STATUS_LABELS[detailsModal.status] ?? detailsModal.status],
               ...(detailsModal.note ? [['Approver Note', detailsModal.note]] : []),

@@ -16,6 +16,7 @@ export const LEAVE_TYPES = {
   PAID: 'JC01',
   SPECIAL: 'JC02',
   UNPAID: 'JC03',
+  COMPENSATORY: 'JC04',
 } as const;
 
 // MasterKategoriPayment

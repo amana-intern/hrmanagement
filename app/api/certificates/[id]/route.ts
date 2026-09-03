@@ -1,13 +1,13 @@
 import { NextRequest } from 'next/server';
 import { requireAuth } from '@/lib/dal';
 import { prisma } from '@/lib/prisma';
-import { isEmployeeRole } from '@/lib/roles';
+import { canUseCareerHub } from '@/lib/roles';
 
 // PATCH/DELETE /api/certificates/[id] — update/hapus sertifikat milik sendiri
 export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   try {
     const auth = await requireAuth();
-    if (!isEmployeeRole(auth.idRole) || !auth.idKaryawan) {
+    if (!canUseCareerHub(auth.idRole) || !auth.idKaryawan) {
       return Response.json({ error: 'Forbidden' }, { status: 403 });
     }
     const { id } = await ctx.params;
@@ -40,7 +40,7 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
 export async function DELETE(_request: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   try {
     const auth = await requireAuth();
-    if (!isEmployeeRole(auth.idRole) || !auth.idKaryawan) {
+    if (!canUseCareerHub(auth.idRole) || !auth.idKaryawan) {
       return Response.json({ error: 'Forbidden' }, { status: 403 });
     }
     const { id } = await ctx.params;

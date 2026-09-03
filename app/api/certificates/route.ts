@@ -1,14 +1,14 @@
 import { NextRequest } from 'next/server';
 import { requireAuth } from '@/lib/dal';
 import { prisma } from '@/lib/prisma';
-import { canUseEmployeeFeatures } from '@/lib/roles';
+import { canUseCareerHub } from '@/lib/roles';
 
 // POST /api/certificates - tambah sertifikat milik karyawan sendiri
 // GET /api/certificates - daftar sertifikat milik karyawan sendiri
 export async function POST(request: NextRequest) {
   try {
     const auth = await requireAuth();
-    if (!canUseEmployeeFeatures(auth.idRole) || !auth.idKaryawan) {
+    if (!canUseCareerHub(auth.idRole) || !auth.idKaryawan) {
       return Response.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
 export async function GET() {
   try {
     const auth = await requireAuth();
-    if (!canUseEmployeeFeatures(auth.idRole) || !auth.idKaryawan) {
+    if (!canUseCareerHub(auth.idRole) || !auth.idKaryawan) {
       return Response.json({ error: 'Forbidden' }, { status: 403 });
     }
 

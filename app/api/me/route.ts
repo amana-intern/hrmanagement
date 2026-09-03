@@ -33,11 +33,12 @@ export async function GET() {
     let specialLeaveUsed = 0;
     let unpaidLeaveUsed = 0;
     let cvURL: string | null = null;
+    let compensatoryLeaveUsed = 0;
 
     if (auth.idKaryawan) {
       const id = auth.idKaryawan;
       const startOfYear = new Date(new Date().getFullYear(), 0, 1);
-      const [balance, pendingLeaveCount, sickCount, payCount, certCount, talent, specialUsed, unpaidUsed] =
+      const [balance, pendingLeaveCount, sickCount, payCount, certCount, talent, specialUsed, unpaidUsed, compensatoryUsed] =
         await Promise.all([
           computeLeaveBalance(id),
           prisma.pengajuanCuti.count({ where: { idKaryawan: id, idStatus: 'ST_LEAVE_PENDING' } }),
@@ -63,6 +64,14 @@ export async function GET() {
               tanggalMulai: { gte: startOfYear },
             },
           }),
+          prisma.pengajuanCuti.findMany({
+            where: {
+              idKaryawan: id,
+              idJenisCuti: LEAVE_TYPES.COMPENSATORY,
+              idStatus: LEAVE_STATUS.APPROVED,
+            },
+            select: { jumlahHariKompensasi: true },
+          }),
         ]);
       sisaCuti = balance.sisa;
       accrued = balance.accrued;
@@ -73,6 +82,7 @@ export async function GET() {
       certificates = certCount;
       specialLeaveUsed = specialUsed;
       unpaidLeaveUsed = unpaidUsed;
+      compensatoryLeaveUsed = compensatoryUsed.reduce((sum, c) => sum + (c.jumlahHariKompensasi ?? 0), 0);
       cvURL = talent?.fileCVURL ?? null;
     }
 
@@ -91,7 +101,7 @@ export async function GET() {
         pictureUrl: auth.pictureUrl,
         permissions: auth.rolePermissions,
         cvURL,
-        leave: { sisaCuti, accrued, carryOver, specialLeaveUsed, unpaidLeaveUsed },
+        leave: { sisaCuti, accrued, carryOver, specialLeaveUsed, unpaidLeaveUsed, compensatoryLeaveUsed },
         stats: { pendingLeaves, sickLeaves, pendingPayments, certificates },
       },
     });

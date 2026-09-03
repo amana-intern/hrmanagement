@@ -14,7 +14,10 @@ export async function GET() {
 
     if (auth.idRole === ROLES.PARTNER) {
       const depts = auth.departments.length ? auth.departments : [auth.department ?? ''];
-      where.karyawan = { department: { in: depts } };
+      where.OR = [
+        { karyawan: { department: { in: depts } } },
+        { idKaryawan: auth.idKaryawan ?? undefined },
+      ];
     } else if (isEmployeeRole(auth.idRole)) {
       where.idKaryawan = auth.idKaryawan ?? undefined;
     }
