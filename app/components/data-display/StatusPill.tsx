@@ -11,7 +11,7 @@ const SOFT_STYLES: Record<string, string> = {
   'bg-amana-success-500': 'bg-amana-success-300 border-amana-success-500 text-amana-success-500',
   'bg-amana-danger-500': 'bg-amana-danger-300 border-amana-danger-500 text-amana-danger-500',
   'bg-amana-warning-500': 'bg-amana-warning-300 border-amana-warning-500 text-amana-warning-500',
-  'bg-amana-primary-500': 'bg-amana-primary-300 border-amana-primary-500 text-amana-primary-500',
+  'bg-amana-primary-500': 'bg-amana-primary-200 border-amana-primary-500 text-amana-primary-500',
   'bg-amana-neutral-400': 'bg-amana-neutral-300 border-amana-neutral-400 text-amana-neutral-500',
 };
 
