@@ -1,6 +1,6 @@
-import { requireAuth } from '@/lib/dal';
+import { requireAuth, partnerForDepartment } from '@/lib/dal';
 import { prisma } from '@/lib/prisma';
-import { ROLES } from '@/lib/roles';
+import { ROLES, DEPARTMENT_LABEL } from '@/lib/roles';
 import { LEAVE_TYPES } from '@/lib/constants';
 import { computeLeaveBalance, parseDateOnly } from '@/lib/leave';
 import { sendEmail } from '@/lib/notify';
@@ -155,27 +155,9 @@ export async function POST(request: Request) {
       },
     });
 
-    // Jika partner submit, auto-approve: increment cutiKompensasi + notifikasi ke partner lain
+    // Jika partner submit, auto-approve: tidak langsung increment cutiKompensasi
+    // (akan dikurangi otomatis oleh cron harian saat tanggal tiba)
     if (isPartner && cuti.idKaryawan) {
-      // Increment cutiKompensasi di kontrak aktif
-      if (idJenisCuti === LEAVE_TYPES.COMPENSATORY && cuti.jumlahHariKompensasi) {
-        const activeContract = await prisma.kontrakKaryawan.findFirst({
-          where: {
-            idKaryawan: cuti.idKaryawan,
-            idStatus: 'ST_KON_ACTIVE',
-          },
-          orderBy: { tanggalMulai: 'desc' },
-        });
-        if (activeContract) {
-          await prisma.kontrakKaryawan.update({
-            where: { idKontrak: activeContract.idKontrak },
-            data: {
-              cutiKompensasi: (activeContract.cutiKompensasi ?? 0) + cuti.jumlahHariKompensasi,
-            },
-          });
-        }
-      }
-
       // Buat approval history
       await prisma.approvalHistory.create({
         data: {
@@ -206,7 +188,35 @@ export async function POST(request: Request) {
               idKaryawan: partner.karyawan.idKaryawan,
               tipe: 'LEAVE_INFO',
               judul: 'Leave Notification',
-              pesan: `Partner ${auth.nama} from ${auth.department} has submitted leave (${tanggalMulai} - ${tanggalSelesai}).`,
+              pesan: `Partner ${auth.nama} from ${DEPARTMENT_LABEL[auth.department ?? ''] || auth.department} has submitted leave (${tanggalMulai} - ${tanggalSelesai}).`,
+              idReferensi: cuti.idCuti,
+            },
+          });
+        }
+      }
+    }
+
+    // Jika employee submit, notifikasi + to-do ke partner di department yang sama
+    if (!isPartner && cuti.idKaryawan) {
+      const partners = await partnerForDepartment(auth.department);
+      for (const partner of partners) {
+        if (partner.idUser !== auth.idUser && partner.karyawan?.idKaryawan) {
+          await prisma.notification.create({
+            data: {
+              idNotif: `NOTIF-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+              idKaryawan: partner.karyawan.idKaryawan,
+              tipe: 'LEAVE_INFO',
+              judul: 'Leave Request Pending',
+              pesan: `${auth.nama} from ${DEPARTMENT_LABEL[auth.department ?? ''] || auth.department} has submitted leave (${tanggalMulai} - ${tanggalSelesai}). Pending your approval.`,
+              idReferensi: cuti.idCuti,
+            },
+          });
+          await prisma.hrTodo.create({
+            data: {
+              idTodo: `TODO-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+              idKaryawan: partner.karyawan.idKaryawan,
+              teks: `Approve leave ${auth.nama} from ${DEPARTMENT_LABEL[auth.department ?? ''] || auth.department} (${tanggalMulai} - ${tanggalSelesai})`,
+              modul: 'LEAVE',
               idReferensi: cuti.idCuti,
             },
           });

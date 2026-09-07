@@ -26,6 +26,7 @@ interface PayReq {
   amount: string;
   projectID: string;
   status: string;
+  createdAt: string | null;
   details: null;
   action: null;
   detailRow: PaymentDetailRow;
@@ -73,6 +74,7 @@ function mapRows(rows: PaymentRaw[]): PayReq[] {
     amount: amountLabel(c),
     projectID: c.projectID ?? '-',
     status: c.idStatus,
+    createdAt: c.createdAt ?? null,
     details: null,
     action: null,
     detailRow: {
@@ -227,7 +229,8 @@ export default function PartnerPaymentApprovalPage() {
           <DataTable
             columns={columns}
             rows={filtered}
-            defaultSortKey="idRequest"
+            defaultSortKey="createdAt"
+            defaultSortDir="desc"
             emptyMessage="No requests found."
           />
         </SectionCard>

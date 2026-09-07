@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 type Notif = {
   idNotif: string;
@@ -45,9 +46,36 @@ function renderMessage(text: string | null) {
   );
 }
 
+// Map notification type to redirect URL
+function getRedirectUrl(tipe: string): string | null {
+  switch (tipe) {
+    case 'LEAVE_INFO':
+      return '/partner/leaveapproval';
+    case 'LEAVE_APPROVED':
+    case 'LEAVE_REJECTED':
+      return '/user/attendance/leaverequest';
+    case 'PAY_APPROVED':
+      return '/partner/paymentapproval';
+    case 'PAY_REVIEW_APPROVED':
+    case 'PAY_SCHEDULED':
+    case 'PAY_PAID':
+    case 'PAY_REJECTED':
+      return '/user/payment';
+    case 'CONTRACT_REMINDER_30':
+    case 'CONTRACT_REMINDER_60':
+    case 'CONTRACT_REMINDER_90':
+    case 'CONTRACT_RENEWAL':
+    case 'CONTRACT_OFFBOARDING':
+      return '/partner/contracttracking';
+    default:
+      return null;
+  }
+}
+
 // NotificationBell — lonceng notifikasi di header (semua role).
 // Data dari /api/notifications, polling tiap 30 detik.
 export default function NotificationBell() {
+  const router = useRouter();
   const [notifs, setNotifs] = useState<Notif[]>([]);
   const [unread, setUnread] = useState(0);
   const [open, setOpen] = useState(false);
@@ -149,7 +177,14 @@ export default function NotificationBell() {
               {notifs.map((n) => (
                 <li key={n.idNotif}>
                   <button
-                    onClick={() => !n.isRead && markRead(n.idNotif)}
+                    onClick={() => {
+                      if (!n.isRead) markRead(n.idNotif);
+                      const url = getRedirectUrl(n.tipe);
+                      if (url) {
+                        setOpen(false);
+                        router.push(url);
+                      }
+                    }}
                     className={`w-full text-left px-4 py-3 hover:bg-amana-primary-200/10 ${
                       n.isRead ? 'opacity-70' : 'bg-amana-primary-200/5'
                     }`}

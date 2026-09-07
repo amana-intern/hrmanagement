@@ -1,8 +1,9 @@
 import { NextRequest } from 'next/server';
-import { requireAuth } from '@/lib/dal';
+import { requireAuth, partnerForDepartment } from '@/lib/dal';
 import { prisma } from '@/lib/prisma';
 import { ROLES } from '@/lib/roles';
 import { sendEmail } from '@/lib/notify';
+import { completeTodo } from '@/lib/todos';
 
 const nota = () => `NOTIF-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 const hist = () => `HIST-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -71,6 +72,24 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
           'Ops review passed',
           `Your payment request ${id} has passed the Ops review and is waiting for final Partner approval.`
         );
+        // Buat to-do untuk partner di department yang sama
+        const empDept = payment.karyawan?.department;
+        if (empDept) {
+          const partners = await partnerForDepartment(empDept);
+          for (const partner of partners) {
+            if (partner.karyawan?.idKaryawan) {
+              await prisma.hrTodo.create({
+                data: {
+                  idTodo: `TODO-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+                  idKaryawan: partner.karyawan.idKaryawan,
+                  teks: `Review payment ${payment.karyawan?.nama ?? '-'}`,
+                  modul: 'PAYMENT',
+                  idReferensi: id,
+                },
+              });
+            }
+          }
+        }
         return Response.json({ ok: true, payment: updated });
       }
       if (action === 'schedule') {
@@ -171,6 +190,7 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
           'Payment request approved',
           `Your payment request ${id} has been approved and is waiting for a payment schedule.`
         );
+        await completeTodo('PAYMENT', id);
         return Response.json({ ok: true, payment: updated });
       }
       if (action === 'reject' && payment.idStatus === 'ST_PAY_PENDING_PARTNER') {
@@ -193,6 +213,7 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
           return u;
         });
         await sendNotifEmail('Payment request rejected', `Your payment request ${id} was rejected. Reason: ${catatan}`);
+        await completeTodo('PAYMENT', id);
         return Response.json({ ok: true, payment: updated });
       }
       return Response.json({ error: 'Invalid action for Partner' }, { status: 400 });

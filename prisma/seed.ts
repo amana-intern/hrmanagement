@@ -86,6 +86,8 @@ const GRADES = [
   { idGrade: 'GRD011', namaGrade: 'Senior Officer' },
   { idGrade: 'GRD012', namaGrade: 'Lead/Coordinator' },
   { idGrade: 'GRD013', namaGrade: 'Head' },
+  { idGrade: 'GRD014', namaGrade: 'Internship' },
+  { idGrade: 'GRD015', namaGrade: 'Advisor' },
 ];
 
 const STATUSES = [
@@ -202,13 +204,17 @@ function mapGrade(grade: string): string {
     'Head (Partner)': 'GRD013',
     'Partner': 'GRD008',
     'Senior Associate': 'GRD004',
+    'Senior Specialist': 'GRD006',
     'Specialist': 'GRD005',
     'Associate': 'GRD003',
     'Lead': 'GRD012',
     'Senior Analyst': 'GRD002',
     'Analyst': 'GRD001',
     'Officer': 'GRD010',
+    'Senior Officer': 'GRD011',
     'Junior Officer': 'GRD009',
+    'Internship': 'GRD014',
+    'Advisor': 'GRD015',
   };
   return m[grade] || 'GRD001';
 }

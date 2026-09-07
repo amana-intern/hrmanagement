@@ -71,6 +71,7 @@ export function partnerForDepartment(department: string | null) {
   if (department === 'ops') {
     return prisma.user.findMany({
       where: { idRole: ROLES.PARTNER, karyawan: { masterGrade: { namaGrade: 'Head' } } },
+      include: { karyawan: true },
     });
   }
   return prisma.user.findMany({
@@ -78,6 +79,7 @@ export function partnerForDepartment(department: string | null) {
       idRole: ROLES.PARTNER,
       karyawan: { department, masterGrade: { namaGrade: 'Partner' } },
     },
+    include: { karyawan: true },
   });
 }
 

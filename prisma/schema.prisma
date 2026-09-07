@@ -92,7 +92,7 @@ model Karyawan {
   department      String?           @db.VarChar
   departments     String[]          @default([])
   noTelepon       String?           @db.VarChar
-  sisaCutiTahunan Int?              @default(12)
+  sisaCutiTahunan Float?              @default(12)
   accrualRate     Float?            @db.DoublePrecision
   tipeKontrak     String?           @default("KONTRAK") @db.VarChar
   user            User?             @relation
@@ -305,13 +305,15 @@ model AssessmentAnswer {
 }
 
 model HrTodo {
-  idTodo     String    @id @db.VarChar
-  idKaryawan String?   @db.VarChar
-  teks       String?   @db.VarChar
-  done       Boolean   @default(false)
-  doneAt     DateTime? @db.Timestamp()
-  createdAt  DateTime? @default(now()) @db.Timestamp()
-  karyawan   Karyawan? @relation(fields: [idKaryawan], references: [idKaryawan])
+  idTodo      String    @id @db.VarChar
+  idKaryawan  String?   @db.VarChar
+  teks        String?   @db.VarChar
+  done        Boolean   @default(false)
+  doneAt      DateTime? @db.Timestamp()
+  createdAt   DateTime? @default(now()) @db.Timestamp()
+  modul       String?   @db.VarChar
+  idReferensi String?   @db.VarChar
+  karyawan    Karyawan? @relation(fields: [idKaryawan], references: [idKaryawan])
 }
 
 model ApprovalHistory {

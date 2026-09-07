@@ -5,6 +5,7 @@ import { ROLES } from '@/lib/roles';
 import { LEAVE_TYPES } from '@/lib/constants';
 import { persistLeaveBalance } from '@/lib/leave';
 import { sendEmail } from '@/lib/notify';
+import { completeTodo } from '@/lib/todos';
 
 // PATCH /api/leave/[id] — Partner approve/reject cuti (pilar department).
 // Matriks approver (Fitur 9):
@@ -71,24 +72,8 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
         },
       });
 
-      // Approve kompensasi: tambahkan jumlahHariKompensasi ke cutiKompensasi di kontrak aktif
-      if (action === 'approve' && isCompensatory && cuti.karyawan?.idKaryawan && cuti.jumlahHariKompensasi) {
-        const activeContract = await tx.kontrakKaryawan.findFirst({
-          where: {
-            idKaryawan: cuti.karyawan.idKaryawan,
-            idStatus: 'ST_KON_ACTIVE',
-          },
-          orderBy: { tanggalMulai: 'desc' },
-        });
-        if (activeContract) {
-          await tx.kontrakKaryawan.update({
-            where: { idKontrak: activeContract.idKontrak },
-            data: {
-              cutiKompensasi: (activeContract.cutiKompensasi ?? 0) + cuti.jumlahHariKompensasi,
-            },
-          });
-        }
-      }
+      // Approve kompensasi: tidak langsung increment cutiKompensasi
+      // (akan dikurangi otomatis oleh cron harian saat tanggal tiba)
 
       await tx.approvalHistory.create({
         data: {
@@ -111,7 +96,7 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
             judul: action === 'approve' ? 'Leave approved' : 'Leave rejected',
             pesan:
               action === 'approve'
-                ? `Your leave request (${cuti.tanggalMulai?.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })} - ${cuti.tanggalSelesai?.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}) has been approved.${isCompensatory ? ` Compensatory leave of ${cuti.jumlahHariKompensasi} day(s) has been added to your balance.` : ''}`
+                ? `Your leave request (${cuti.tanggalMulai?.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })} - ${cuti.tanggalSelesai?.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}) has been approved.${isCompensatory ? ` Compensatory leave of ${cuti.jumlahHariKompensasi} day(s) will be automatically deducted when the dates arrive.` : ''}`
                 : `Your leave request (${cuti.tanggalMulai?.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })} - ${cuti.tanggalSelesai?.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}) was rejected. Reason: ${catatan}`,
             idReferensi: id,
           },
@@ -142,6 +127,9 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
           : `Hello ${applicantName},\n\nYour leave request (${range}) was rejected.\nReason: ${catatan}\n\nThank you.`;
       await sendEmail({ to: applicantEmail, subject, text });
     }
+
+    // Tandai to-do partner selesai
+    await completeTodo('LEAVE', id);
 
     return Response.json({ ok: true, cuti: updated });
   } catch (e) {

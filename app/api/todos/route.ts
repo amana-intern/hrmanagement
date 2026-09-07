@@ -35,6 +35,8 @@ export async function GET() {
         teks: t.teks,
         done: t.done,
         doneAt: t.doneAt ? t.doneAt.toISOString() : null,
+        modul: t.modul ?? null,
+        idReferensi: t.idReferensi ?? null,
       })),
     });
   } catch (e) {

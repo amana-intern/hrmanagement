@@ -161,8 +161,8 @@ export default function ContractTrackingPage({
           key={activeFilter}
           columns={columns}
           rows={filtered}
-          defaultSortKey={activeFilter === 'all' || activeFilter === 'needaction' ? 'name' : 'daysLeft'}
-          defaultSortDir={activeFilter === 'all' ? 'desc' : 'asc'}
+          defaultSortKey="daysLeft"
+          defaultSortDir="desc"
           emptyMessage={
             activeFilter === 'needaction'
               ? 'No contracts awaiting action.'

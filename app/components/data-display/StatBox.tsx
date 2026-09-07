@@ -7,10 +7,11 @@ export interface Stat {
   value: number | string;
   label: string;
   caption: string;
+  onClick?: () => void;
 }
 
 /** Bordered stat card: label header, big number in a colored pill with a clock icon, caption below. */
-export default function StatBox({ value, label, caption }: Stat) {
+export default function StatBox({ value, label, caption, onClick }: Stat) {
   return (
     <div className="flex-1 min-w-0 border border-amana-primary-500 rounded-[5px] px-3 py-2">
       <div className="text-[16px] font-semibold text-amana-neutral-500 border-b border-amana-neutral-500 pb-1 mb-1 line-clamp-2 leading-tight">
@@ -20,7 +21,10 @@ export default function StatBox({ value, label, caption }: Stat) {
         <span className="text-[27px] font-semibold text-amana-danger-500 leading-none">
           {typeof value === 'number' ? <AnimatedNumber value={value} /> : value}
         </span>
-        <ClockIcon className="w-6 h-6 text-amana-danger-500 flex-shrink-0" />
+        <ClockIcon
+          className={`w-6 h-6 text-amana-danger-500 flex-shrink-0 ${onClick ? 'cursor-pointer hover:text-amana-danger-700' : ''}`}
+          onClick={onClick}
+        />
       </div>
       <div className="text-[9px] leading-tight text-amana-neutral-400 mt-1 whitespace-nowrap overflow-hidden text-ellipsis">
         {caption}

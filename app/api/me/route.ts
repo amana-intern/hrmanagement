@@ -34,11 +34,12 @@ export async function GET() {
     let unpaidLeaveUsed = 0;
     let cvURL: string | null = null;
     let compensatoryLeaveUsed = 0;
+    let compensatoryLeaveDetails: { tanggalPengajuan: string; tanggalMulai: string; tanggalSelesai: string; jumlahHari: number; status: string }[] = [];
 
     if (auth.idKaryawan) {
       const id = auth.idKaryawan;
       const startOfYear = new Date(new Date().getFullYear(), 0, 1);
-      const [balance, pendingLeaveCount, sickCount, payCount, certCount, talent, specialUsed, unpaidUsed, compensatoryUsed] =
+      const [balance, pendingLeaveCount, sickCount, payCount, certCount, talent, specialUsed, unpaidUsed, compensatoryUsed, compDetailsRaw] =
         await Promise.all([
           computeLeaveBalance(id),
           prisma.pengajuanCuti.count({ where: { idKaryawan: id, idStatus: 'ST_LEAVE_PENDING' } }),
@@ -72,6 +73,20 @@ export async function GET() {
             },
             select: { jumlahHariKompensasi: true },
           }),
+          prisma.pengajuanCuti.findMany({
+            where: {
+              idKaryawan: id,
+              idJenisCuti: LEAVE_TYPES.COMPENSATORY,
+            },
+            select: {
+              tanggalPengajuan: true,
+              tanggalMulai: true,
+              tanggalSelesai: true,
+              jumlahHariKompensasi: true,
+              idStatus: true,
+            },
+            orderBy: { tanggalMulai: 'desc' },
+          }),
         ]);
       sisaCuti = balance.sisa;
       accrued = balance.accrued;
@@ -83,6 +98,13 @@ export async function GET() {
       specialLeaveUsed = specialUsed;
       unpaidLeaveUsed = unpaidUsed;
       compensatoryLeaveUsed = compensatoryUsed.reduce((sum, c) => sum + (c.jumlahHariKompensasi ?? 0), 0);
+      compensatoryLeaveDetails = compDetailsRaw.map((c) => ({
+        tanggalPengajuan: c.tanggalPengajuan?.toISOString().split('T')[0] ?? '',
+        tanggalMulai: c.tanggalMulai?.toISOString().split('T')[0] ?? '',
+        tanggalSelesai: c.tanggalSelesai?.toISOString().split('T')[0] ?? '',
+        jumlahHari: c.jumlahHariKompensasi ?? 0,
+        status: c.idStatus ?? '',
+      }));
       cvURL = talent?.fileCVURL ?? null;
     }
 
@@ -101,7 +123,7 @@ export async function GET() {
         pictureUrl: auth.pictureUrl,
         permissions: auth.rolePermissions,
         cvURL,
-        leave: { sisaCuti, accrued, carryOver, specialLeaveUsed, unpaidLeaveUsed, compensatoryLeaveUsed },
+        leave: { sisaCuti, accrued, carryOver, specialLeaveUsed, unpaidLeaveUsed, compensatoryLeaveUsed, compensatoryLeaveDetails },
         stats: { pendingLeaves, sickLeaves, pendingPayments, certificates },
       },
     });

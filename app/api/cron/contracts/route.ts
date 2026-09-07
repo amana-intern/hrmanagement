@@ -89,6 +89,18 @@ export async function GET(request: Request) {
               idReferensi: contract.idKontrak,
             },
           });
+          // Buat to-do untuk partner
+          if (r.idKaryawan === partner?.idKaryawan) {
+            await prisma.hrTodo.create({
+              data: {
+                idTodo: `TODO-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+                idKaryawan: r.idKaryawan,
+                teks: `Kontrak ${nama} expires on ${tanggal}. Review renewal/offboarding.`,
+                modul: 'CONTRACT',
+                idReferensi: contract.idKontrak,
+              },
+            });
+          }
         }
         if (r.email) {
           await sendEmail({ to: r.email, subject: judul, text: r.pesan });

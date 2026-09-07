@@ -197,7 +197,7 @@ function ToDoList({
                 <span className="relative min-w-0">
                   <span
                     className={cn(
-                      'block text-[16px] truncate transition-colors duration-300',
+                      'block text-[16px] whitespace-normal break-words transition-colors duration-300',
                       task.done ? 'text-amana-neutral-300' : 'text-black'
                     )}
                   >

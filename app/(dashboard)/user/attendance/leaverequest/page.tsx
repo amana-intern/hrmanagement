@@ -1,15 +1,25 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { CalendarCheck } from 'lucide-react';
+import { CalendarCheck, X } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { springSnappy } from '@/app/utils/motion';
 import PageTopBar from '@/app/components/layout/PageTopBar';
 import SectionCard from '@/app/components/layout/SectionCard';
 import StatBox from '@/app/components/data-display/StatBox';
+import StatusPill from '@/app/components/data-display/StatusPill';
 import SelectField from '@/app/components/forms/SelectField';
 import TextField from '@/app/components/forms/TextField';
 import Button from '@/app/components/forms/Button';
 import StatusModal from '@/app/components/feedback/StatusModal';
-import { LEAVE_TYPES } from '@/lib/constants';
+import { LEAVE_TYPES, LEAVE_STATUS } from '@/lib/constants';
+import { statusColor } from '@/app/utils/statusColor';
+
+const COMP_STATUS_MAP: Record<string, string> = {
+  ST_LEAVE_APPROVED: 'Approved',
+  ST_LEAVE_PENDING: 'Pending',
+  ST_LEAVE_REJECTED: 'Rejected',
+};
 
 const specialLeaveList = [
   'Menstruation pain (Maximum of 2 days)',
@@ -55,6 +65,8 @@ export default function LeaveRequestPage() {
   const [specialLeaveUsed, setSpecialLeaveUsed] = useState<number | null>(null);
   const [unpaidLeaveUsed, setUnpaidLeaveUsed] = useState<number | null>(null);
   const [compensatoryLeaveUsed, setCompensatoryLeaveUsed] = useState<number | null>(null);
+  const [compDetails, setCompDetails] = useState<{ tanggalPengajuan: string; tanggalMulai: string; tanggalSelesai: string; jumlahHari: number; status: string }[]>([]);
+  const [showCompModal, setShowCompModal] = useState(false);
 
   const loadBalance = async () => {
     try {
@@ -65,6 +77,7 @@ export default function LeaveRequestPage() {
         setSpecialLeaveUsed(data.user?.leave?.specialLeaveUsed ?? 0);
         setUnpaidLeaveUsed(data.user?.leave?.unpaidLeaveUsed ?? 0);
         setCompensatoryLeaveUsed(data.user?.leave?.compensatoryLeaveUsed ?? 0);
+        setCompDetails(data.user?.leave?.compensatoryLeaveDetails ?? []);
       }
     } catch {}
   };
@@ -79,7 +92,6 @@ export default function LeaveRequestPage() {
     { count: leaveBalance != null ? String(leaveBalance) : '...', label: 'Paid Leave', caption: 'Remaining Paid Leave Balance(s)' },
     { count: specialLeaveUsed != null ? String(specialLeaveUsed) : '...', label: 'Special Leave', caption: 'Special Leave used this year' },
     { count: unpaidLeaveUsed != null ? String(unpaidLeaveUsed) : '...', label: 'Unpaid Leave', caption: 'Unpaid Leave used this year' },
-    { count: compensatoryLeaveUsed != null ? String(compensatoryLeaveUsed) : '...', label: 'Compensatory', caption: 'Compensatory Leave earned (approved)' },
   ];
 
   const isFormValid =
@@ -178,6 +190,12 @@ export default function LeaveRequestPage() {
           {leaveBalanceItems.map((item, idx) => (
             <StatBox key={idx} value={item.count} label={item.label} caption={item.caption} />
           ))}
+          <StatBox
+            value={compensatoryLeaveUsed != null ? String(compensatoryLeaveUsed) : '...'}
+            label="Compensatory"
+            caption="Compensatory Leave earned (approved)"
+            onClick={() => setShowCompModal(true)}
+          />
         </div>
       </SectionCard>
 
@@ -316,6 +334,76 @@ export default function LeaveRequestPage() {
       </SectionCard>
 
       <StatusModal state={message} onClose={() => setMessage(null)} />
+
+      {/* Compensatory Leave Details Modal */}
+      {showCompModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-amana-neutral-100 rounded-[5px] border border-amana-primary-500 shadow-lg w-full max-w-2xl mx-4 max-h-[80vh] flex flex-col">
+            <div className="flex-shrink-0 flex items-center justify-between px-5 py-3 border-b border-amana-primary-500">
+              <h2 className="text-[24px] font-semibold text-amana-primary-500">Your Compensatory Leave</h2>
+              <motion.button
+                onClick={() => setShowCompModal(false)}
+                whileHover={{ rotate: 90 }}
+                whileTap={{ scale: 0.9 }}
+                transition={springSnappy}
+                className="text-amana-primary-500 hover:text-amana-danger-500"
+              >
+                <X className="w-6 h-6" />
+              </motion.button>
+            </div>
+            <div className="flex-1 overflow-y-auto px-5 pt-3 pb-2">
+              {compDetails.length === 0 ? (
+                <p className="text-sm text-amana-neutral-400 text-center py-8">No compensatory leave records found.</p>
+              ) : (
+                <table className="w-full table-fixed text-center border-collapse">
+                  <colgroup>
+                    <col className="w-[22%]" />
+                    <col className="w-[22%]" />
+                    <col className="w-[22%]" />
+                    <col className="w-[10%]" />
+                    <col className="w-[24%]" />
+                  </colgroup>
+                  <thead>
+                    <tr>
+                      <th className="px-3 pb-2 border-b border-amana-neutral-300 bg-amana-neutral-100 text-center font-semibold text-amana-primary-500 text-[16px] border-r border-amana-neutral-300">Submitted On</th>
+                      <th className="px-3 pb-2 border-b border-amana-neutral-300 bg-amana-neutral-100 text-center font-semibold text-amana-primary-500 text-[16px] border-r border-amana-neutral-300">Start Date</th>
+                      <th className="px-3 pb-2 border-b border-amana-neutral-300 bg-amana-neutral-100 text-center font-semibold text-amana-primary-500 text-[16px] border-r border-amana-neutral-300">End Date</th>
+                      <th className="px-3 pb-2 border-b border-amana-neutral-300 bg-amana-neutral-100 text-center font-semibold text-amana-primary-500 text-[16px] border-r border-amana-neutral-300">Days</th>
+                      <th className="px-3 pb-2 border-b border-amana-neutral-300 bg-amana-neutral-100 text-center font-semibold text-amana-primary-500 text-[16px]">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {compDetails.map((item, idx) => (
+                      <tr key={idx}>
+                        <td className={`text-amana-neutral-500 text-center truncate px-3 py-2.5 text-[16px] border-r border-amana-neutral-300 ${idx < compDetails.length - 1 ? 'border-b' : ''}`}>
+                          {item.tanggalPengajuan ? new Date(item.tanggalPengajuan + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}
+                        </td>
+                        <td className={`text-amana-neutral-500 text-center truncate px-3 py-2.5 text-[16px] border-r border-amana-neutral-300 ${idx < compDetails.length - 1 ? 'border-b' : ''}`}>
+                          {new Date(item.tanggalMulai + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </td>
+                        <td className={`text-amana-neutral-500 text-center truncate px-3 py-2.5 text-[16px] border-r border-amana-neutral-300 ${idx < compDetails.length - 1 ? 'border-b' : ''}`}>
+                          {new Date(item.tanggalSelesai + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </td>
+                        <td className={`text-amana-neutral-500 text-center truncate px-3 py-2.5 text-[16px] border-r border-amana-neutral-300 ${idx < compDetails.length - 1 ? 'border-b' : ''}`}>{item.jumlahHari}</td>
+                        <td className={`text-center px-3 py-2.5 text-[16px] overflow-visible ${idx < compDetails.length - 1 ? 'border-b border-amana-neutral-300' : ''}`}>
+                          <div className="flex justify-center">
+                            <StatusPill color={statusColor(COMP_STATUS_MAP[item.status] ?? item.status)} fullWidth={false}>
+                              {COMP_STATUS_MAP[item.status] ?? item.status}
+                            </StatusPill>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+            <div className="px-5 py-3 border-t border-amana-neutral-300 flex justify-end">
+              <Button variant="outline" onClick={() => setShowCompModal(false)}>Close</Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

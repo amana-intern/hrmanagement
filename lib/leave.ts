@@ -135,9 +135,10 @@ export async function computeLeaveBalance(idKaryawan: string): Promise<LeaveBala
   const period = resolvePeriod(k.tanggalMasuk, contracts);
   const consumed = await consumedDays(idKaryawan, period.start, period.end, { includeFuture: true });
   const accrued = accruedMonths(period.start, new Date(), period.annualQuota);
-  // Saldo = carry-over + kompensasi + accrual - pemakaian (riwayat pengajuan + offset historis).
+  // Saldo = carry-over + accrual - pemakaian (riwayat pengajuan + offset historis).
+  // Compensatory leave dipisah (dikurangi otomatis oleh cron harian).
   const sisa = Math.max(
-    Math.floor(period.carryOver + period.cutiKompensasi + accrued - consumed - period.cutiTerpakaiAwal),
+    period.carryOver + accrued - consumed - period.cutiTerpakaiAwal,
     0
   );
 

@@ -313,7 +313,8 @@ export default function PartnerLeaveApprovalPage() {
           <DataTable
             columns={columns}
             rows={filtered}
-            defaultSortKey="name"
+            defaultSortKey="submittedAt"
+            defaultSortDir="desc"
             emptyMessage="No requests found."
           />
         </SectionCard>

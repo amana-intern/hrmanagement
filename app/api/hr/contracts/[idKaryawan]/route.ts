@@ -3,6 +3,7 @@ import { requireAuth } from '@/lib/dal';
 import { prisma } from '@/lib/prisma';
 import { ROLES } from '@/lib/roles';
 import { OFFBOARDING_FORM_URL, sendEmail } from '@/lib/notify';
+import { completeTodo } from '@/lib/todos';
 
 const nota = () => `NOTIF-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
@@ -120,6 +121,15 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ idKar
     const hrEmail = hrUser?.email;
     if (employeeEmail) await sendEmail({ to: employeeEmail, ...emailKaryawan });
     if (hrEmail) await sendEmail({ to: hrEmail, ...emailHR });
+
+    // Tandai to-do partner selesai
+    const activeContract = await prisma.kontrakKaryawan.findFirst({
+      where: { idKaryawan, idStatus: 'ST_KON_ACTIVE' },
+      orderBy: { tanggalMulai: 'desc' },
+    });
+    if (activeContract) {
+      await completeTodo('CONTRACT', activeContract.idKontrak);
+    }
 
     return Response.json({ ok: true });
   } catch (e) {
