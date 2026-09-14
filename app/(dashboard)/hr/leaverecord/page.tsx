@@ -14,14 +14,16 @@ import Modal from '@/app/components/feedback/Modal';
 import { statusColor } from '@/app/utils/statusColor';
 import { useFilters } from '@/app/utils/useFilters';
 import { downloadTSV } from '@/lib/sheets';
-import { formatDateWIB } from '@/app/utils/formatDate';
+import { formatDateWIB, formatDateTimeWIB } from '@/app/utils/formatDate';
 import { TableSkeleton } from '@/app/components/feedback/PageSkeleton';
 
 interface LeaveRecord {
   id: string;
   name: string;
+  department: string;
   grade: string;
   type: string;
+  jenis: string;
   startDate: string;
   endDate: string;
   totalDays: number | null;
@@ -37,7 +39,7 @@ interface LeaveRecord {
 
 interface RawLeave {
   idCuti: string;
-  karyawan?: { nama?: string | null; masterGrade?: { namaGrade?: string | null } | null };
+  karyawan?: { nama?: string | null; department?: string | null; masterGrade?: { namaGrade?: string | null } | null } | null;
   masterJenisCuti?: { namaJenis?: string | null } | null;
   tanggalMulai?: string | null;
   tanggalSelesai?: string | null;
@@ -58,6 +60,14 @@ const STATUS_LABELS: Record<string, string> = {
   ST_LEAVE_REJECTED: 'Rejected',
 };
 
+const DEPARTMENT_LABEL: Record<string, string> = {
+  ops: 'Operations',
+  health: 'Health and Wellbeing',
+  strategy: 'Strategy and Transformation',
+  education: 'Education and HR',
+  digital: 'Digital and Finance',
+};
+
 const iso = (d: Date) => d.toISOString().slice(0, 10);
 
 interface Filters {
@@ -76,6 +86,13 @@ export default function LeaveRecordPage() {
   const [detailsModal, setDetailsModal] = useState<LeaveRecord | null>(null);
   const { draft, applied, setField, setFieldAndApply, handleSearch, handleReset } = useFilters<Filters>(emptyFilters);
 
+  const DetailField = ({ label, value }: { label: string; value: React.ReactNode }) => (
+    <div className="flex items-start justify-between gap-4 py-2 border-b border-amana-neutral-200 last:border-b-0">
+      <span className="text-[14px] font-semibold text-amana-neutral-400 flex-shrink-0">{label}</span>
+      <span className="text-[15px] text-amana-neutral-500 text-right break-words">{value}</span>
+    </div>
+  );
+
   useEffect(() => {
     (async () => {
       const res = await fetch('/api/leave/list', { cache: 'no-store' });
@@ -85,14 +102,16 @@ export default function LeaveRecordPage() {
           ((data as { list?: RawLeave[] }).list ?? []).map((c) => ({
             id: c.idCuti,
             name: c.karyawan?.nama ?? '-',
+            department: (c.karyawan?.department && DEPARTMENT_LABEL[c.karyawan.department]) || c.karyawan?.department || '-',
             grade: c.karyawan?.masterGrade?.namaGrade ?? '-',
             type: c.masterJenisCuti?.namaJenis ?? 'Leave',
+            jenis: c.masterJenisCuti?.namaJenis ?? 'cuti',
             startDate: c.tanggalMulai ? iso(new Date(c.tanggalMulai)) : '',
             endDate: c.tanggalSelesai ? iso(new Date(c.tanggalSelesai)) : '',
             totalDays: c.jumlahHari ?? null,
             reason: c.keterangan ?? '-',
             note: c.catatan ?? '',
-            submittedDate: c.tanggalPengajuan ? iso(new Date(c.tanggalPengajuan)) : '',
+            submittedDate: c.tanggalPengajuan ?? '',
             status: c.idStatus ?? 'ST_LEAVE_PENDING',
             tanggalKerjaHariLibur: c.tanggalKerjaHariLibur ?? null,
             tanggalSelesaiKerjaLibur: c.tanggalSelesaiKerjaLibur ?? null,
@@ -197,47 +216,41 @@ export default function LeaveRecordPage() {
         <DataTable
           columns={columns}
           rows={filtered}
-          defaultSortKey="name"
+          defaultSortKey="submittedDate"
+          defaultSortDir="desc"
           emptyMessage="No leave records match your filters."
         />
       </SectionCard>
 
       {detailsModal && (
-        <Modal title="Leave Details" onClose={() => setDetailsModal(null)} maxWidth="max-w-lg">
+        <Modal title={`Leave Details - ${detailsModal.name || ''}`} onClose={() => setDetailsModal(null)} maxWidth="max-w-lg">
           <div className="p-5 flex flex-col">
-            {[
-              ['Employee', detailsModal.name],
-              ['Grade', detailsModal.grade],
-              ['Leave Type', detailsModal.type],
-              ['Reason', detailsModal.reason],
-              ['Start Date', detailsModal.startDate ? formatDateWIB(detailsModal.startDate) : '-'],
-              ['End Date', detailsModal.endDate ? formatDateWIB(detailsModal.endDate) : '-'],
-              [
-                'Total Days',
-                detailsModal.totalDays != null
-                  ? `${detailsModal.totalDays} day(s)`
-                  : detailsModal.startDate && detailsModal.endDate
-                    ? `${Math.max(Math.round((new Date(detailsModal.endDate).getTime() - new Date(detailsModal.startDate).getTime()) / 86400000) + 1, 0)} day(s)`
-                    : '-',
-              ],
-              ...(detailsModal.tanggalKerjaHariLibur
-                ? [['Holiday Work Date', `${formatDateWIB(detailsModal.tanggalKerjaHariLibur)}${detailsModal.tanggalSelesaiKerjaLibur ? ` - ${formatDateWIB(detailsModal.tanggalSelesaiKerjaLibur)}` : ''}`]]
-                : []),
-              ...(detailsModal.tipeCutiKompensasi
-                ? [['Day Type', detailsModal.tipeCutiKompensasi === 'FULL' ? 'Full Day (1 day)' : 'Half Day (0.5 day)']]
-                : []),
-              ...(detailsModal.jumlahHariKompensasi != null
-                ? [['Compensatory Days', `${detailsModal.jumlahHariKompensasi} day(s)`]]
-                : []),
-              ['Submitted On', detailsModal.submittedDate ? formatDateWIB(detailsModal.submittedDate) : '-'],
-              ['Status', STATUS_LABELS[detailsModal.status] ?? detailsModal.status],
-              ...(detailsModal.note ? [['Approver Note', detailsModal.note]] : []),
-            ].map(([label, value]) => (
-              <div key={label} className="flex items-start justify-between gap-4 py-2 border-b border-amana-neutral-200 last:border-b-0">
-                <span className="text-[14px] font-semibold text-amana-neutral-400 flex-shrink-0">{label}</span>
-                <span className="text-[15px] text-amana-neutral-500 text-right">{value}</span>
-              </div>
-            ))}
+            <DetailField label="Submitted On" value={detailsModal.submittedDate ? formatDateTimeWIB(detailsModal.submittedDate) : '-'} />
+            <DetailField label="Employee" value={detailsModal.name} />
+            <DetailField label="Department" value={detailsModal.department} />
+            <DetailField label="Grade" value={detailsModal.grade} />
+            <div className="flex items-start justify-between gap-4 py-2 border-b border-amana-neutral-200">
+              <span className="text-[14px] font-semibold text-amana-neutral-400 flex-shrink-0">Status</span>
+              <StatusPill color={statusColor(STATUS_LABELS[detailsModal.status] ?? detailsModal.status)}>
+                {STATUS_LABELS[detailsModal.status] ?? detailsModal.status}
+              </StatusPill>
+            </div>
+            <DetailField label="Start Date" value={detailsModal.startDate ? formatDateWIB(detailsModal.startDate) : '-'} />
+            <DetailField label="End Date" value={detailsModal.endDate ? formatDateWIB(detailsModal.endDate) : '-'} />
+            {detailsModal.totalDays != null && (
+              <DetailField label="Total Days" value={`${detailsModal.totalDays} day(s)`} />
+            )}
+            {detailsModal.tanggalKerjaHariLibur && (
+              <DetailField label="Holiday Work Date" value={`${formatDateWIB(detailsModal.tanggalKerjaHariLibur)}${detailsModal.tanggalSelesaiKerjaLibur ? ` - ${formatDateWIB(detailsModal.tanggalSelesaiKerjaLibur)}` : ''}`} />
+            )}
+            {detailsModal.tipeCutiKompensasi && (
+              <DetailField label="Day Type" value={detailsModal.tipeCutiKompensasi === 'FULL' ? 'Full Day (1 day)' : 'Half Day (0.5 day)'} />
+            )}
+            {detailsModal.jumlahHariKompensasi != null && (
+              <DetailField label="Compensatory Days" value={`${detailsModal.jumlahHariKompensasi} day(s)`} />
+            )}
+            <DetailField label={detailsModal.jenis === 'sakit' ? 'Symptoms' : 'Reason'} value={detailsModal.reason ?? '-'} />
+            {detailsModal.note && <DetailField label="Approver Note" value={detailsModal.note} />}
           </div>
         </Modal>
       )}

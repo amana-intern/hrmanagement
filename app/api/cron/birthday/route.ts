@@ -33,34 +33,73 @@ export async function GET(request: Request) {
       return tgl.getUTCMonth() + 1 === currentMonth && tgl.getUTCDate() === currentDay;
     });
 
-    if (birthdays.length > 0) {
-      const webhookUrl = process.env.GOOGLE_CHAT_WEBHOOK_URL;
+    // 1. Validasi webhook URL sebelum loop
+    const webhookUrl = process.env.GOOGLE_CHAT_WEBHOOK_URL;
+    if (!webhookUrl) {
+      console.error('GOOGLE_CHAT_WEBHOOK_URL not configured');
+      return NextResponse.json({ success: false, error: 'Webhook URL not configured' }, { status: 500 });
+    }
 
-      // Pakai model Gemini versi terbaru yang selalu didukung
-      const model = genAI.getGenerativeModel({ model: 'gemini-flash-latest' });
+    if (birthdays.length === 0) {
+      console.log('No birthdays today.');
+      return NextResponse.json({ success: true, message: 'No birthdays today.', sent: 0, failed: 0 });
+    }
 
-      for (const person of birthdays) {
-        const nama = person.nama ?? 'teman kita';
-        const grade = person.masterGrade?.namaGrade ? ` (${person.masterGrade.namaGrade})` : '';
+    // 3. Logging: daftar orang yang ulang tahun hari ini
+    const names = birthdays.map((p) => p.nama ?? p.idKaryawan);
+    console.log(`Found ${birthdays.length} birthday(s): ${names.join(', ')}`);
 
+    // Pakai model Gemini versi terbaru yang selalu didukung
+    const model = genAI.getGenerativeModel({ model: 'gemini-flash-latest' });
+
+    let sentCount = 0;
+    let failedCount = 0;
+
+    // 2. Try/catch per orang agar 1 error tidak hentikan yang lain
+    for (const person of birthdays) {
+      const nama = person.nama ?? 'teman kita';
+      const grade = person.masterGrade?.namaGrade ? ` (${person.masterGrade.namaGrade})` : '';
+
+      try {
         // Beri perintah (prompt) ke AI untuk merangkai kalimatnya
-        const prompt = `buatkan ucapan selamat ulang tahun berbahasa indonesia untuk salah satu anggota keluarga bernama ${nama}${grade}. Buat pesannya unik, kreatif, tidak kaku, serta mengingatkan bahwa bertambahnya umur semoga bertambah juga keimanan dan ketakwaan kepada tuhan yang maha esa. berikan juga doa semoga bertambah rezeki, selalu diberi kesehatan dan doa baik lainnya. Gunakan emoji yang pas. Jangan terlalu panjang, maksimal 2 sampai 3 kalimat saja.`;
+        const prompt = `buatkan ucapan selamat ulang tahun berbahasa indonesia untuk salah satu karyawan bernama ${nama}${grade}. Buat pesannya unik, kreatif, tidak kaku. berikan juga doa semoga bertambah rezeki, selalu diberi kesehatan dan doa baik lainnya. Gunakan emoji yang pas. Jangan terlalu panjang, maksimal 2 sampai 3 kalimat saja.`;
 
         const aiResult = await model.generateContent(prompt);
-        const generatedMessage = aiResult.response.text();
+        let generatedMessage = aiResult.response.text();
+
+        // 4. Validasi AI response — fallback jika kosong
+        if (!generatedMessage || generatedMessage.trim().length === 0) {
+          console.warn(`AI returned empty message for ${nama}, using fallback`);
+          generatedMessage = `Selamat Ulang Tahun, ${nama}! 🎂 Semoga di usia baru ini, selalu diberi kesehatan, rezeki yang berlimpah, dan kebahagiaan. Terus menjadi bagian terbaik dari tim kita! 🤲✨`;
+        }
 
         // Kirim teks buatan AI ke Google Chat
-        await fetch(webhookUrl!, {
+        const response = await fetch(webhookUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ text: generatedMessage }),
         });
+
+        if (!response.ok) {
+          throw new Error(`Webhook returned ${response.status}: ${response.statusText}`);
+        }
+
+        // 3. Logging: success
+        console.log(`✅ Sent to ${nama}`);
+        sentCount++;
+      } catch (err) {
+        // 2. Error handling per orang + 3. Logging: failed
+        console.error(`❌ Failed for ${nama}:`, err);
+        failedCount++;
       }
     }
 
     return NextResponse.json({
       success: true,
-      message: `Birthday check completed. Found ${birthdays.length} birthday(s) and sent dynamic AI messages.`,
+      message: `Birthday check completed.`,
+      sent: sentCount,
+      failed: failedCount,
+      names,
     });
   } catch (error) {
     console.error('Error broadcasting birthday:', error);

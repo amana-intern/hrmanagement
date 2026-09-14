@@ -110,7 +110,7 @@ export async function GET() {
         department: k.department ?? '-',
         roleLabel: k.user?.role?.namaRole ?? '-',
         pictureUrl: k.user?.pictureUrl ?? null,
-        tipeKontrak: k.tipeKontrak ?? 'KONTRAK',
+        tipeKontrak: k.tipeKontrak ?? '-',
         contractStartDate: activeContract?.tanggalMulai
           ? activeContract.tanggalMulai.toISOString().slice(0, 10)
           : null,
@@ -171,7 +171,7 @@ export async function GET() {
 // Grade wajib. Grade "Head"/"Partner" = leader -> role dipaksa ROLE_PARTNER (permission Partner).
 // Selain itu = karyawan -> role bebas teks (custom); jika diisi Partner/Admin HR/Admin OPS ditolak,
 // dan role custom otomatis mendapat permission Employee.
-// tipeKontrak: 'KONTRAK' (default) | 'TETAP'. Kontrak (KontrakKaryawan) hanya dibuat
+    // tipeKontrak: 'PKWTT' | 'PKWT' | 'KKI' | 'INTERNSHIP' (default 'PKWT'). Kontrak (KontrakKaryawan) hanya dibuat
 // jika tipeKontrak 'KONTRAK' dan tanggalBerakhir diisi. Password default: amana123.
 export async function POST(request: Request) {
   try {
@@ -185,7 +185,9 @@ export async function POST(request: Request) {
 
     const cleanNama = String(nama ?? '').trim();
     const cleanEmail = String(email ?? '').trim().toLowerCase();
-    const cleanTipe = String(tipeKontrak ?? '').trim().toUpperCase() === 'TETAP' ? 'TETAP' : 'KONTRAK';
+    const validTypes = ['PKWTT', 'PKWT', 'KKI', 'INTERNSHIP'];
+    const rawTipe = String(tipeKontrak ?? '').trim().toUpperCase();
+    const cleanTipe = validTypes.includes(rawTipe) ? rawTipe : 'PKWT';
     const cleanGrade = String(namaGrade ?? '').trim();
     if (!cleanNama) return Response.json({ error: 'Name is required' }, { status: 400 });
     if (!cleanEmail) return Response.json({ error: 'Email is required' }, { status: 400 });
@@ -340,7 +342,7 @@ export async function POST(request: Request) {
           idRole: role.idRole,
         },
       });
-      if (cleanTipe === 'KONTRAK' && tanggalAkhir) {
+      if (cleanTipe === 'PKWT' && tanggalAkhir) {
         await tx.kontrakKaryawan.create({
           data: {
             idKontrak: `KTR-${Date.now()}`,

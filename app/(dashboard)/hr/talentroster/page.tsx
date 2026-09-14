@@ -23,7 +23,7 @@ const OPS_GRADES = ['Head', 'Lead/Coordinator', 'Senior Officer', 'Officer', 'Ju
 const NON_OPS_GRADES = ['Partner', 'Principal', 'Senior Specialist', 'Specialist', 'Senior Associate', 'Associate', 'Senior Analyst', 'Analyst'];
 const LEADER_GRADES = ['Head', 'Partner'];
 const BASE_NON_EMPLOYEE_ROLES = ['partner', 'admin hr', 'admin ops'];
-const CONTRACT_TYPE_OPTIONS = ['Contract', 'Permanent'];
+const CONTRACT_TYPE_OPTIONS = ['PKWTT', 'PKWT', 'KKI', 'Internship'];
 const ACCESS_OPTIONS = ['employee', 'admin_hr', 'admin_ops'];
 const ACCESS_LABELS: Record<string, string> = { employee: 'Employee', admin_hr: 'Admin HR', admin_ops: 'Admin OPS' };
 
@@ -363,14 +363,20 @@ export default function TalentRosterPage() {
   };
 
   const departmentLabel = (d: string) => DEPARTMENT_LABELS[d] || d || '-';
-  const contractLabel = (t?: string) => (t === 'TETAP' ? 'Permanent' : 'Contract');
+  const contractLabel = (t?: string) => {
+    const map: Record<string, string> = { PKWTT: 'PKWTT', PKWT: 'PKWT', KKI: 'KKI', INTERNSHIP: 'Internship', KONTRAK: 'Contract' };
+    return map[t ?? ''] ?? t ?? '-';
+  };
 
   const rosterColumns: DataTableColumn<RosterRow>[] = [
     { key: 'nama', label: 'Name' },
     { key: 'department', label: 'Department', render: (e) => departmentLabel(e.department) },
     { key: 'grade', label: 'Grade' },
     { key: 'roleLabel', label: 'Role' },
-    { key: 'tipeKontrak', label: 'Contract Type', render: (e) => contractLabel(e.tipeKontrak) },
+    { key: 'tipeKontrak', label: 'Contract Type', sortValue: (e) => {
+      const order: Record<string, number> = { PKWTT: 1, PKWT: 2, KKI: 3, INTERNSHIP: 4, KONTRAK: 5 };
+      return order[e.tipeKontrak ?? ''] ?? 9;
+    }, render: (e) => contractLabel(e.tipeKontrak) },
     {
       key: 'id',
       label: 'Assessment',
@@ -426,7 +432,7 @@ export default function TalentRosterPage() {
             </Button>
           }
         >
-          <DataTable key="roster" columns={rosterColumns} rows={rosterRows} defaultSortKey="nama" emptyMessage="No employees found." compact />
+          <DataTable key="roster" columns={rosterColumns} rows={rosterRows} defaultSortKey="tipeKontrak" emptyMessage="No employees found." compact />
         </SectionCard>
       </div>
 
@@ -542,7 +548,7 @@ export default function TalentRosterPage() {
             />
 
             <TextField label="Start Date" type="date" value={newUser.tanggalMasuk} onChange={(v) => setNewUser((p) => ({ ...p, tanggalMasuk: v }))} />
-            {newUser.tipeKontrak === 'Contract' && (
+            {newUser.tipeKontrak && newUser.tipeKontrak !== 'PKWTT' && (
               <TextField label="End Date" type="date" value={newUser.tanggalBerakhir} onChange={(v) => setNewUser((p) => ({ ...p, tanggalBerakhir: v }))} />
             )}
           </div>

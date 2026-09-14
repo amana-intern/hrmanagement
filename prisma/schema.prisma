@@ -94,7 +94,7 @@ model Karyawan {
   noTelepon       String?           @db.VarChar
   sisaCutiTahunan Float?              @default(12)
   accrualRate     Float?            @db.DoublePrecision
-  tipeKontrak     String?           @default("KONTRAK") @db.VarChar
+  tipeKontrak     String?           @default("PKWT") @db.VarChar
   user            User?             @relation
   masterGrade     MasterGrade?      @relation(fields: [idGrade], references: [idGrade])
   masterDepartment MasterDepartment? @relation(fields: [department], references: [idDepartment])

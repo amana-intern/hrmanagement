@@ -192,6 +192,13 @@ export async function POST(request: Request) {
               idReferensi: cuti.idCuti,
             },
           });
+          if (partner.email) {
+            await sendEmail({
+              to: partner.email,
+              subject: 'Leave Notification',
+              text: `Partner ${auth.nama} from ${DEPARTMENT_LABEL[auth.department ?? ''] || auth.department} has submitted leave (${tanggalMulai} - ${tanggalSelesai}).`,
+            });
+          }
         }
       }
     }
@@ -220,6 +227,13 @@ export async function POST(request: Request) {
               idReferensi: cuti.idCuti,
             },
           });
+          if (partner.email) {
+            await sendEmail({
+              to: partner.email,
+              subject: 'Leave Request Pending',
+              text: `${auth.nama} from ${DEPARTMENT_LABEL[auth.department ?? ''] || auth.department} has submitted leave (${tanggalMulai} - ${tanggalSelesai}). Pending your approval.`,
+            });
+          }
         }
       }
     }

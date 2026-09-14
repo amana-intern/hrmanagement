@@ -55,7 +55,7 @@ export async function GET() {
         grade: k.masterGrade?.namaGrade ?? '-',
         department: k.department ?? '-',
         roleLabel: k.user?.role?.namaRole ?? '-',
-        tipeKontrak: k.tipeKontrak ?? 'KONTRAK',
+        tipeKontrak: k.tipeKontrak ?? '-',
         startDate: startDate ? startDate.toISOString().slice(0, 10) : null,
         endDate: endDate ? endDate.toISOString().slice(0, 10) : null,
         daysLeft,
