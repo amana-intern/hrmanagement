@@ -227,7 +227,7 @@ export default function LeaveRecordPage() {
           <div className="p-5 flex flex-col">
             <DetailField label="Submitted On" value={detailsModal.submittedDate ? formatDateTimeWIB(detailsModal.submittedDate) : '-'} />
             <DetailField label="Employee" value={detailsModal.name} />
-            <DetailField label="Department" value={detailsModal.department} />
+            <DetailField label="Practice Group" value={detailsModal.department} />
             <DetailField label="Grade" value={detailsModal.grade} />
             <div className="flex items-start justify-between gap-4 py-2 border-b border-amana-neutral-200">
               <span className="text-[14px] font-semibold text-amana-neutral-400 flex-shrink-0">Status</span>

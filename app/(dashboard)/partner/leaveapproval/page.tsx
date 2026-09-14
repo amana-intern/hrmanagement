@@ -247,7 +247,7 @@ export default function PartnerLeaveApprovalPage() {
 
   const columns: DataTableColumn<LeaveReq>[] = [
     { key: 'name', label: 'Name', width: '200px' },
-    { key: 'department', label: 'Department' },
+    { key: 'department', label: 'Practice Group' },
     { key: 'grade', label: 'Grade' },
     { key: 'type', label: 'Leave Type' },
     {
@@ -303,7 +303,7 @@ export default function PartnerLeaveApprovalPage() {
             onChange={(v) => setField('search', v)}
             placeholder="Search by name or ID..."
           />
-          <SearchSelectField label="Department" value={draft.department} onChange={(v) => setField('department', v)} options={DEPARTMENT_OPTIONS} />
+          <SearchSelectField label="Practice Group" value={draft.department} onChange={(v) => setField('department', v)} options={DEPARTMENT_OPTIONS} />
           <SearchSelectField label="Grade" value={draft.grade} onChange={(v) => setField('grade', v)} options={gradeOptions} />
           <SearchSelectField label="Leave Type" value={draft.type} onChange={(v) => setField('type', v)} options={typeOptions} />
           <SearchSelectField label="Status" value={draft.status} onChange={(v) => setField('status', v)} options={STATUS_OPTIONS} />
@@ -337,7 +337,7 @@ export default function PartnerLeaveApprovalPage() {
           <div className="p-5 flex flex-col">
             <DetailField label="Submitted On" value={formatDateTimeWIB(detailRow.submittedAt)} />
             <DetailField label="Employee" value={detailRow.name} />
-            <DetailField label="Department" value={detailRow.department} />
+            <DetailField label="Practice Group" value={detailRow.department} />
             <DetailField label="Grade" value={detailRow.grade} />
             <div className="flex items-start justify-between gap-4 py-2 border-b border-amana-neutral-200">
               <span className="text-[14px] font-semibold text-amana-neutral-400 flex-shrink-0">Status</span>

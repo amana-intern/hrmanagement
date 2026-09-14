@@ -182,7 +182,7 @@ export default function TalentRosterPage() {
       return;
     }
     if (!newUser.department) {
-      setAddUserMsg('Department is required');
+      setAddUserMsg('Practice Group is required');
       return;
     }
     const gradeVal = newUser.grade === '__other__' ? customGrade.trim() : newUser.grade.trim();
@@ -268,7 +268,7 @@ export default function TalentRosterPage() {
   const handleSaveEdit = async () => {
     if (!editModal) return;
     if (!editForm.department) {
-      setEditMsg('Department is required');
+      setEditMsg('Practice Group is required');
       return;
     }
     const gradeVal = editForm.grade === '__other__' ? customEditGrade.trim() : editForm.grade.trim();
@@ -370,7 +370,7 @@ export default function TalentRosterPage() {
 
   const rosterColumns: DataTableColumn<RosterRow>[] = [
     { key: 'nama', label: 'Name' },
-    { key: 'department', label: 'Department', render: (e) => departmentLabel(e.department) },
+    { key: 'department', label: 'Practice Group', render: (e) => departmentLabel(e.department) },
     { key: 'grade', label: 'Grade' },
     { key: 'roleLabel', label: 'Role' },
     { key: 'tipeKontrak', label: 'Contract Type', sortValue: (e) => {
@@ -490,12 +490,12 @@ export default function TalentRosterPage() {
             <TextField label="Phone Number" value={newUser.noTelepon} onChange={(v) => setNewUser((p) => ({ ...p, noTelepon: v }))} placeholder="e.g.: 0812-3456-7890" />
 
             <SelectField
-              label="Department"
+              label="Practice Group"
               value={newUser.department}
               onChange={(v) => setNewUser((p) => ({ ...p, department: v, grade: '' }))}
               options={DEPARTMENT_OPTION_LIST}
               labels={DEPARTMENT_LABELS}
-              placeholder="Choose Department"
+              placeholder="Choose Practice Group"
             />
 
             <div>
@@ -596,12 +596,12 @@ export default function TalentRosterPage() {
             />
 
             <SelectField
-              label="Department"
+              label="Practice Group"
               value={editForm.department}
               onChange={(v) => setEditForm((p) => ({ ...p, department: v, grade: '' }))}
               options={DEPARTMENT_OPTION_LIST}
               labels={DEPARTMENT_LABELS}
-              placeholder="Choose Department"
+              placeholder="Choose Practice Group"
             />
 
             <div>

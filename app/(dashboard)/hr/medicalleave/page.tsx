@@ -136,7 +136,7 @@ export default function MedicalLeavePage() {
   }, [logs]);
 
   const buildTSV = () => {
-    const header = ['Name', 'Department', 'Grade', 'Start Date', 'End Date', 'Duration (days)', 'Diagnosis', 'Document'];
+    const header = ['Name', 'Practice Group', 'Grade', 'Start Date', 'End Date', 'Duration (days)', 'Diagnosis', 'Document'];
     const lines = filtered.map((l) => [
       l.name,
       l.department,
@@ -164,7 +164,7 @@ export default function MedicalLeavePage() {
 
   const columns: DataTableColumn<SickLog>[] = [
     { key: 'name', label: 'Name', width: '200px' },
-    { key: 'department', label: 'Department' },
+    { key: 'department', label: 'Practice Group' },
     { key: 'grade', label: 'Grade' },
     {
       key: 'startDate',
@@ -206,7 +206,7 @@ export default function MedicalLeavePage() {
         onSearch={handleSearch}
       >
         <SearchTextField label="Employee Name" value={draft.name} onChange={(v) => setField('name', v)} placeholder="Search by name..." />
-        <SearchSelectField label="Department" value={draft.department} onChange={(v) => setField('department', v)} options={DEPARTMENT_OPTIONS} />
+        <SearchSelectField label="Practice Group" value={draft.department} onChange={(v) => setField('department', v)} options={DEPARTMENT_OPTIONS} />
         <SearchSelectField label="Grade" value={draft.grade} onChange={(v) => setField('grade', v)} options={gradeOptions} />
         <SearchSelectField label="Sickness Type" value={draft.gejala} onChange={(v) => setField('gejala', v)} options={gejalaOptions} />
         <SearchSelectField label="Duration" value={draft.duration} onChange={(v) => setField('duration', v)} options={durationOptions} />
