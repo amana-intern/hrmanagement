@@ -14,8 +14,9 @@ model User {
   googleSub    String?   @unique @db.VarChar
   pictureUrl   String?   @db.VarChar(500)
   idRole       String?   @db.VarChar
+
   role         Role?     @relation(fields: [idRole], references: [idRole])
-  karyawan     Karyawan? @relation(fields: [idUser], references: [idUser])
+  karyawan     Karyawan?
 }
 
 model Role {
@@ -83,32 +84,35 @@ model MasterKategoriPayment {
 }
 
 model Karyawan {
-  idKaryawan      String            @id @db.VarChar
-  idUser          String?           @unique @db.VarChar
-  nama            String?           @db.VarChar
-  tanggalLahir    DateTime?         @db.Date
-  tanggalMasuk    DateTime?         @db.Date
-  idGrade         String?           @db.VarChar
-  department      String?           @db.VarChar
-  departments     String[]          @default([])
-  noTelepon       String?           @db.VarChar
-  sisaCutiTahunan Float?              @default(12)
-  accrualRate     Float?            @db.DoublePrecision
-  tipeKontrak     String?           @default("KONTRAK") @db.VarChar
-  user            User?             @relation
-  masterGrade     MasterGrade?      @relation(fields: [idGrade], references: [idGrade])
+  idKaryawan       String    @id @db.VarChar
+  idUser           String?   @unique @db.VarChar
+  nama             String?   @db.VarChar
+  tanggalLahir     DateTime? @db.Date
+  tanggalMasuk     DateTime? @db.Date
+  idGrade          String?   @db.VarChar
+  department       String?   @db.VarChar
+  departments      String[]  @default([])
+  noTelepon        String?   @db.VarChar
+  sisaCutiTahunan  Float?    @default(12)
+  accrualRate      Float?    @db.DoublePrecision
+  tipeKontrak      String?   @default("KONTRAK") @db.VarChar
+
+  user             User?     @relation(fields: [idUser], references: [idUser])
+
+  masterGrade      MasterGrade?      @relation(fields: [idGrade], references: [idGrade])
   masterDepartment MasterDepartment? @relation(fields: [department], references: [idDepartment])
-  pengajuanCuti   PengajuanCuti[]
-  izinSakit       IzinSakit[]
-  kontrakKaryawan KontrakKaryawan[]
-  talentProfile   TalentProfile?
-  paymentRequests PaymentRequest[]
-  auditTrails     AuditTrail[]
-  sertifikat      SertifikatKaryawan[]
+
+  pengajuanCuti    PengajuanCuti[]
+  izinSakit        IzinSakit[]
+  kontrakKaryawan  KontrakKaryawan[]
+  talentProfile    TalentProfile?
+  paymentRequests  PaymentRequest[]
+  auditTrails      AuditTrail[]
+  sertifikat       SertifikatKaryawan[]
   assessmentSubmissions AssessmentSubmission[]
-  hrTodos         HrTodo[]
-  notifications   Notification[]
-  karyawanHistory KaryawanHistory[]
+  hrTodos          HrTodo[]
+  notifications    Notification[]
+  karyawanHistory  KaryawanHistory[]
 }
 
 model SertifikatKaryawan {
