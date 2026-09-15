@@ -1,3 +1,4 @@
+/* Fix order of seed */
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { ASSESSMENT_FIELDS } from '../lib/assessment-template';
