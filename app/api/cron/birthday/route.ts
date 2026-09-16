@@ -57,12 +57,12 @@ export async function GET(request: Request) {
 
     // 2. Try/catch per orang agar 1 error tidak hentikan yang lain
     for (const person of birthdays) {
-      const nama = person.nama ?? 'teman kita';
+      const nama = person.nama ?? 'our colleague';
       const grade = person.masterGrade?.namaGrade ? ` (${person.masterGrade.namaGrade})` : '';
 
       try {
         // Beri perintah (prompt) ke AI untuk merangkai kalimatnya
-        const prompt = `buatkan ucapan selamat ulang tahun berbahasa indonesia untuk salah satu karyawan bernama ${nama}${grade}. Buat pesannya unik, kreatif, tidak kaku. berikan juga doa semoga bertambah rezeki, selalu diberi kesehatan dan doa baik lainnya. Gunakan emoji yang pas. Jangan terlalu panjang, maksimal 2 sampai 3 kalimat saja.`;
+        const prompt = `Create a happy birthday greeting in English for an employee named ${nama}${grade}. Make the message unique, creative, and warm. Include wishes for good health, abundant fortune, and happiness. Use appropriate emojis. Keep it concise, maximum 2 to 3 sentences.`;
 
         const aiResult = await model.generateContent(prompt);
         let generatedMessage = aiResult.response.text();
@@ -70,7 +70,7 @@ export async function GET(request: Request) {
         // 4. Validasi AI response — fallback jika kosong
         if (!generatedMessage || generatedMessage.trim().length === 0) {
           console.warn(`AI returned empty message for ${nama}, using fallback`);
-          generatedMessage = `Selamat Ulang Tahun, ${nama}! 🎂 Semoga di usia baru ini, selalu diberi kesehatan, rezeki yang berlimpah, dan kebahagiaan. Terus menjadi bagian terbaik dari tim kita! 🤲✨`;
+          generatedMessage = `Happy Birthday, ${nama}! 🎂 Wishing you good health, abundant fortune, and happiness in this new year. Thank you for being an amazing part of our team! 🤲✨`;
         }
 
         // Kirim teks buatan AI ke Google Chat

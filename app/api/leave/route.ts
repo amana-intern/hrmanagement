@@ -48,11 +48,11 @@ export async function POST(request: Request) {
     if (blocked.length > 0) {
       const rangeLabel = (b: (typeof blocked)[number]) =>
         b.tanggalAkhir
-          ? `${b.tanggal?.toLocaleDateString('id-ID')} - ${b.tanggalAkhir.toLocaleDateString('id-ID')}`
-          : (b.tanggal?.toLocaleDateString('id-ID') ?? '');
+          ? `${b.tanggal?.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })} - ${b.tanggalAkhir.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}`
+          : (b.tanggal?.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) ?? '');
       return Response.json(
         {
-          error: `Tanggal ${blocked.map(rangeLabel).filter(Boolean).join(', ')} sedang diblokir${blocked[0]?.alasan ? ` (${blocked[0].alasan})` : ''}.`,
+          error: `Date(s) ${blocked.map(rangeLabel).filter(Boolean).join(', ')} are currently blocked${blocked[0]?.alasan ? ` (${blocked[0].alasan})` : ''}.`,
         },
         { status: 400 }
       );
@@ -63,7 +63,7 @@ export async function POST(request: Request) {
       const balance = await computeLeaveBalance(auth.idKaryawan);
       if (balance.sisa > 0) {
         return Response.json(
-          { error: `Unpaid leave hanya bisa diajukan saat saldo Paid = 0. Sisa Anda: ${balance.sisa} hari.` },
+          { error: `Unpaid leave can only be submitted when Paid balance = 0. Your remaining: ${balance.sisa} day(s).` },
           { status: 400 }
         );
       }
@@ -75,7 +75,7 @@ export async function POST(request: Request) {
       keterangan?.toLowerCase().includes('menstruation')
     ) {
       if (jumlahHari > 2) {
-        return Response.json({ error: 'Cuti menstruasi maksimal 2 hari.' }, { status: 400 });
+        return Response.json({ error: 'Menstrual leave maximum 2 days.' }, { status: 400 });
       }
       const monthUsage = await prisma.pengajuanCuti.findMany({
         where: {
@@ -93,7 +93,7 @@ export async function POST(request: Request) {
         .reduce((s, c) => s + (c.jumlahHari ?? 0), 0);
       if (usedThisMonth + jumlahHari > 2) {
         return Response.json(
-          { error: `Cuti menstruasi bulan ini sudah ${usedThisMonth} hari (maks 2 hari/bulan).` },
+          { error: `Menstrual leave this month already ${usedThisMonth} day(s) (max 2 days/month).` },
           { status: 400 }
         );
       }
@@ -188,7 +188,7 @@ export async function POST(request: Request) {
               idKaryawan: partner.karyawan.idKaryawan,
               tipe: 'LEAVE_INFO',
               judul: 'Leave Notification',
-              pesan: `Partner ${auth.nama} from ${DEPARTMENT_LABEL[auth.department ?? ''] || auth.department} has submitted leave (${tanggalMulai} - ${tanggalSelesai}).`,
+              pesan: `Partner ${auth.nama} from ${DEPARTMENT_LABEL[auth.department ?? ''] || auth.department} has submitted leave (${start.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })} - ${end.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}).`,
               idReferensi: cuti.idCuti,
             },
           });
@@ -196,7 +196,7 @@ export async function POST(request: Request) {
             await sendEmail({
               to: partner.email,
               subject: 'Leave Notification',
-              text: `Partner ${auth.nama} from ${DEPARTMENT_LABEL[auth.department ?? ''] || auth.department} has submitted leave (${tanggalMulai} - ${tanggalSelesai}).`,
+              text: `Partner ${auth.nama} from ${DEPARTMENT_LABEL[auth.department ?? ''] || auth.department} has submitted leave (${start.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })} - ${end.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}).`,
             });
           }
         }
@@ -214,7 +214,7 @@ export async function POST(request: Request) {
               idKaryawan: partner.karyawan.idKaryawan,
               tipe: 'LEAVE_INFO',
               judul: 'Leave Request Pending',
-              pesan: `${auth.nama} from ${DEPARTMENT_LABEL[auth.department ?? ''] || auth.department} has submitted leave (${tanggalMulai} - ${tanggalSelesai}). Pending your approval.`,
+              pesan: `${auth.nama} from ${DEPARTMENT_LABEL[auth.department ?? ''] || auth.department} has submitted leave (${start.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })} - ${end.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}). Pending your approval.`,
               idReferensi: cuti.idCuti,
             },
           });
@@ -222,7 +222,7 @@ export async function POST(request: Request) {
             data: {
               idTodo: `TODO-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
               idKaryawan: partner.karyawan.idKaryawan,
-              teks: `Approve leave ${auth.nama} from ${DEPARTMENT_LABEL[auth.department ?? ''] || auth.department} (${tanggalMulai} - ${tanggalSelesai})`,
+              teks: `Approve leave ${auth.nama} from ${DEPARTMENT_LABEL[auth.department ?? ''] || auth.department} (${start.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })} - ${end.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })})`,
               modul: 'LEAVE',
               idReferensi: cuti.idCuti,
             },

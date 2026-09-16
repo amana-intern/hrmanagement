@@ -103,6 +103,15 @@ export async function POST(request: NextRequest) {
       return Response.json({ error: 'End date must be after start date' }, { status: 400 });
     }
 
+    // Validasi overlap dengan kontrak aktif yang sudah ada
+    const overlapping = karyawan.kontrakKaryawan.find((k) => {
+      if (k.idStatus !== 'ST_KON_ACTIVE' || !k.tanggalMulai || !k.tanggalBerakhir) return false;
+      return k.tanggalMulai <= end && start <= k.tanggalBerakhir;
+    });
+    if (overlapping) {
+      return Response.json({ error: 'New contract overlaps with an existing active contract' }, { status: 409 });
+    }
+
     // Periode terakhir (kontrak terbaru) => sumber carry-over.
     const previous = karyawan.kontrakKaryawan.length
       ? karyawan.kontrakKaryawan[karyawan.kontrakKaryawan.length - 1]
@@ -112,27 +121,20 @@ export async function POST(request: NextRequest) {
     let annualQuota = 12;
 
     if (previous?.tanggalMulai && previous.tanggalBerakhir) {
-      const prevPeriod = resolvePeriod(previous.tanggalMulai, [
-        {
-          tanggalMulai: previous.tanggalMulai,
-          tanggalBerakhir: previous.tanggalBerakhir,
-          carryOver: previous.carryOver,
-          annualQuota: previous.annualQuota,
-          cutiKompensasi: previous.cutiKompensasi,
-          cutiTerpakaiAwal: previous.cutiTerpakaiAwal,
-        },
-      ]);
-      const consumed = await consumedDays(idKaryawan, prevPeriod.start, previous.tanggalBerakhir);
-      const accrued = accruedMonths(prevPeriod.start, previous.tanggalBerakhir, prevPeriod.annualQuota);
+      // Ambil langsung dari kontrak lama, jangan pakai resolvePeriod (karena kontrak lama sudah expired)
+      const prevStart = previous.tanggalMulai;
+      const prevEnd = previous.tanggalBerakhir;
+      const prevCarryOver = previous.carryOver ?? 0;
+      const prevCutiKompensasi = previous.cutiKompensasi ?? 0;
+      const prevCutiTerpakaiAwal = previous.cutiTerpakaiAwal ?? 0;
+      const prevAnnualQuota = previous.annualQuota ?? 12;
+      const consumed = await consumedDays(idKaryawan, prevStart, prevEnd);
+      const accrued = accruedMonths(prevStart, prevEnd, prevAnnualQuota);
       const remaining = Math.max(
-        prevPeriod.carryOver +
-          prevPeriod.cutiKompensasi +
-          accrued -
-          consumed -
-          prevPeriod.cutiTerpakaiAwal,
+        prevCarryOver + prevCutiKompensasi + accrued - consumed - prevCutiTerpakaiAwal,
         0
       );
-      carryOver = Math.min(remaining, Math.floor(prevPeriod.annualQuota / 2)); // n/2
+      carryOver = Math.min(remaining, Math.floor(prevAnnualQuota / 2)); // n/2
       annualQuota = 12;
     }
 

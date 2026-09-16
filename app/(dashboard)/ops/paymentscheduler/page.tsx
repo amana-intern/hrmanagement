@@ -51,7 +51,7 @@ function amountLabel(c: PaymentRaw): string {
     } catch {}
     return 'View file';
   }
-  return `Rp ${Number(c.nominal).toLocaleString('id-ID')}`;
+  return `Rp ${Number(c.nominal).toLocaleString('en-US')}`;
 }
 
 const STATUS_MAP: Record<string, { label: string; color: string }> = {
@@ -264,7 +264,7 @@ export default function PaymentSchedulerPage() {
         <Modal title="Schedule Payment" onClose={() => { setScheduleTarget(null); setScheduleDate(''); }} maxWidth="max-w-md">
           <div className="p-5 flex flex-col gap-4">
             <p className="text-[15px] text-amana-neutral-500">
-              Pilih tanggal pembayaran untuk <span className="font-semibold">{scheduleTarget.idRequest}</span>.
+              Select payment date for <span className="font-semibold">{scheduleTarget.idRequest}</span>.
             </p>
             <div className="flex flex-col gap-1.5">
               <label className="text-[16px] font-semibold text-amana-neutral-500">Payment Date</label>

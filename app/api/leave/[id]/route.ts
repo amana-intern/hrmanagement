@@ -42,11 +42,11 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
     if (!cuti) return Response.json({ error: 'Request not found' }, { status: 404 });
 
     // Cek apakah applicant adalah partner (sudah auto-approved)
-    const applicant = await prisma.user.findUnique({
-      where: { idUser: cuti.idKaryawan ?? '' },
-      select: { idRole: true },
+    const applicantKaryawan = await prisma.karyawan.findUnique({
+      where: { idKaryawan: cuti.idKaryawan ?? '' },
+      include: { user: { select: { idRole: true } } },
     });
-    if (applicant?.idRole === ROLES.PARTNER) {
+    if (applicantKaryawan?.user?.idRole === ROLES.PARTNER) {
       return Response.json({ error: 'This leave was auto-approved by the partner who submitted it.' }, { status: 400 });
     }
 
@@ -72,8 +72,19 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
         },
       });
 
-      // Approve kompensasi: tidak langsung increment cutiKompensasi
-      // (akan dikurangi otomatis oleh cron harian saat tanggal tiba)
+      // Approve kompensasi: increment cutiKompensasi di kontrak aktif
+      if (isCompensatory && cuti.karyawan?.idKaryawan && cuti.jumlahHariKompensasi) {
+        const activeContract = await tx.kontrakKaryawan.findFirst({
+          where: { idKaryawan: cuti.karyawan.idKaryawan, idStatus: 'ST_KON_ACTIVE' },
+          orderBy: { tanggalMulai: 'desc' },
+        });
+        if (activeContract) {
+          await tx.kontrakKaryawan.update({
+            where: { idKontrak: activeContract.idKontrak },
+            data: { cutiKompensasi: (activeContract.cutiKompensasi ?? 0) + cuti.jumlahHariKompensasi },
+          });
+        }
+      }
 
       await tx.approvalHistory.create({
         data: {

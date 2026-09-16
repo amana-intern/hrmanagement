@@ -39,6 +39,16 @@ export async function GET(request: Request) {
 
       // Cek apakah hari ini dalam rentang tanggal cuti kompensasi
       if (todayUTC >= cutiStart && todayUTC <= cutiEnd) {
+        // Idempotency check: sudah ada history deduction hari ini untuk cuti ini?
+        const existingDeduction = await prisma.approvalHistory.findFirst({
+          where: {
+            idReferensi: cuti.idCuti,
+            modul: 'COMP_LEAVE_DEDUCT',
+            action: `deduct-${todayUTC.toISOString().slice(0, 10)}`,
+          },
+        });
+        if (existingDeduction) continue;
+
         // Cari kontrak aktif karyawan
         const activeContract = await prisma.kontrakKaryawan.findFirst({
           where: {
@@ -49,12 +59,23 @@ export async function GET(request: Request) {
         });
 
         if (activeContract && (activeContract.cutiKompensasi ?? 0) > 0) {
-          // Kurangi cutiKompensasi sebanyak 1 hari
-          const deduction = Math.min(1, activeContract.cutiKompensasi ?? 0);
+          // Kurangi cutiKompensasi sesuai jumlahHariKompensasi (bisa 0.5 untuk HALF)
+          const deduction = Math.min(cuti.jumlahHariKompensasi ?? 1, activeContract.cutiKompensasi ?? 0);
           await prisma.kontrakKaryawan.update({
             where: { idKontrak: activeContract.idKontrak },
             data: {
               cutiKompensasi: (activeContract.cutiKompensasi ?? 0) - deduction,
+            },
+          });
+          // Record deduction for idempotency
+          await prisma.approvalHistory.create({
+            data: {
+              idHistory: `HIST-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+              idReferensi: cuti.idCuti,
+              modul: 'COMP_LEAVE_DEDUCT',
+              actorIdUser: 'CRON',
+              action: `deduct-${todayUTC.toISOString().slice(0, 10)}`,
+              catatan: `Auto-deducted ${deduction} day(s)`,
             },
           });
           totalDeducted += deduction;

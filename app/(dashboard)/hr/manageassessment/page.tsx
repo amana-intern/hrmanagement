@@ -9,6 +9,7 @@ import Button from '@/app/components/forms/Button';
 import TextField from '@/app/components/forms/TextField';
 import SelectField from '@/app/components/forms/SelectField';
 import Modal from '@/app/components/feedback/Modal';
+import ConfirmModal from '@/app/components/feedback/ConfirmModal';
 import StatusModal from '@/app/components/feedback/StatusModal';
 import SectionCard from '@/app/components/layout/SectionCard';
 import DataTable from '@/app/components/data-display/DataTable';
@@ -92,6 +93,7 @@ export default function ManageAssessmentPage() {
   const [openOnCreate, setOpenOnCreate] = useState(true);
   const [draftQuestions, setDraftQuestions] = useState<DraftQuestion[]>([]);
   const [viewAssessment, setViewAssessment] = useState<Assessment | null>(null);
+  const [confirmTarget, setConfirmTarget] = useState<Assessment | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -246,14 +248,15 @@ export default function ManageAssessmentPage() {
     {
       key: 'tanggalBuka',
       label: 'Period',
+      width: '280px',
       render: (a) => (
-        <span className="whitespace-nowrap">
+        <span className="text-[14px] leading-tight">
           {a.tanggalBuka ? formatDateWIB(a.tanggalBuka) : '-'}
-          {a.tanggalTutup ? ` - ${formatDateWIB(a.tanggalTutup)}` : ''}
+          {a.tanggalTutup ? ` – ${formatDateWIB(a.tanggalTutup)}` : ''}
         </span>
       ),
     },
-    { key: 'totalPeserta', label: 'Participants' },
+    { key: 'totalPeserta', label: 'Participants', width: '120px' },
     {
       key: 'id',
       label: 'Action',
@@ -263,7 +266,7 @@ export default function ManageAssessmentPage() {
           size="sm"
           className="w-full"
           disabled={processing}
-          onClick={() => handleToggle(a)}
+          onClick={() => setConfirmTarget(a)}
         >
           {a.idStatus === ASSESSMENT_STATUS.OPEN ? 'Close' : 'Open'}
         </Button>
@@ -464,6 +467,22 @@ export default function ManageAssessmentPage() {
           </Modal>
         )}
       </AnimatePresence>
+
+      {confirmTarget && (
+        <ConfirmModal
+          title={confirmTarget.idStatus === ASSESSMENT_STATUS.OPEN ? 'Close Assessment' : 'Open Assessment'}
+          message={
+            confirmTarget.idStatus === ASSESSMENT_STATUS.OPEN
+              ? <>Are you sure you want to close <span className="font-semibold">{confirmTarget.judul}</span>? Participants will no longer be able to submit answers.</>
+              : <>Are you sure you want to reopen <span className="font-semibold">{confirmTarget.judul}</span>?</>
+          }
+          confirmLabel={confirmTarget.idStatus === ASSESSMENT_STATUS.OPEN ? 'Close' : 'Open'}
+          loadingLabel="Saving..."
+          loading={processing}
+          onConfirm={() => { handleToggle(confirmTarget); setConfirmTarget(null); }}
+          onCancel={() => setConfirmTarget(null)}
+        />
+      )}
 
       <StatusModal state={status} onClose={() => setStatus(null)} />
     </div>

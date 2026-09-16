@@ -7,7 +7,7 @@ import { springSnappy } from '@/app/utils/motion';
 
 interface ButtonProps extends Omit<HTMLMotionProps<"button">, "onAnimationStart" | "onDragStart" | "onDragEnd" | "onDrag" | "ref"> {
   children: ReactNode;
-  variant?: 'primary' | 'danger' | 'ghost' | 'outline';
+  variant?: 'primary' | 'danger' | 'ghost' | 'outline' | 'danger-outline';
   size?: 'sm' | 'md' | 'lg';
   isLoading?: boolean;
 }
@@ -23,6 +23,9 @@ const variants = {
   // The reverse of `primary`: outlined/light by default, flips to solid on hover — for a secondary action paired next to a primary one (e.g. Previous next to Next).
   outline:
     'bg-amana-neutral-100 text-amana-primary-500 border-amana-primary-500 hover:bg-amana-primary-500 hover:text-amana-neutral-100 hover:border-amana-primary-500 active:bg-amana-primary-100 active:text-amana-primary-500 active:border-amana-primary-100',
+  // Red outline variant — for destructive secondary actions (e.g. Offboarding paired next to Renewal).
+  'danger-outline':
+    'bg-amana-neutral-100 text-amana-danger-500 border-amana-danger-500 hover:bg-amana-danger-500 hover:text-amana-neutral-100 hover:border-amana-danger-500 active:bg-amana-danger-100 active:text-amana-danger-500 active:border-amana-danger-100',
 };
 
 const sizes = {

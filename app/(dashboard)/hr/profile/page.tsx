@@ -58,7 +58,7 @@ export default function HRProfilePage() {
   const attendancePanel: SummaryPanelConfig = {
     title: 'Attendance Summary',
     stats: [
-      stat(data?.attendance.pendingApproval ?? 0, 'Pending Approval', 'Menunggu persetujuan'),
+      stat(data?.attendance.pendingApproval ?? 0, 'Pending Approval', 'Awaiting approval'),
       stat(data?.attendance.sickLeave ?? 0, 'Sick Leave', 'Sick leave recorded'),
       stat(data?.attendance.totalLeave ?? 0, 'Total Leave', 'Total leave requests'),
     ],
@@ -69,7 +69,7 @@ export default function HRProfilePage() {
     title: 'Career Hub Summary',
     stats: [
       stat(data?.career.pendingApproval ?? 0, 'Assessment Pending', 'Not yet assessed'),
-      stat(data?.career.certificates ?? 0, 'Certificates', 'Total sertifikat'),
+      stat(data?.career.certificates ?? 0, 'Certificates', 'Total certificates'),
       stat(data?.career.assessment ?? 0, 'Assessment', 'Completed'),
     ],
     updates: (data?.career.updates ?? []).map((u) => u.text),

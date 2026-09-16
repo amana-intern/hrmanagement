@@ -10,9 +10,9 @@ export async function GET() {
       return Response.json({ notifications: [], unread: 0 });
     }
 
-    // Auto-delete: notifikasi berumur > 7 hari dihapus permanen.
+    // Auto-delete: notifikasi berumur > 7 hari dihapus permanen (hanya untuk user ini).
     const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-    await prisma.notification.deleteMany({ where: { createdAt: { lt: cutoff } } });
+    await prisma.notification.deleteMany({ where: { idKaryawan: auth.idKaryawan, createdAt: { lt: cutoff } } });
 
     const notifications = await prisma.notification.findMany({
       where: { idKaryawan: auth.idKaryawan },

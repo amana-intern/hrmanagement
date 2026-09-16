@@ -52,11 +52,11 @@ export default function SickLeavePage() {
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-3">
         <SectionCard title="Sick Leave Schedule">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-xl">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <TextField label="When are you leaving?" type="date" value={startDate} onChange={setStartDate} />
             <TextField label="When will you be back?" type="date" value={endDate} onChange={setEndDate} />
           </div>
-          <div className="mt-4 max-w-xl">
+          <div className="mt-4">
             <TextField
               label="Symptom / Diagnosis"
               value={symptom}

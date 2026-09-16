@@ -31,6 +31,26 @@ export async function GET(request: Request) {
 
   try {
     const now = new Date();
+
+    // Transition contracts to EXPIRING (<=30 days) or EXPIRED (past end date)
+    const activeContracts = await prisma.kontrakKaryawan.findMany({
+      where: { idStatus: CONTRACT_STATUS.ACTIVE, tanggalBerakhir: { not: null } },
+    });
+    for (const c of activeContracts) {
+      const daysRemaining = Math.ceil(((c.tanggalBerakhir?.getTime() ?? 0) - now.getTime()) / DAY_MS);
+      if (daysRemaining <= 0) {
+        await prisma.kontrakKaryawan.update({
+          where: { idKontrak: c.idKontrak },
+          data: { idStatus: CONTRACT_STATUS.EXPIRED },
+        });
+      } else if (daysRemaining <= 30) {
+        await prisma.kontrakKaryawan.update({
+          where: { idKontrak: c.idKontrak },
+          data: { idStatus: CONTRACT_STATUS.EXPIRING },
+        });
+      }
+    }
+
     const contracts = await prisma.kontrakKaryawan.findMany({
       where: {
         idStatus: CONTRACT_STATUS.ACTIVE,

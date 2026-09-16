@@ -145,6 +145,9 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
         return Response.json({ ok: true, payment: updated });
       }
       if (action === 'reject') {
+        if (payment.idStatus !== 'ST_PAY_PENDING_OPS') {
+          return Response.json({ error: 'Invalid status' }, { status: 409 });
+        }
         if (!catatan) {
           return Response.json({ error: 'Rejection reason is required' }, { status: 400 });
         }
