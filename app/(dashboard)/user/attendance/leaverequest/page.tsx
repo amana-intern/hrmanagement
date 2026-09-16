@@ -361,7 +361,7 @@ export default function LeaveRequestPage() {
                 </thead>
                 <tbody>
                   {compDetails.map((item, idx) => (
-                    <tr key={idx}>
+                    <tr key={idx} className="hover:bg-amana-primary-100 transition-colors duration-150">
                       <td className={`text-amana-neutral-500 text-center truncate px-3 py-2.5 text-[16px] border-r border-amana-neutral-300 ${idx < compDetails.length - 1 ? 'border-b' : ''}`}>
                         {formatDateWIB(item.tanggalPengajuan)}
                       </td>

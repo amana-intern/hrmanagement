@@ -66,7 +66,7 @@ export default function DataTable<T extends { id: number | string }>({
 
   return (
     <div className="flex-1 min-h-0 overflow-auto">
-      <table className="w-full table-fixed text-center border-collapse">
+      <table className="w-full table-fixed text-center border-separate border-spacing-0">
         <thead>
           <tr>
             {columns.map((c, i) => (
@@ -111,6 +111,7 @@ export default function DataTable<T extends { id: number | string }>({
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: durationFast, ease: easeOut, delay: Math.min(idx, 15) * 0.02 }}
+              className="hover:bg-amana-primary-100 transition-colors duration-150"
             >
               {columns.map((c, i) => (
                 <td

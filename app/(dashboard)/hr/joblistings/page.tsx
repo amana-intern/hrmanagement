@@ -295,7 +295,7 @@ export default function JobListingsPage() {
                 Delete Listing
               </Button>
             ) : (
-              <Button variant="danger" size="lg" disabled={busy} onClick={() => setShowTakedownModal(editJob)}>
+              <Button variant="danger-outline" size="lg" disabled={busy} onClick={() => setShowTakedownModal(editJob)}>
                 Takedown Listing
               </Button>
             )}
@@ -320,7 +320,7 @@ export default function JobListingsPage() {
       )}
 
       {showTakedownModal && (
-        <Modal title="Takedown Job Listing" onClose={() => setShowTakedownModal(null)} maxWidth="max-w-md">
+        <Modal title="Takedown Job Listing" onClose={() => setShowTakedownModal(null)} maxWidth="max-w-md" showCloseButton={false}>
           <div className="p-5 flex flex-col gap-4">
             <p className="text-sm text-amana-neutral-400">
               Are you sure you want to takedown <strong className="text-amana-neutral-500">{showTakedownModal.title}</strong>?
@@ -330,13 +330,16 @@ export default function JobListingsPage() {
               <Button variant="danger" size="lg" onClick={() => handleTakedown(showTakedownModal)}>
                 Yes, Takedown
               </Button>
+              <Button variant="outline" size="lg" onClick={() => setShowTakedownModal(null)}>
+                Cancel
+              </Button>
             </div>
           </div>
         </Modal>
       )}
 
       {showDeleteModal && (
-        <Modal title="Delete Job Listing" onClose={() => setShowDeleteModal(null)} maxWidth="max-w-md">
+        <Modal title="Delete Job Listing" onClose={() => setShowDeleteModal(null)} maxWidth="max-w-md" showCloseButton={false}>
           <div className="p-5 flex flex-col gap-4">
             <p className="text-sm text-amana-neutral-400">
               Are you sure you want to delete <strong className="text-amana-neutral-500">{showDeleteModal.title}</strong>?
@@ -345,6 +348,9 @@ export default function JobListingsPage() {
             <div className="flex justify-end gap-3 pt-2">
               <Button variant="danger" size="lg" onClick={() => handleDelete(showDeleteModal)}>
                 Delete
+              </Button>
+              <Button variant="outline" size="lg" onClick={() => setShowDeleteModal(null)}>
+                Cancel
               </Button>
             </div>
           </div>

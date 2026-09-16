@@ -18,7 +18,7 @@ export default function RejectReasonModal({
   const [reason, setReason] = useState('');
 
   return (
-    <Modal title={title} onClose={onCancel} maxWidth="max-w-md">
+    <Modal title={title} onClose={onCancel} maxWidth="max-w-md" showCloseButton={false}>
       <div className="p-5 flex flex-col gap-4">
         <div className="flex flex-col gap-1.5">
           <label className="text-[16px] font-semibold text-amana-neutral-500">Reason</label>
@@ -31,9 +31,6 @@ export default function RejectReasonModal({
           />
         </div>
         <div className="flex gap-3">
-          <Button variant="outline" size="lg" className="flex-1" onClick={onCancel} disabled={submitting}>
-            Cancel
-          </Button>
           <Button
             variant="danger"
             size="lg"
@@ -42,6 +39,9 @@ export default function RejectReasonModal({
             onClick={() => onConfirm(reason)}
           >
             {submitting ? 'Rejecting...' : 'Reject'}
+          </Button>
+          <Button variant="outline" size="lg" className="flex-1" onClick={onCancel} disabled={submitting}>
+            Cancel
           </Button>
         </div>
       </div>

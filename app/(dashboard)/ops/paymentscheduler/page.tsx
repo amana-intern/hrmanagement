@@ -261,7 +261,7 @@ export default function PaymentSchedulerPage() {
       </div>
 
       {scheduleTarget && (
-        <Modal title="Schedule Payment" onClose={() => { setScheduleTarget(null); setScheduleDate(''); }} maxWidth="max-w-md">
+        <Modal title="Schedule Payment" onClose={() => { setScheduleTarget(null); setScheduleDate(''); }} maxWidth="max-w-md" showCloseButton={false}>
           <div className="p-5 flex flex-col gap-4">
             <p className="text-[15px] text-amana-neutral-500">
               Select payment date for <span className="font-semibold">{scheduleTarget.idRequest}</span>.
@@ -278,6 +278,15 @@ export default function PaymentSchedulerPage() {
             </div>
             <div className="flex gap-3 pt-2">
               <Button
+                variant="primary"
+                size="lg"
+                className="flex-1"
+                disabled={!scheduleDate || processingId === scheduleTarget.id}
+                onClick={handleConfirmSchedule}
+              >
+                {processingId === scheduleTarget.id ? 'Processing...' : 'Schedule'}
+              </Button>
+              <Button
                 variant="outline"
                 size="lg"
                 className="flex-1"
@@ -288,15 +297,6 @@ export default function PaymentSchedulerPage() {
                 }}
               >
                 Cancel
-              </Button>
-              <Button
-                variant="primary"
-                size="lg"
-                className="flex-1"
-                disabled={!scheduleDate || processingId === scheduleTarget.id}
-                onClick={handleConfirmSchedule}
-              >
-                {processingId === scheduleTarget.id ? 'Processing...' : 'Schedule'}
               </Button>
             </div>
           </div>

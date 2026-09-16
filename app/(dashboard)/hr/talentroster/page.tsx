@@ -482,7 +482,7 @@ export default function TalentRosterPage() {
       <PdfPreviewModal target={previewPdf} onClose={() => setPreviewPdf(null)} />
 
       {isAddUserOpen && (
-        <Modal title="Add New Talent" onClose={() => { setIsAddUserOpen(false); setAddUserMsg(''); setCustomGrade(''); }} maxWidth="max-w-3xl" className="max-h-[90vh]">
+        <Modal title="Add New Talent" onClose={() => { setIsAddUserOpen(false); setAddUserMsg(''); setCustomGrade(''); }} maxWidth="max-w-3xl" className="max-h-[90vh]" showCloseButton={false}>
           <div className="flex-1 min-h-0 overflow-y-auto scroll-smooth p-5 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
             <TextField label="Talent Email" value={newUser.email} onChange={(v) => setNewUser((p) => ({ ...p, email: v }))} placeholder="e.g.: name@company" />
             <TextField label="Talent Name" value={newUser.nama} onChange={(v) => setNewUser((p) => ({ ...p, nama: v }))} placeholder="Full Name" />
@@ -558,11 +558,11 @@ export default function TalentRosterPage() {
           )}
 
           <div className="flex-shrink-0 flex justify-end gap-3 px-5 py-4 border-t border-amana-neutral-200">
-            <Button variant="outline" size="lg" onClick={() => { setIsAddUserOpen(false); setAddUserMsg(''); setCustomGrade(''); }}>
-              Cancel
-            </Button>
             <Button variant="primary" size="lg" disabled={addingUser} onClick={handleAddUser}>
               {addingUser ? 'Saving...' : 'Add Talent'}
+            </Button>
+            <Button variant="outline" size="lg" onClick={() => { setIsAddUserOpen(false); setAddUserMsg(''); setCustomGrade(''); }}>
+              Cancel
             </Button>
           </div>
         </Modal>
@@ -574,6 +574,7 @@ export default function TalentRosterPage() {
           onClose={() => setEditModal(null)}
           maxWidth="max-w-2xl"
           className="max-h-[90vh]"
+          showCloseButton={false}
         >
           {isSelfEdit && (
             <div className="mx-5 mt-4 flex-shrink-0 flex items-center gap-2 rounded-[5px] border border-amana-warning-500 bg-amana-warning-100 px-4 py-2.5 text-[14px] font-medium text-amana-warning-500">
@@ -701,11 +702,11 @@ export default function TalentRosterPage() {
               Delete
             </Button>
             <div className="flex gap-3">
-              <Button variant="outline" size="lg" onClick={() => { setEditModal(null); setEditMsg(''); setCustomEditGrade(''); }}>
-                Cancel
-              </Button>
               <Button variant="primary" size="lg" disabled={savingEdit} onClick={handleSaveEdit}>
                 {savingEdit ? 'Saving...' : 'Save Changes'}
+              </Button>
+              <Button variant="outline" size="lg" onClick={() => { setEditModal(null); setEditMsg(''); setCustomEditGrade(''); }}>
+                Cancel
               </Button>
             </div>
           </div>
@@ -713,17 +714,17 @@ export default function TalentRosterPage() {
       )}
 
       {deleteModal && (
-        <Modal title={`Delete Employee - ${deleteModal.nama || ''}`} onClose={() => setDeleteModal(null)} maxWidth="max-w-md">
+        <Modal title={`Delete Employee - ${deleteModal.nama || ''}`} onClose={() => setDeleteModal(null)} maxWidth="max-w-md" showCloseButton={false}>
           <div className="p-5 flex flex-col gap-4">
             <p className="text-sm text-amana-neutral-400">
               Are you sure you want to delete <span className="font-semibold text-amana-neutral-500">{deleteModal.nama}</span>?
               Employee data along with all their records will be permanently deleted and cannot be recovered.
             </p>
             <div className="flex justify-end gap-3 pt-2">
-              <Button variant="outline" size="lg" onClick={() => setDeleteModal(null)}>Cancel</Button>
               <Button variant="danger" size="lg" disabled={deletingUser} onClick={handleDeleteUser}>
                 {deletingUser ? 'Processing...' : 'Delete'}
               </Button>
+              <Button variant="outline" size="lg" onClick={() => setDeleteModal(null)}>Cancel</Button>
             </div>
           </div>
         </Modal>
