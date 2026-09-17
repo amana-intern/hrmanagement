@@ -96,7 +96,7 @@ model Karyawan {
   sisaCutiTahunan Float?              @default(12)
   accrualRate     Float?            @db.DoublePrecision
   tipeKontrak     String?           @default("PKWT") @db.VarChar
-  user            User?             @relation
+  user            User?             @relation(fields: [idUser], references: [idUser])
   masterGrade     MasterGrade?      @relation(fields: [idGrade], references: [idGrade])
   masterDepartment MasterDepartment? @relation(fields: [department], references: [idDepartment])
 

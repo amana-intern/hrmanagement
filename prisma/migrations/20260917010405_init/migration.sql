@@ -97,7 +97,7 @@ CREATE TABLE "Karyawan" (
     "noTelepon" VARCHAR,
     "sisaCutiTahunan" DOUBLE PRECISION DEFAULT 12,
     "accrualRate" DOUBLE PRECISION,
-    "tipeKontrak" VARCHAR DEFAULT 'KONTRAK',
+    "tipeKontrak" VARCHAR DEFAULT 'PKWT',
 
     CONSTRAINT "Karyawan_pkey" PRIMARY KEY ("idKaryawan")
 );
