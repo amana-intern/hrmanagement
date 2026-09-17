@@ -6,6 +6,7 @@ import type { Contract } from '@/app/components/data-display/ContractTrackingPag
 import { needActionBadge } from '@/app/components/data-display/ContractTrackingPage';
 import type { DataTableColumn } from '@/app/components/data-display/DataTable';
 import Button from '@/app/components/forms/Button';
+import ConfirmModal from '@/app/components/feedback/ConfirmModal';
 import StatusModal from '@/app/components/feedback/StatusModal';
 import StatusPill from '@/app/components/data-display/StatusPill';
 import { TableSkeleton } from '@/app/components/feedback/PageSkeleton';
@@ -32,6 +33,8 @@ export default function PartnerContractTrackingPage() {
   const [loading, setLoading] = useState(true);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+  const [confirmTarget, setConfirmTarget] = useState<Contract | null>(null);
+  const [confirmAction, setConfirmAction] = useState<'renewal' | 'offboarding' | null>(null);
 
   const load = async () => {
     const res = await fetch('/api/hr/contracts', { cache: 'no-store' });
@@ -100,22 +103,22 @@ export default function PartnerContractTrackingPage() {
       return (
         <div className="flex gap-2">
           <Button
-            variant="danger"
+            variant="danger-outline"
             size="sm"
             className="flex-1 whitespace-nowrap"
             disabled={processingId === String(c.id)}
-            onClick={() => handleAction(String(c.id), 'offboarding')}
+            onClick={() => { setConfirmTarget(c); setConfirmAction('offboarding'); }}
           >
-            {processingId === String(c.id) ? 'Processing...' : 'Offboarding'}
+            Offboarding
           </Button>
           <Button
             variant="primary"
             size="sm"
             className="flex-1 whitespace-nowrap"
             disabled={processingId === String(c.id)}
-            onClick={() => handleAction(String(c.id), 'renewal')}
+            onClick={() => { setConfirmTarget(c); setConfirmAction('renewal'); }}
           >
-            {processingId === String(c.id) ? 'Processing...' : 'Renewal'}
+            Renewal
           </Button>
         </div>
       );
@@ -127,6 +130,22 @@ export default function PartnerContractTrackingPage() {
   return (
     <>
       <ContractTrackingPage contracts={contracts} actionsColumn={actionsColumn} />
+
+      {confirmTarget && confirmAction && (
+        <ConfirmModal
+          title={confirmAction === 'offboarding' ? 'Confirm Offboarding' : 'Confirm Renewal'}
+          message={
+            confirmAction === 'offboarding'
+              ? <>Are you sure you want to initiate offboarding for <span className="font-semibold">{confirmTarget.name}</span>? This will send a request to HR and the employee.</>
+              : <>Are you sure you want to request a contract renewal for <span className="font-semibold">{confirmTarget.name}</span>? This will send a request to HR and the employee.</>
+          }
+          confirmLabel={confirmAction === 'offboarding' ? 'Offboarding' : 'Renewal'}
+          loadingLabel="Processing..."
+          loading={processingId === String(confirmTarget.id)}
+          onConfirm={() => { handleAction(String(confirmTarget.id), confirmAction); setConfirmTarget(null); setConfirmAction(null); }}
+          onCancel={() => { setConfirmTarget(null); setConfirmAction(null); }}
+        />
+      )}
 
       <StatusModal state={message} onClose={() => setMessage(null)} />
     </>

@@ -17,7 +17,7 @@ export interface CareerHistoryEntry {
 }
 
 const FIELD_LABELS: Record<string, string> = {
-  DEPARTMENT: 'Department',
+  DEPARTMENT: 'Practice Group',
   GRADE: 'Grade',
   ROLE: 'Role',
 };

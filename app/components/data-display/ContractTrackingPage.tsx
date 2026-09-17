@@ -81,7 +81,7 @@ export default function ContractTrackingPage({
 
   const needActionColumns: DataTableColumn<Contract>[] = [
     { key: 'name', label: 'Name' },
-    { key: 'department', label: 'Department' },
+    { key: 'department', label: 'Practice Group' },
     { key: 'grade', label: 'Grade' },
     {
       key: 'needAction',
@@ -103,7 +103,7 @@ export default function ContractTrackingPage({
       ? needActionColumns
       : [
           { key: 'name', label: 'Name' },
-          { key: 'department', label: 'Department' },
+          { key: 'department', label: 'Practice Group' },
           { key: 'grade', label: 'Grade' },
           ...(showStartDate
             ? [

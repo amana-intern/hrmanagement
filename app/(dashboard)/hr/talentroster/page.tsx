@@ -23,7 +23,7 @@ const OPS_GRADES = ['Head', 'Lead/Coordinator', 'Senior Officer', 'Officer', 'Ju
 const NON_OPS_GRADES = ['Partner', 'Principal', 'Senior Specialist', 'Specialist', 'Senior Associate', 'Associate', 'Senior Analyst', 'Analyst'];
 const LEADER_GRADES = ['Head', 'Partner'];
 const BASE_NON_EMPLOYEE_ROLES = ['partner', 'admin hr', 'admin ops'];
-const CONTRACT_TYPE_OPTIONS = ['Contract', 'Permanent'];
+const CONTRACT_TYPE_OPTIONS = ['PKWTT', 'PKWT', 'KKI', 'Internship'];
 const ACCESS_OPTIONS = ['employee', 'admin_hr', 'admin_ops'];
 const ACCESS_LABELS: Record<string, string> = { employee: 'Employee', admin_hr: 'Admin HR', admin_ops: 'Admin OPS' };
 
@@ -182,7 +182,7 @@ export default function TalentRosterPage() {
       return;
     }
     if (!newUser.department) {
-      setAddUserMsg('Department is required');
+      setAddUserMsg('Practice Group is required');
       return;
     }
     const gradeVal = newUser.grade === '__other__' ? customGrade.trim() : newUser.grade.trim();
@@ -268,7 +268,7 @@ export default function TalentRosterPage() {
   const handleSaveEdit = async () => {
     if (!editModal) return;
     if (!editForm.department) {
-      setEditMsg('Department is required');
+      setEditMsg('Practice Group is required');
       return;
     }
     const gradeVal = editForm.grade === '__other__' ? customEditGrade.trim() : editForm.grade.trim();
@@ -363,14 +363,20 @@ export default function TalentRosterPage() {
   };
 
   const departmentLabel = (d: string) => DEPARTMENT_LABELS[d] || d || '-';
-  const contractLabel = (t?: string) => (t === 'TETAP' ? 'Permanent' : 'Contract');
+  const contractLabel = (t?: string) => {
+    const map: Record<string, string> = { PKWTT: 'PKWTT', PKWT: 'PKWT', KKI: 'KKI', INTERNSHIP: 'Internship', KONTRAK: 'Contract' };
+    return map[t ?? ''] ?? t ?? '-';
+  };
 
   const rosterColumns: DataTableColumn<RosterRow>[] = [
     { key: 'nama', label: 'Name' },
-    { key: 'department', label: 'Department', render: (e) => departmentLabel(e.department) },
+    { key: 'department', label: 'Practice Group', render: (e) => departmentLabel(e.department) },
     { key: 'grade', label: 'Grade' },
     { key: 'roleLabel', label: 'Role' },
-    { key: 'tipeKontrak', label: 'Contract Type', render: (e) => contractLabel(e.tipeKontrak) },
+    { key: 'tipeKontrak', label: 'Contract Type', sortValue: (e) => {
+      const order: Record<string, number> = { PKWTT: 1, PKWT: 2, KKI: 3, INTERNSHIP: 4, KONTRAK: 5 };
+      return order[e.tipeKontrak ?? ''] ?? 9;
+    }, render: (e) => contractLabel(e.tipeKontrak) },
     {
       key: 'id',
       label: 'Assessment',
@@ -426,7 +432,7 @@ export default function TalentRosterPage() {
             </Button>
           }
         >
-          <DataTable key="roster" columns={rosterColumns} rows={rosterRows} defaultSortKey="nama" emptyMessage="No employees found." compact />
+          <DataTable key="roster" columns={rosterColumns} rows={rosterRows} defaultSortKey="tipeKontrak" emptyMessage="No employees found." compact />
         </SectionCard>
       </div>
 
@@ -476,7 +482,7 @@ export default function TalentRosterPage() {
       <PdfPreviewModal target={previewPdf} onClose={() => setPreviewPdf(null)} />
 
       {isAddUserOpen && (
-        <Modal title="Add New Talent" onClose={() => { setIsAddUserOpen(false); setAddUserMsg(''); setCustomGrade(''); }} maxWidth="max-w-3xl" className="max-h-[90vh]">
+        <Modal title="Add New Talent" onClose={() => { setIsAddUserOpen(false); setAddUserMsg(''); setCustomGrade(''); }} maxWidth="max-w-3xl" className="max-h-[90vh]" showCloseButton={false}>
           <div className="flex-1 min-h-0 overflow-y-auto scroll-smooth p-5 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
             <TextField label="Talent Email" value={newUser.email} onChange={(v) => setNewUser((p) => ({ ...p, email: v }))} placeholder="e.g.: name@company" />
             <TextField label="Talent Name" value={newUser.nama} onChange={(v) => setNewUser((p) => ({ ...p, nama: v }))} placeholder="Full Name" />
@@ -484,12 +490,12 @@ export default function TalentRosterPage() {
             <TextField label="Phone Number" value={newUser.noTelepon} onChange={(v) => setNewUser((p) => ({ ...p, noTelepon: v }))} placeholder="e.g.: 0812-3456-7890" />
 
             <SelectField
-              label="Department"
+              label="Practice Group"
               value={newUser.department}
               onChange={(v) => setNewUser((p) => ({ ...p, department: v, grade: '' }))}
               options={DEPARTMENT_OPTION_LIST}
               labels={DEPARTMENT_LABELS}
-              placeholder="Choose Department"
+              placeholder="Choose Practice Group"
             />
 
             <div>
@@ -542,7 +548,7 @@ export default function TalentRosterPage() {
             />
 
             <TextField label="Start Date" type="date" value={newUser.tanggalMasuk} onChange={(v) => setNewUser((p) => ({ ...p, tanggalMasuk: v }))} />
-            {newUser.tipeKontrak === 'Contract' && (
+            {newUser.tipeKontrak && newUser.tipeKontrak !== 'PKWTT' && (
               <TextField label="End Date" type="date" value={newUser.tanggalBerakhir} onChange={(v) => setNewUser((p) => ({ ...p, tanggalBerakhir: v }))} />
             )}
           </div>
@@ -552,11 +558,11 @@ export default function TalentRosterPage() {
           )}
 
           <div className="flex-shrink-0 flex justify-end gap-3 px-5 py-4 border-t border-amana-neutral-200">
-            <Button variant="outline" size="lg" onClick={() => { setIsAddUserOpen(false); setAddUserMsg(''); setCustomGrade(''); }}>
-              Cancel
-            </Button>
             <Button variant="primary" size="lg" disabled={addingUser} onClick={handleAddUser}>
               {addingUser ? 'Saving...' : 'Add Talent'}
+            </Button>
+            <Button variant="outline" size="lg" onClick={() => { setIsAddUserOpen(false); setAddUserMsg(''); setCustomGrade(''); }}>
+              Cancel
             </Button>
           </div>
         </Modal>
@@ -568,6 +574,7 @@ export default function TalentRosterPage() {
           onClose={() => setEditModal(null)}
           maxWidth="max-w-2xl"
           className="max-h-[90vh]"
+          showCloseButton={false}
         >
           {isSelfEdit && (
             <div className="mx-5 mt-4 flex-shrink-0 flex items-center gap-2 rounded-[5px] border border-amana-warning-500 bg-amana-warning-100 px-4 py-2.5 text-[14px] font-medium text-amana-warning-500">
@@ -590,12 +597,12 @@ export default function TalentRosterPage() {
             />
 
             <SelectField
-              label="Department"
+              label="Practice Group"
               value={editForm.department}
               onChange={(v) => setEditForm((p) => ({ ...p, department: v, grade: '' }))}
               options={DEPARTMENT_OPTION_LIST}
               labels={DEPARTMENT_LABELS}
-              placeholder="Choose Department"
+              placeholder="Choose Practice Group"
             />
 
             <div>
@@ -695,11 +702,11 @@ export default function TalentRosterPage() {
               Delete
             </Button>
             <div className="flex gap-3">
-              <Button variant="outline" size="lg" onClick={() => { setEditModal(null); setEditMsg(''); setCustomEditGrade(''); }}>
-                Cancel
-              </Button>
               <Button variant="primary" size="lg" disabled={savingEdit} onClick={handleSaveEdit}>
                 {savingEdit ? 'Saving...' : 'Save Changes'}
+              </Button>
+              <Button variant="outline" size="lg" onClick={() => { setEditModal(null); setEditMsg(''); setCustomEditGrade(''); }}>
+                Cancel
               </Button>
             </div>
           </div>
@@ -707,17 +714,17 @@ export default function TalentRosterPage() {
       )}
 
       {deleteModal && (
-        <Modal title={`Delete Employee - ${deleteModal.nama || ''}`} onClose={() => setDeleteModal(null)} maxWidth="max-w-md">
+        <Modal title={`Delete Employee - ${deleteModal.nama || ''}`} onClose={() => setDeleteModal(null)} maxWidth="max-w-md" showCloseButton={false}>
           <div className="p-5 flex flex-col gap-4">
             <p className="text-sm text-amana-neutral-400">
               Are you sure you want to delete <span className="font-semibold text-amana-neutral-500">{deleteModal.nama}</span>?
               Employee data along with all their records will be permanently deleted and cannot be recovered.
             </p>
             <div className="flex justify-end gap-3 pt-2">
-              <Button variant="outline" size="lg" onClick={() => setDeleteModal(null)}>Cancel</Button>
               <Button variant="danger" size="lg" disabled={deletingUser} onClick={handleDeleteUser}>
                 {deletingUser ? 'Processing...' : 'Delete'}
               </Button>
+              <Button variant="outline" size="lg" onClick={() => setDeleteModal(null)}>Cancel</Button>
             </div>
           </div>
         </Modal>

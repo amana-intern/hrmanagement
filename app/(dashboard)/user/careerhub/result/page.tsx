@@ -106,7 +106,7 @@ export default function CompetencyAssessmentResultPage() {
             </p>
             <div className="flex justify-center">
               <Button variant="primary" size="lg" onClick={() => router.push('/user/assessment')}>
-                Isi Assessment
+                Complete Assessment
               </Button>
             </div>
           </div>

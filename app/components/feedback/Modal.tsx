@@ -12,6 +12,7 @@ export default function Modal({
   maxWidth = 'max-w-2xl',
   zIndex = 50,
   className,
+  showCloseButton = true,
   children,
 }: {
   title: string;
@@ -21,6 +22,8 @@ export default function Modal({
   zIndex?: number;
   /** Extra classes on the dialog container, e.g. 'max-h-[90vh]' or 'h-[80vh]'. */
   className?: string;
+  /** Hide the top-right X — for confirm dialogs where Cancel/Confirm buttons already cover dismissal. */
+  showCloseButton?: boolean;
   children: ReactNode;
 }) {
   const reduceMotion = useReducedMotion();
@@ -57,15 +60,17 @@ export default function Modal({
       >
         <div className="flex-shrink-0 flex items-center justify-between px-5 py-3 border-b border-amana-primary-500">
           <h2 className="text-[24px] font-semibold text-amana-primary-500">{title}</h2>
-          <motion.button
-            onClick={onClose}
-            whileHover={{ rotate: 90 }}
-            whileTap={{ scale: 0.9 }}
-            transition={springSnappy}
-            className="text-amana-primary-500 hover:text-amana-danger-500"
-          >
-            <X className="w-6 h-6" />
-          </motion.button>
+          {showCloseButton && (
+            <motion.button
+              onClick={onClose}
+              whileHover={{ rotate: 90 }}
+              whileTap={{ scale: 0.9 }}
+              transition={springSnappy}
+              className="text-amana-primary-500 hover:text-amana-danger-500"
+            >
+              <X className="w-6 h-6" />
+            </motion.button>
+          )}
         </div>
         {children}
       </motion.div>

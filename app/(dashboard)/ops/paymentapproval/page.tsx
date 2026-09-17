@@ -52,7 +52,7 @@ function amountLabel(c: PaymentRaw): string {
     } catch {}
     return 'View file';
   }
-  return `Rp ${Number(c.nominal).toLocaleString('id-ID')}`;
+  return `Rp ${Number(c.nominal).toLocaleString('en-US')}`;
 }
 
 const STATUS_MAP: Record<string, { label: string; color: string }> = {

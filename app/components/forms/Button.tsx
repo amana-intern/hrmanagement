@@ -7,7 +7,7 @@ import { springSnappy } from '@/app/utils/motion';
 
 interface ButtonProps extends Omit<HTMLMotionProps<"button">, "onAnimationStart" | "onDragStart" | "onDragEnd" | "onDrag" | "ref"> {
   children: ReactNode;
-  variant?: 'primary' | 'danger' | 'ghost' | 'outline';
+  variant?: 'primary' | 'danger' | 'ghost' | 'outline' | 'danger-outline';
   size?: 'sm' | 'md' | 'lg';
   isLoading?: boolean;
 }
@@ -20,9 +20,12 @@ const variants = {
     'bg-amana-danger-500 text-amana-neutral-100 border-amana-danger-500 hover:bg-amana-danger-100 hover:text-amana-danger-500 hover:border-amana-danger-100 active:bg-amana-neutral-100 active:text-amana-danger-500 active:border-amana-danger-500',
   ghost:
     'border-transparent text-amana-neutral-500 hover:text-amana-primary-500 hover:bg-amana-primary-50',
-  // The reverse of `primary`: outlined/light by default, flips to solid on hover — for a secondary action paired next to a primary one (e.g. Previous next to Next).
+  // The reverse of `primary`: outlined by default, soft tint on hover, flips to solid on active/click — for a secondary action paired next to a primary one (e.g. Previous next to Next).
   outline:
-    'bg-amana-neutral-100 text-amana-primary-500 border-amana-primary-500 hover:bg-amana-primary-500 hover:text-amana-neutral-100 hover:border-amana-primary-500 active:bg-amana-primary-100 active:text-amana-primary-500 active:border-amana-primary-100',
+    'bg-amana-neutral-100 text-amana-primary-500 border-amana-primary-500 hover:bg-amana-primary-100 hover:text-amana-primary-500 hover:border-amana-primary-100 active:bg-amana-primary-500 active:text-amana-neutral-100 active:border-amana-primary-500',
+  // Red outline variant — for destructive secondary actions (e.g. Offboarding paired next to Renewal).
+  'danger-outline':
+    'bg-amana-neutral-100 text-amana-danger-500 border-amana-danger-500 hover:bg-amana-danger-100 hover:text-amana-danger-500 hover:border-amana-danger-100 active:bg-amana-danger-500 active:text-amana-neutral-100 active:border-amana-danger-500',
 };
 
 const sizes = {

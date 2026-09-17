@@ -1,17 +1,26 @@
 'use client';
 
-// Format tanggal seragam dd/mm/yyyy (zona WIB), mis. "18/08/2026".
+const MONTH_NAMES = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+
+// Format tanggal seragam "d MonthName yyyy" (zona WIB), mis. "18 August 2026".
 export function formatDateWIB(v: string | Date | null | undefined): string {
   if (!v) return '-';
   const d = typeof v === 'string' ? new Date(v) : v;
   if (Number.isNaN(d.getTime())) return '-';
-  const dd = String(d.getDate()).padStart(2, '0');
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  return `${dd}/${mm}/${d.getFullYear()}`;
+  // Convert to WIB (UTC+7) for day/month/year extraction
+  const utc = d.getTime() + d.getTimezoneOffset() * 60000;
+  const wib = new Date(utc + 7 * 3600000);
+  const day = wib.getDate();
+  const month = MONTH_NAMES[wib.getMonth()];
+  const year = wib.getFullYear();
+  return `${day} ${month} ${year}`;
 }
 
 // Format timestamp (UTC/ISO dari DB) menjadi tanggal + jam WIB,
-// mis. "04/08/2026 10.00 WIB".
+// mis. "18 August 2026 on 10:00 WIB".
 export function formatDateTimeWIB(v: string | Date | null | undefined): string {
   if (!v) return '-';
   const d = typeof v === 'string' ? new Date(v) : v;
@@ -23,5 +32,5 @@ export function formatDateTimeWIB(v: string | Date | null | undefined): string {
     minute: '2-digit',
     hour12: false,
   });
-  return `${date} on ${time} WIB`;
+  return `${date} at ${time} WIB`;
 }

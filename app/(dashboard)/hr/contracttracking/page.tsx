@@ -158,7 +158,7 @@ export default function HRContractTrackingPage() {
       <ContractTrackingPage contracts={contracts} showStartDate needActionConfig={{ actionColumn }} />
 
       {extendTarget && (
-        <Modal title="Add / Extend Contract" onClose={() => setExtendTarget(null)} maxWidth="max-w-lg">
+        <Modal title="Add / Extend Contract" onClose={() => setExtendTarget(null)} maxWidth="max-w-lg" showCloseButton={false}>
           <div className="p-5 flex flex-col gap-4">
             <div className="flex flex-col gap-1">
               <span className="text-[16px] font-semibold text-amana-neutral-500">Employee</span>
@@ -173,28 +173,28 @@ export default function HRContractTrackingPage() {
             </p>
           </div>
           <div className="flex-shrink-0 flex justify-end gap-3 px-5 py-4 border-t border-amana-neutral-200">
-            <Button variant="outline" size="lg" onClick={() => setExtendTarget(null)}>
-              Cancel
-            </Button>
             <Button variant="primary" size="lg" disabled={extending} onClick={handleExtend}>
               {extending ? 'Saving...' : 'Extend Contract'}
+            </Button>
+            <Button variant="outline" size="lg" onClick={() => setExtendTarget(null)}>
+              Cancel
             </Button>
           </div>
         </Modal>
       )}
 
       {deleteTarget && (
-        <Modal title={`Delete Employee - ${deleteTarget.name || ''}`} onClose={() => setDeleteTarget(null)} maxWidth="max-w-md">
+        <Modal title={`Delete Employee - ${deleteTarget.name || ''}`} onClose={() => setDeleteTarget(null)} maxWidth="max-w-md" showCloseButton={false}>
           <div className="p-5 flex flex-col gap-4">
             <p className="text-sm text-amana-neutral-400">
               Are you sure you want to delete <span className="font-semibold text-amana-neutral-500">{deleteTarget.name}</span>?
               Employee data along with all their records will be permanently deleted and cannot be recovered.
             </p>
             <div className="flex justify-end gap-3 pt-2">
-              <Button variant="outline" size="lg" onClick={() => setDeleteTarget(null)}>Cancel</Button>
               <Button variant="danger" size="lg" disabled={deleting} onClick={handleDeleteTalent}>
                 {deleting ? 'Processing...' : 'Delete'}
               </Button>
+              <Button variant="outline" size="lg" onClick={() => setDeleteTarget(null)}>Cancel</Button>
             </div>
           </div>
         </Modal>

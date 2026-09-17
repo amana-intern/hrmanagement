@@ -62,9 +62,9 @@ export async function POST(request: Request) {
 
     if (hit) {
       const existing = hit.tanggalAkhir
-        ? `${hit.tanggal?.toLocaleDateString('id-ID')} - ${hit.tanggalAkhir.toLocaleDateString('id-ID')}`
-        : (hit.tanggal?.toLocaleDateString('id-ID') ?? '');
-      return Response.json({ error: `Rentang tanggal tumpang-tindih dengan blokir: ${existing}.` }, { status: 409 });
+        ? `${hit.tanggal?.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })} - ${hit.tanggalAkhir.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}`
+        : (hit.tanggal?.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) ?? '');
+      return Response.json({ error: `Date range overlaps with blocked period: ${existing}.` }, { status: 409 });
     }
 
     const created = await prisma.tanggalBlokir.create({

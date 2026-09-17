@@ -33,6 +33,7 @@ export default function BlockedDatesPage() {
   const [status, setStatus] = useState<{ ok: boolean; text: string } | null>(null);
   const [rowToDelete, setRowToDelete] = useState<BlockedDate | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [rowToBlock, setRowToBlock] = useState<{ tanggal: string; tanggalAkhir: string | null; alasan: string } | null>(null);
 
   const load = async () => {
     const res = await fetch('/api/hr/blocked-dates', { cache: 'no-store' });
@@ -71,12 +72,17 @@ export default function BlockedDatesPage() {
       setStatus({ ok: false, text: 'End date must be on or after the start date' });
       return;
     }
+    setRowToBlock({ tanggal: newDate, tanggalAkhir: newEndDate || null, alasan: newReason });
+  };
+
+  const confirmBlock = async () => {
+    if (!rowToBlock) return;
     setSaving(true);
     setError('');
     const res = await fetch('/api/hr/blocked-dates', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tanggal: newDate, tanggalAkhir: newEndDate || null, alasan: newReason }),
+      body: JSON.stringify({ tanggal: rowToBlock.tanggal, tanggalAkhir: rowToBlock.tanggalAkhir, alasan: rowToBlock.alasan }),
     });
     const data = await res.json().catch(() => null);
     setSaving(false);
@@ -84,6 +90,7 @@ export default function BlockedDatesPage() {
       setStatus({ ok: false, text: data?.error || 'Failed to block date' });
       return;
     }
+    setRowToBlock(null);
     setNewDate('');
     setNewEndDate('');
     setNewReason('');
@@ -106,10 +113,10 @@ export default function BlockedDatesPage() {
     {
       key: 'tanggal',
       label: 'Date',
-      width: '210px',
+      width: '300px',
       sortValue: (r) => (r.tanggal ? new Date(r.tanggal).getTime() : 0),
       render: (r) => (
-        <span className="text-[13px] leading-snug whitespace-nowrap">
+        <span className="text-[13px] leading-snug whitespace-normal break-words">
           {fmt(r.tanggal)}
           {r.tanggalAkhir ? ` - ${fmt(r.tanggalAkhir)}` : ''}
         </span>
@@ -119,7 +126,7 @@ export default function BlockedDatesPage() {
       key: 'alasan',
       label: 'Reason',
       render: (r) => (
-        <span className="block w-full break-words text-center">
+        <span className="block w-full text-[13px] leading-snug whitespace-normal break-words">
           {r.alasan ?? '-'}
         </span>
       ),
@@ -127,7 +134,7 @@ export default function BlockedDatesPage() {
     {
       key: 'id',
       label: 'Action',
-      width: '240px',
+      width: '170px',
       render: (r) => (
         <Button variant="danger" size="sm" className="w-full" onClick={() => setRowToDelete(r)}>
           Remove
@@ -173,12 +180,39 @@ export default function BlockedDatesPage() {
       {rowToDelete && (
         <ConfirmModal
           title="Remove Blocked Date"
-          message={<>Hapus blokir <span className="font-semibold">{blockLabel(rowToDelete)}</span>?</>}
+          message={
+            <>
+              Remove blocked dates from <span className="font-semibold">{blockLabel(rowToDelete)}</span>?
+              {rowToDelete.alasan && (
+                <span className="block mt-1 text-[14px] text-amana-neutral-400">Reason: {rowToDelete.alasan}</span>
+              )}
+            </>
+          }
           confirmLabel="Remove"
           loadingLabel="Removing..."
           loading={deleting}
           onConfirm={() => handleDelete(rowToDelete)}
           onCancel={() => setRowToDelete(null)}
+        />
+      )}
+
+      {rowToBlock && (
+        <ConfirmModal
+          title="Confirm Block Date"
+          message={
+            <>
+              Block dates from <span className="font-semibold">{fmt(rowToBlock.tanggal)}</span>
+              {rowToBlock.tanggalAkhir ? <> to <span className="font-semibold">{fmt(rowToBlock.tanggalAkhir)}</span></> : ''}?
+              {rowToBlock.alasan && (
+                <span className="block mt-1 text-[14px] text-amana-neutral-400">Reason: {rowToBlock.alasan}</span>
+              )}
+            </>
+          }
+          confirmLabel="Block"
+          loadingLabel="Blocking..."
+          loading={saving}
+          onConfirm={confirmBlock}
+          onCancel={() => setRowToBlock(null)}
         />
       )}
 

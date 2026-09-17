@@ -62,7 +62,7 @@ function AttachmentLink({ file, label, onPreview }: { file?: Attachment | null; 
 function formatRp(nominal?: number | string | null) {
   const num = Number(nominal);
   if (!Number.isFinite(num)) return '-';
-  return `Rp ${num.toLocaleString('id-ID')}`;
+  return `Rp ${num.toLocaleString('en-US')}`;
 }
 
 function formatTanggal(v?: string) {
@@ -130,7 +130,7 @@ export default function PaymentDetailModal({ row, open, onClose }: PaymentDetail
   return (
     <>
       {open && (
-        <Modal title={`Detail Pengajuan - ${row.idRequest}`} onClose={onClose} maxWidth="max-w-2xl" className="max-h-[92vh]">
+        <Modal title={`Submission Detail - ${row.idRequest}`} onClose={onClose} maxWidth="max-w-2xl" className="max-h-[92vh]">
           <div className="px-5 py-2 max-h-[70vh] overflow-y-auto bg-amana-neutral-100">
             <Field label="To Whom" value={row.masterKategoriPayment?.namaKategori ?? row.idKategoriPayment} />
             <Field label="Event / Vendor Name" value={row.projectID} />
