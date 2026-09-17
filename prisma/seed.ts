@@ -1,4 +1,3 @@
-/* Fix order of seed */
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { ASSESSMENT_FIELDS } from '../lib/assessment-template';
@@ -698,16 +697,44 @@ async function main() {
     });
   }
 
-  // 9. Users
-  const passwordHash = await bcrypt.hash(PASSWORD, 10);
+  // 9b. New Karyawan from TSV data
+  for (const u of TSV_USERS) {
+    await prisma.karyawan.upsert({
+      where: { idKaryawan: u.idKaryawan },
+      update: {
+        idUser: u.idKaryawan,
+        nama: u.nama,
+        idGrade: u.idGrade,
+        department: u.department,
+        departments: u.departments ?? [],
+        tanggalLahir: u.tanggalLahir ? new Date(u.tanggalLahir) : null,
+        tanggalMasuk: parseIdDate(u.tanggalMasuk),
+        tipeKontrak: u.tipeKontrak,
+        noTelepon: u.noTelepon || null,
+      },
+      create: {
+        idKaryawan: u.idKaryawan,
+        idUser: u.idKaryawan,
+        nama: u.nama,
+        idGrade: u.idGrade,
+        department: u.department,
+        departments: u.departments ?? [],
+        tanggalLahir: u.tanggalLahir ? new Date(u.tanggalLahir) : null,
+        tanggalMasuk: parseIdDate(u.tanggalMasuk),
+        tipeKontrak: u.tipeKontrak,
+        sisaCutiTahunan: 12,
+        accrualRate: 1,
+        noTelepon: u.noTelepon || null,
+      },
+    });
+  }
 
+  // 10. Users
+  const passwordHash = await bcrypt.hash(PASSWORD, 10);
   for (const u of USERS) {
     await prisma.user.upsert({
       where: { email: u.email },
-      update: {
-        idRole: u.role,
-        passwordHash,
-      },
+      update: { idRole: u.role, passwordHash },
       create: {
         idUser: u.idKaryawan,
         email: u.email,
@@ -717,15 +744,11 @@ async function main() {
     });
   }
 
-  // 9b. New Users from TSV data
+  // 10b. New Users from TSV data
   for (const u of TSV_USERS) {
     await prisma.user.upsert({
       where: { idUser: u.idKaryawan },
-      update: {
-        email: u.email,
-        idRole: u.role,
-        passwordHash,
-      },
+      update: { email: u.email, idRole: u.role, passwordHash },
       create: {
         idUser: u.idKaryawan,
         email: u.email,
@@ -734,65 +757,6 @@ async function main() {
       },
     });
   }
-
-  // 10. Karyawan for existing USERS
-for (const u of USERS) {
-  await prisma.karyawan.upsert({
-    where: { idKaryawan: u.idKaryawan },
-    update: {
-      idUser: u.idKaryawan,
-      nama: u.nama,
-      idGrade: u.idGrade,
-      department: u.department,
-        departments: u.departments ?? [],
-      tanggalLahir: u.tanggalLahir ? new Date(u.tanggalLahir) : parseIdDate(u.tanggalLahir),
-      tanggalMasuk: parseIdDate(u.tanggalMasuk),
-    },
-    create: {
-      idKaryawan: u.idKaryawan,
-      idUser: u.idKaryawan,
-      nama: u.nama,
-      idGrade: u.idGrade,
-      department: u.department,
-        departments: u.departments ?? [],
-      tanggalLahir: u.tanggalLahir ? new Date(u.tanggalLahir) : parseIdDate(u.tanggalLahir),
-      tanggalMasuk: parseIdDate(u.tanggalMasuk),
-      sisaCutiTahunan: 12,
-      accrualRate: 1,
-      tipeKontrak: 'KONTRAK',
-    },
-  });
-}
-
-// 10b. Karyawan from TSV data
-for (const u of TSV_USERS) {
-  await prisma.karyawan.upsert({
-    where: { idKaryawan: u.idKaryawan },
-    update: {
-      idUser: u.idKaryawan,
-      nama: u.nama,
-      idGrade: u.idGrade,
-      department: u.department,
-      tanggalLahir: null,
-      tanggalMasuk: parseIdDate(u.tanggalMasuk),
-      tipeKontrak: u.tipeKontrak,
-      noTelepon: u.noTelepon || null,
-    },
-    create: {
-      idKaryawan: u.idKaryawan,
-      idUser: u.idKaryawan,
-      nama: u.nama,
-      idGrade: u.idGrade,
-      department: u.department,
-      tanggalLahir: null,
-      tanggalMasuk: parseIdDate(u.tanggalMasuk),
-      tipeKontrak: u.tipeKontrak,
-      sisaCutiTahunan: 12,
-      accrualRate: 1,
-      noTelepon: u.noTelepon || null,
-    },
-  });
-}
 
   // 11. Lowongan Karir
   for (const l of LOWONGAN) {
