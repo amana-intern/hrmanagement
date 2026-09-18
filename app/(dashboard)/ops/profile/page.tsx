@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import ProfileOverview, { type Stat, type SummaryPanelConfig, type ProfileBio } from '@/app/components/data-display/ProfileOverview';
+import ProfileOverview, { type Stat, type SummaryPanelConfig, type ProfileBio, type ProfileBioDetails } from '@/app/components/data-display/ProfileOverview';
 import { useTodos } from '@/lib/useTodos';
 
 interface Me {
@@ -13,6 +13,7 @@ interface Me {
   rolesDivisi: string;
   displayGrade?: string | null;
   roleLabel: string;
+  tipeKontrak?: string | null;
   stats: {
     pendingLeaves: number;
     sickLeaves: number;
@@ -69,17 +70,23 @@ export default function OPSProfilePage() {
     photoSrc: me?.pictureUrl ?? undefined,
   };
 
+  const bioDetails: ProfileBioDetails = {
+    grade: me?.displayGrade || '-',
+    department: me?.departmentLabel || '-',
+    position: me?.roleLabel || '-',
+    contractType: me?.tipeKontrak || '-',
+  };
+
   return (
     <ProfileOverview
       showGreeting
       showCareerHistory
       panels={[paymentPanel, opsPanel]}
       bio={bio}
+      bioDetails={bioDetails}
       todos={todos}
       onAddTodo={addTodo}
       onToggleTodo={toggleTodo}
-      onDeleteTodo={deleteTodo}
-      pageLabel="Profile"
-    />
+      onDeleteTodo={deleteTodo}    />
   );
 }

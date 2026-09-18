@@ -349,7 +349,7 @@ export default function CareerHubPage() {
                       <span className="font-semibold text-sm truncate text-amana-neutral-500">{cert.title}</span>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
-                      <Button variant="primary" size="sm" onClick={() => handleViewPdf(cert.title, cert.fileUrl)}>
+                      <Button variant="outline" size="sm" onClick={() => handleViewPdf(cert.title, cert.fileUrl)}>
                         View
                       </Button>
                       <Button variant="primary" size="sm" onClick={() => openUpdateCertModal(cert)}>

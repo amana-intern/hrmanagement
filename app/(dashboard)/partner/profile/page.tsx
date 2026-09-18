@@ -77,8 +77,6 @@ export default function PartnerProfilePage() {
       todos={todos}
       onAddTodo={addTodo}
       onToggleTodo={toggleTodo}
-      onDeleteTodo={deleteTodo}
-      pageLabel="Profile"
-    />
+      onDeleteTodo={deleteTodo}    />
   );
 }

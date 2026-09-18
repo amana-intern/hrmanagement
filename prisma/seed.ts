@@ -1,6 +1,5 @@
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
-import { ASSESSMENT_FIELDS } from '../lib/assessment-template';
 
 const prisma = new PrismaClient();
 
@@ -164,18 +163,143 @@ const LOWONGAN = [
 ];
 
 // Assessment contoh: 1 OPEN (sedang berjalan) yang dipakai berulang tiap periode.
-// Kategori & kompetensi memakai template 6 bidang (lib/assessment-template.ts).
+// Setiap bidang kompetensi jadi 1 checkbox grid (kompetensi = baris, Level 1-4 = kolom bersama)
+// — seed ini hanya data konten, bukan template aplikasi (assessment lain dibuat bebas oleh HR).
+const LEVEL_LABELS: Record<number, string> = { 1: 'Familiar', 2: 'Applied', 3: 'Proficient', 4: 'Expert' };
+
+const COMPETENCY_FIELDS: { namaKategori: string; kompetensi: string[] }[] = [
+  {
+    namaKategori: 'Digital Transformation & GovTech',
+    kompetensi: [
+      'Digital Strategy',
+      'Public Sector Transformation',
+      'Civic tech',
+      'Digital Government',
+      'Technology Implementation',
+      'E-Government',
+      'Sustainable Development Goals',
+      'Project Management',
+      'Digital Transformation',
+    ],
+  },
+  {
+    namaKategori: 'Health & Wellbeing',
+    kompetensi: [
+      'Public Health',
+      'Epidemiology',
+      'Clinical research',
+      'Laboratory Management',
+      'Health Policy',
+      'Health System Strengthening',
+      'Monitoring & Evaluation',
+    ],
+  },
+  {
+    namaKategori: 'Public Policy & Social Development',
+    kompetensi: [
+      'Policy analysis',
+      'Social Research',
+      'Stakeholder engagement',
+      'Social development',
+      'Policy economics',
+      'Public Policy',
+      'Digital Policy',
+      'Policy Research & Analysis',
+      'Social Welfare',
+      'Social Inclusion',
+      'Policy Advocacy',
+      'Curriculum development',
+    ],
+  },
+  {
+    namaKategori: 'Technology & Data Analytics',
+    kompetensi: [
+      'Product Development',
+      'Scrum Master',
+      'IT Audit',
+      'Cybersecurity',
+      'Solution Architect',
+      'Fraud detection',
+      'Data Engineering',
+      'Cloud computing',
+      'Data Science',
+      'Data Analytics',
+      'Data modeling',
+      'SQL Databases',
+      'Data Visualization',
+      'Data Governance',
+      'Data Warehousing',
+      'Data Driven Planning',
+      'AI Policy',
+      'AI Product Development',
+      'UI/UX Design',
+      'Data Center Operation',
+      'Full Stack Developer',
+    ],
+  },
+  {
+    namaKategori: 'Research & Consulting',
+    kompetensi: [
+      'Qualitative Research',
+      'Quantitative Research',
+      'Research Design',
+      'Strategic Planning',
+      'Public sector consulting',
+      'Public sector reform',
+      'Business research',
+    ],
+  },
+  {
+    namaKategori: 'Human Resources & Operation',
+    kompetensi: [
+      'HR Management',
+      'Recruitment',
+      'Business Operation',
+      'Administration',
+      'Organizational Development',
+      'Social Media Analyst',
+      'Copywriter',
+      'Graphic Designer',
+      'Motion Graphic',
+      'Videographer',
+      'Public Relation',
+      'Legal Drafting',
+      'Legal Compliance',
+      'Litigasi',
+      'Hukum Tata Negara',
+      'Corporate Governance',
+      'Business Acumen',
+      'Information Design',
+      'Content Management',
+    ],
+  },
+];
+
 let _catSeq = 0;
 let _qSeq = 0;
 function buildCategories() {
-  return ASSESSMENT_FIELDS.map((f) => ({
-    idKategoriAsm: `ASC${String(++_catSeq).padStart(3, '0')}`,
-    namaKategori: f.namaKategori,
-    questions: f.kompetensi.map((teks) => ({
-      idPertanyaan: `ASQ${String(++_qSeq).padStart(3, '0')}`,
-      teks,
-    })),
-  }));
+  return COMPETENCY_FIELDS.map((f) => {
+    const idKategoriAsm = `ASC${String(++_catSeq).padStart(3, '0')}`;
+    const gridId = `ASG-migrated-${idKategoriAsm}`;
+    return {
+      idKategoriAsm,
+      namaKategori: f.namaKategori,
+      questions: f.kompetensi.map((teks) => {
+        const idPertanyaan = `ASQ${String(++_qSeq).padStart(3, '0')}`;
+        return {
+          idPertanyaan,
+          teks,
+          tipeSoal: 'checkbox_grid',
+          gridId,
+          options: [1, 2, 3, 4].map((level) => ({
+            idOpsi: `ASO-migrated-${idPertanyaan}-L${level}`,
+            teks: `Level ${level} (${LEVEL_LABELS[level]})`,
+            urutan: level,
+          })),
+        };
+      }),
+    };
+  });
 }
 
 const ASSESSMENT_CATALOG = [
@@ -825,7 +949,9 @@ async function main() {
   for (const a of ASSESSMENT_CATALOG) {
     await prisma.assessment.upsert({
       where: { idAssessment: a.idAssessment },
-      update: { judul: a.judul, deskripsi: a.deskripsi, idStatus: a.idStatus, tanggalBuka: new Date(), tanggalTutup: new Date(Date.now() + 30 * 24 * 3600 * 1000) },
+      // autoOpened: true — seeded assessments aren't created via the scheduled create/edit flow,
+      // so the scheduler (lib/assessment-scheduler.ts) must never auto-open/reopen them.
+      update: { judul: a.judul, deskripsi: a.deskripsi, idStatus: a.idStatus, tanggalBuka: new Date(), tanggalTutup: new Date(Date.now() + 30 * 24 * 3600 * 1000), autoOpened: true },
       create: {
         idAssessment: a.idAssessment,
         judul: a.judul,
@@ -833,6 +959,7 @@ async function main() {
         idStatus: a.idStatus,
         tanggalBuka: new Date(),
         tanggalTutup: new Date(Date.now() + 30 * 24 * 3600 * 1000),
+        autoOpened: true,
       },
     });
     for (const c of a.categories) {
@@ -844,15 +971,29 @@ async function main() {
       for (const q of c.questions) {
         await prisma.assessmentQuestion.upsert({
           where: { idPertanyaan: q.idPertanyaan },
-          update: { teks: q.teks, idKategoriAsm: c.idKategoriAsm },
-          create: { idPertanyaan: q.idPertanyaan, teks: q.teks, idKategoriAsm: c.idKategoriAsm, urutan: c.questions.indexOf(q) + 1 },
+          update: { teks: q.teks, idKategoriAsm: c.idKategoriAsm, tipeSoal: q.tipeSoal, gridId: q.gridId },
+          create: {
+            idPertanyaan: q.idPertanyaan,
+            teks: q.teks,
+            idKategoriAsm: c.idKategoriAsm,
+            urutan: c.questions.indexOf(q) + 1,
+            tipeSoal: q.tipeSoal,
+            gridId: q.gridId,
+          },
         });
+        for (const o of q.options) {
+          await prisma.assessmentQuestionOption.upsert({
+            where: { idOpsi: o.idOpsi },
+            update: { teks: o.teks, idPertanyaan: q.idPertanyaan, urutan: o.urutan },
+            create: { idOpsi: o.idOpsi, teks: o.teks, idPertanyaan: q.idPertanyaan, urutan: o.urutan },
+          });
+        }
       }
     }
   }
 
-  // 12b. Assessment submissions for new employees (dummy answers, level=3)
-  const totalQuestions = ASSESSMENT_FIELDS.reduce((sum, f) => sum + f.kompetensi.length, 0);
+  // 12b. Assessment submissions for new employees (dummy answers, Level 3 selected)
+  const totalQuestions = COMPETENCY_FIELDS.reduce((sum, f) => sum + f.kompetensi.length, 0);
   for (const u of TSV_USERS) {
     const submissionId = `SUB-${u.idKaryawan}`;
     await prisma.assessmentSubmission.upsert({
@@ -870,14 +1011,15 @@ async function main() {
     for (let i = 1; i <= totalQuestions; i++) {
       const answerId = `ANS-${u.idKaryawan}-${String(i).padStart(3, '0')}`;
       const questionId = `ASQ${String(i).padStart(3, '0')}`;
+      const idOpsi = `ASO-migrated-${questionId}-L3`;
       await prisma.assessmentAnswer.upsert({
         where: { idJawaban: answerId },
-        update: { level: 3 },
+        update: { pilihan: [idOpsi] },
         create: {
           idJawaban: answerId,
           idSubmission: submissionId,
           idPertanyaan: questionId,
-          level: 3,
+          pilihan: [idOpsi],
         },
       });
     }

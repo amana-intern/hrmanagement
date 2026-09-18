@@ -52,6 +52,7 @@ export async function requireAuth() {
     department: user.karyawan?.department ?? null,
     departments,
     noTelepon: user.karyawan?.noTelepon ?? null,
+    tipeKontrak: user.karyawan?.tipeKontrak ?? null,
     pictureUrl: user.pictureUrl ?? null,
     rolePermissions: user.role?.rolePermissions.map((rp) => rp.idPermission) ?? [],
   };

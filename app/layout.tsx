@@ -13,7 +13,7 @@ const beVietnamPro = Be_Vietnam_Pro({
 });
 
 export const metadata: Metadata = {
-  title: 'AMANA Solutions HR-OPS',
+  title: 'Core Administrative System',
   description: 'Internal System AMANA',
 };
 

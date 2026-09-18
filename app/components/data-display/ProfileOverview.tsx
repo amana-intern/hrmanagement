@@ -2,13 +2,17 @@
 
 import { useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Check, Trash2 } from 'lucide-react';
+import { Check, Inbox, Trash2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import PageTopBar from '../layout/PageTopBar';
 import NotificationBell from '../ui/NotificationBell';
 import Button from '../forms/Button';
 import Collapse from '../layout/Collapse';
+import Modal from '../feedback/Modal';
+import PdfPreviewModal, { type PdfPreviewTarget } from '../feedback/PdfPreviewModal';
 import StatBox, { type Stat } from './StatBox';
 import CareerHistoryModal, { type CareerHistoryEntry } from './CareerHistoryModal';
+import { EmployeeDetailsContent, type EmployeeCertificate } from './EmployeeDetailsModal';
 import { cn } from '@/app/utils/cn';
 import { springSnappy, durationFast, easeOut } from '@/app/utils/motion';
 
@@ -27,6 +31,16 @@ export interface ProfileBio {
   phone: string;
   photoSrc?: string;
 }
+
+/** Extra fields for the full "Employee Details" modal — only needed when `showCareerHistory` is set. */
+export interface ProfileBioDetails {
+  grade: string;
+  department: string;
+  position: string;
+  contractType: string;
+}
+
+const CONTRACT_LABELS: Record<string, string> = { PKWTT: 'PKWTT', PKWT: 'PKWT', KKI: 'KKI', INTERNSHIP: 'Internship', KONTRAK: 'Contract' };
 
 export interface TodoItem {
   id: number | string;
@@ -221,14 +235,14 @@ function ToDoList({
                     aria-label="Delete task"
                     className="text-amana-danger-500 hover:text-amana-danger-400"
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
+                    <Trash2 className="w-[18px] h-[18px]" />
                   </button>
                 )}
                 <span
                   className={cn(
-                    'w-[18px] h-[18px] rounded-[8px] border flex items-center justify-center flex-shrink-0',
+                    'w-[18px] h-[18px] rounded-[8px] border flex items-center justify-center flex-shrink-0 transition-colors duration-150',
                     task.done
-                      ? 'bg-amana-primary-500 border-amana-primary-500'
+                      ? 'bg-amana-primary-500 border-amana-primary-500 group-hover:bg-amana-primary-100 group-hover:border-amana-primary-100'
                       : 'border-amana-neutral-300 group-hover:border-amana-primary-500'
                   )}
                 >
@@ -238,7 +252,7 @@ function ToDoList({
                       animate={{ scale: 1, opacity: 1 }}
                       transition={springSnappy}
                     >
-                      <Check className="w-2.5 h-2.5 text-white" strokeWidth={4} />
+                      <Check className="w-2.5 h-2.5 text-white transition-colors duration-150 group-hover:text-amana-primary-500" strokeWidth={4} />
                     </motion.span>
                   )}
                 </span>
@@ -246,6 +260,12 @@ function ToDoList({
             </motion.div>
           ))}
         </AnimatePresence>
+        {sortedTasks.length === 0 && (
+          <div className="h-full flex flex-col items-center justify-center gap-2 text-center py-4">
+            <Inbox className="w-9 h-9 text-amana-primary-300" strokeWidth={1.5} />
+            <p className="text-[14px] text-amana-neutral-400">You&apos;re all set! There is no current To-Do.</p>
+          </div>
+        )}
       </div>
 
       <div className="flex justify-end pt-2 flex-shrink-0">
@@ -260,33 +280,40 @@ function ToDoList({
 export interface ProfileOverviewProps {
   panels: [SummaryPanelConfig, SummaryPanelConfig];
   bio: ProfileBio;
+  /** Grade/department/position/contract — required when `showCareerHistory` is set, shown in the full Employee Details modal. */
+  bioDetails?: ProfileBioDetails;
   initialTodos?: TodoItem[];
   /** Controlled todo list (persisted server-side). When omitted, the internal mock state is used. */
   todos?: TodoItem[];
   onAddTodo?: (text: string) => void;
   onToggleTodo?: (id: TodoItem['id']) => void;
   onDeleteTodo?: (id: TodoItem['id']) => void;
-  pageLabel?: string;
   showGreeting?: boolean;
-  /** Show a "View Details" button on the Employee Bio card, opening the user's own Career History. */
+  /** Show a "View Details" button on the Employee Bio card, opening the user's own full Employee Details (bio, assessment, certificates, career history). */
   showCareerHistory?: boolean;
 }
 
 export default function ProfileOverview({
   panels,
   bio,
+  bioDetails,
   initialTodos,
   todos,
   onAddTodo,
   onToggleTodo,
   onDeleteTodo,
-  pageLabel = 'Profile',
   showGreeting = false,
   showCareerHistory = false,
 }: ProfileOverviewProps) {
+  const router = useRouter();
   const [careerHistoryOpen, setCareerHistoryOpen] = useState(false);
   const [careerHistory, setCareerHistory] = useState<CareerHistoryEntry[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
+
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [certificates, setCertificates] = useState<EmployeeCertificate[]>([]);
+  const [assessment, setAssessment] = useState<{ name?: string; done: boolean }>({ done: false });
+  const [previewPdf, setPreviewPdf] = useState<PdfPreviewTarget | null>(null);
 
   const openCareerHistory = async () => {
     setCareerHistoryOpen(true);
@@ -305,15 +332,28 @@ export default function ProfileOverview({
     setLoadingHistory(false);
   };
 
+  const openDetails = async () => {
+    setDetailsOpen(true);
+    try {
+      const [certRes, asmRes] = await Promise.all([
+        fetch('/api/certificates', { cache: 'no-store' }),
+        fetch('/api/assessments/open', { cache: 'no-store' }),
+      ]);
+      if (certRes.ok) {
+        const data = await certRes.json();
+        setCertificates((data.list ?? []).map((c: { judul: string; fileURL: string | null }) => ({ title: c.judul, fileURL: c.fileURL })));
+      }
+      if (asmRes.ok) {
+        const data = await asmRes.json();
+        setAssessment({ name: data.assessment?.judul, done: !!data.submission });
+      }
+    } catch {}
+  };
+
   return (
     <div className="w-full h-full flex flex-col gap-3">
       <div className="flex-shrink-0">
-        <PageTopBar
-          showGreeting={showGreeting}
-          right={
-            <span className="text-[16px] font-semibold text-amana-primary-500">{pageLabel}</span>
-          }
-        />
+        <PageTopBar showGreeting={showGreeting} />
       </div>
 
       <div className="flex-1 min-h-0 flex flex-col lg:flex-row gap-4">
@@ -323,7 +363,7 @@ export default function ProfileOverview({
         </div>
 
         <div className="flex flex-col gap-4 w-full lg:w-2/5 min-h-0">
-          <EmployeeBio {...bio} onViewDetails={showCareerHistory ? openCareerHistory : undefined} />
+          <EmployeeBio {...bio} onViewDetails={showCareerHistory ? openDetails : undefined} />
           <ToDoList
             initialTodos={initialTodos}
             todos={todos}
@@ -333,6 +373,31 @@ export default function ProfileOverview({
           />
         </div>
       </div>
+
+      {detailsOpen && bioDetails && (
+        <Modal title="Employee Details" onClose={() => setDetailsOpen(false)} maxWidth="max-w-4xl" className="max-h-[90vh]">
+          <EmployeeDetailsContent
+            employee={{
+              name: bio.name,
+              grade: bioDetails.grade,
+              department: bioDetails.department,
+              position: bioDetails.position,
+              contractType: CONTRACT_LABELS[bioDetails.contractType] ?? bioDetails.contractType,
+              email: bio.email,
+              phone: bio.phone,
+              photoSrc: bio.photoSrc,
+              assessmentDone: assessment.done,
+              assessmentName: assessment.name,
+              certificates,
+            }}
+            onViewAssessment={() => router.push('/user/careerhub/result')}
+            onViewCertificate={(cert) => cert.fileURL && setPreviewPdf({ title: cert.title, url: cert.fileURL })}
+            onViewCareerHistory={openCareerHistory}
+          />
+        </Modal>
+      )}
+
+      <PdfPreviewModal target={previewPdf} onClose={() => setPreviewPdf(null)} />
 
       {careerHistoryOpen && (
         <CareerHistoryModal

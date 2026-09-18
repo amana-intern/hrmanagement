@@ -1,8 +1,6 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { ChevronDown } from 'lucide-react';
-import { ASSESSMENT_LEVELS } from '@/lib/assessment-template';
 import { cn } from '@/app/utils/cn';
 
 // A plain, fixed-size tab button — unlike ToggleButton, it has no width-animating selection
@@ -43,15 +41,11 @@ export interface AssessmentResultField {
 }
 
 export interface AssessmentResultAnswer {
-  level?: number | null;
   pilihan?: string[] | null;
   jawabanTeks?: string | null;
 }
 
 export interface AssessmentResultData {
-  bidangSkor?: Record<string, number | null>;
-  technicalSkills?: string | null;
-  selfDevelopmentAreas?: string | null;
   answers?: Record<string, AssessmentResultAnswer>;
 }
 
@@ -60,36 +54,20 @@ interface AssessmentResultViewProps {
   assessment: AssessmentResultData | null;
 }
 
-type SortColumn = 'field' | 'score';
-type SortDirection = 'asc' | 'desc';
-
-const SELF_ASSESSMENT_FIELD = '__self_assessment__';
-const SELF_ASSESSMENT_LABEL = 'Self Assessment & Need for development';
-
-function toList(value: string | null | undefined): string[] {
-  if (!value) return [];
-  const lines = value
-    .split(/\r?\n/)
-    .map((s) => s.trim())
-    .filter(Boolean);
-  if (lines.length > 1) return lines;
-  return lines[0]
-    .split(/[,;]/)
-    .map((s) => s.trim())
-    .filter(Boolean);
+function isAnswered(q: AssessmentResultQuestion, answer: AssessmentResultAnswer | undefined) {
+  return q.tipeSoal === 'short_answer' ? !!answer?.jawabanTeks : !!answer?.pilihan?.length;
 }
 
 export default function AssessmentResultView({ categories, assessment }: AssessmentResultViewProps) {
   const [selectedField, setSelectedField] = useState<string | null>(null);
-  const [sort, setSort] = useState<{ column: SortColumn; direction: SortDirection } | null>(null);
 
   const fields = useMemo(
     () =>
-      categories.map((c) => ({
-        id: c.idKategoriAsm,
-        field: c.namaKategori,
-        score: assessment?.bidangSkor?.[c.idKategoriAsm] ?? null,
-      })),
+      categories.map((c) => {
+        const questions = c.questions ?? [];
+        const answered = questions.filter((q) => isAnswered(q, assessment?.answers?.[q.idPertanyaan])).length;
+        return { id: c.idKategoriAsm, field: c.namaKategori, total: questions.length, answered };
+      }),
     [categories, assessment]
   );
 
@@ -98,95 +76,26 @@ export default function AssessmentResultView({ categories, assessment }: Assessm
     [categories, selectedField]
   );
 
-  const toggleSort = (column: SortColumn) => {
-    setSort((prev) =>
-      prev && prev.column === column
-        ? { column, direction: prev.direction === 'asc' ? 'desc' : 'asc' }
-        : { column, direction: 'asc' }
-    );
-  };
-
-  const visibleResults = selectedField ? fields.filter((r) => r.field === selectedField) : fields;
-  const sortedResults = sort
-    ? [...visibleResults].sort((a, b) => {
-        const cmp =
-          sort.column === 'field'
-            ? a.field.localeCompare(b.field)
-            : (a.score ?? -1) - (b.score ?? -1);
-        return sort.direction === 'asc' ? cmp : -cmp;
-      })
-    : visibleResults;
-
-  const skills = toList(assessment?.technicalSkills);
-  const developmentAreas = toList(assessment?.selfDevelopmentAreas);
-
   if (!assessment) {
     return <p className="text-sm text-amana-neutral-400">No assessment data yet.</p>;
   }
-
-  const selfAssessmentSection = (
-    <div className="bg-amana-neutral-100 rounded-[5px] border border-amana-primary-500 shadow-sm px-5 py-2.5">
-      <h4 className="text-[18px] font-sans font-semibold not-italic text-amana-primary-500 pb-1.5 mb-2 border-b border-amana-primary-500">
-        {SELF_ASSESSMENT_LABEL}
-      </h4>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <p className="text-[14px] font-semibold text-amana-neutral-500 pb-1 mb-2 border-b border-amana-neutral-200">
-            1-3 most significant technical skills
-          </p>
-          <div className="flex flex-col divide-y divide-amana-neutral-200">
-            {skills.length > 0 ? (
-              skills.map((item, idx) => (
-                <p key={idx} className="text-[15px] text-amana-neutral-500 py-1.5">
-                  {item}
-                </p>
-              ))
-            ) : (
-              <p className="text-[14px] text-amana-neutral-400 py-1.5">-</p>
-            )}
-          </div>
-        </div>
-        <div>
-          <p className="text-[14px] font-semibold text-amana-neutral-500 pb-1 mb-2 border-b border-amana-neutral-200">
-            Self-Development Areas
-          </p>
-          <div className="flex flex-col divide-y divide-amana-neutral-200">
-            {developmentAreas.length > 0 ? (
-              developmentAreas.map((item, idx) => (
-                <p key={idx} className="text-[15px] text-amana-neutral-500 py-1.5">
-                  {item}
-                </p>
-              ))
-            ) : (
-              <p className="text-[14px] text-amana-neutral-400 py-1.5">-</p>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
 
   return (
     <div className="flex-1 min-h-0 overflow-y-auto scroll-smooth flex flex-col gap-4 pr-1">
       <div className="bg-amana-neutral-100 rounded-[5px] border border-amana-primary-500 shadow-sm px-5 py-2.5">
         <div className="flex flex-nowrap gap-2">
           <CategoryTab selected={selectedField === null} onClick={() => setSelectedField(null)}>
-            Average
+            All Fields
           </CategoryTab>
           {fields.map(({ field }) => (
             <CategoryTab key={field} selected={selectedField === field} onClick={() => setSelectedField(field)}>
               {field}
             </CategoryTab>
           ))}
-          <CategoryTab selected={selectedField === SELF_ASSESSMENT_FIELD} onClick={() => setSelectedField(SELF_ASSESSMENT_FIELD)}>
-            {SELF_ASSESSMENT_LABEL}
-          </CategoryTab>
         </div>
       </div>
 
-      {selectedField === SELF_ASSESSMENT_FIELD ? (
-        selfAssessmentSection
-      ) : selectedCategory ? (
+      {selectedCategory ? (
         <div className="bg-amana-neutral-100 rounded-[5px] border border-amana-primary-500 shadow-sm px-5 py-2.5">
           <h4 className="text-[18px] font-sans font-semibold not-italic text-amana-primary-500 pb-1.5 mb-2 border-b border-amana-primary-500">
             {selectedCategory.namaKategori}
@@ -195,20 +104,14 @@ export default function AssessmentResultView({ categories, assessment }: Assessm
             {selectedCategory.questions && selectedCategory.questions.length > 0 ? (
               selectedCategory.questions.map((q) => {
                 const answer = assessment.answers?.[q.idPertanyaan];
-                const lvl = !q.tipeSoal ? ASSESSMENT_LEVELS.find((l) => l.level === answer?.level) : undefined;
                 const optionLabel = (idOpsi: string) => q.options?.find((o) => o.idOpsi === idOpsi)?.teks ?? idOpsi;
+                const answered = isAnswered(q, answer);
 
                 let content: React.ReactNode = '-';
-                let answered = false;
-                if (!q.tipeSoal) {
-                  content = lvl ? `L${lvl.level} (${lvl.label})` : '-';
-                  answered = !!lvl;
-                } else if (q.tipeSoal === 'short_answer') {
+                if (q.tipeSoal === 'short_answer') {
                   content = answer?.jawabanTeks || '-';
-                  answered = !!answer?.jawabanTeks;
                 } else if (answer?.pilihan?.length) {
                   content = answer.pilihan.map(optionLabel).join(', ');
-                  answered = true;
                 }
 
                 return (
@@ -231,64 +134,28 @@ export default function AssessmentResultView({ categories, assessment }: Assessm
           </div>
         </div>
       ) : (
-        <>
-          <div className="bg-amana-neutral-100 rounded-[5px] border border-amana-primary-500 shadow-sm px-5 py-2.5">
-            <div className="flex items-stretch">
-              <div className="flex-1 min-w-0 flex flex-col">
-                <button
-                  type="button"
-                  onClick={() => toggleSort('field')}
-                  className="flex items-center justify-between gap-2 pb-1.5 border-b border-amana-primary-500 cursor-pointer group"
-                >
-                  <h4 className="text-[18px] font-sans font-semibold not-italic text-amana-primary-500">Field</h4>
-                  <ChevronDown
-                    className={cn(
-                      'w-4 h-4 flex-shrink-0 transition-transform duration-200 group-hover:text-amana-primary-400',
-                      sort?.column === 'field' ? 'text-amana-primary-500' : 'text-amana-neutral-300',
-                      sort?.column === 'field' && sort.direction === 'desc' && 'rotate-180'
-                    )}
-                  />
-                </button>
-                <div className="flex flex-col divide-y divide-amana-neutral-200">
-                  {sortedResults.map(({ field }) => (
-                    <div key={field} className="min-h-[42px] flex items-center text-[15px] text-amana-neutral-500">
-                      {field}
-                    </div>
-                  ))}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {fields.map(({ id, field, total, answered }) => {
+            const pct = total > 0 ? Math.round((answered / total) * 100) : 0;
+            return (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setSelectedField(field)}
+                className="text-left p-3 rounded-[5px] bg-amana-neutral-200/40 border border-amana-neutral-300 hover:border-amana-primary-500 transition-colors duration-150"
+              >
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <span className="text-[15px] font-semibold text-amana-neutral-500">{field}</span>
+                  <span className="flex-shrink-0 text-[13px] font-semibold text-amana-primary-500">{pct}%</span>
                 </div>
-              </div>
-
-              <div className="w-px flex-shrink-0 bg-amana-neutral-300 mx-4" />
-
-              <div className="w-[260px] flex-shrink-0 flex flex-col">
-                <button
-                  type="button"
-                  onClick={() => toggleSort('score')}
-                  className="flex items-center justify-between gap-2 pb-1.5 border-b border-amana-primary-500 cursor-pointer group"
-                >
-                  <h4 className="text-[18px] font-sans font-semibold not-italic text-amana-primary-500">Average Level</h4>
-                  <ChevronDown
-                    className={cn(
-                      'w-4 h-4 flex-shrink-0 transition-transform duration-200 group-hover:text-amana-primary-400',
-                      sort?.column === 'score' ? 'text-amana-primary-500' : 'text-amana-neutral-300',
-                      sort?.column === 'score' && sort.direction === 'desc' && 'rotate-180'
-                    )}
-                  />
-                </button>
-                <div className="flex flex-col divide-y divide-amana-neutral-200">
-                  {sortedResults.map(({ field, score }) => (
-                    <div key={field} className="min-h-[42px] flex items-center">
-                      <span className="flex w-full items-center justify-center rounded-full bg-amana-success-500 text-amana-neutral-100 text-[14px] font-semibold px-5 py-1">
-                        {score != null ? score.toFixed(1) : '-'}
-                      </span>
-                    </div>
-                  ))}
+                <div className="h-1.5 rounded-full bg-amana-neutral-300 overflow-hidden mb-1.5">
+                  <div className="h-full rounded-full bg-amana-success-500" style={{ width: `${pct}%` }} />
                 </div>
-              </div>
-            </div>
-          </div>
-          {selfAssessmentSection}
-        </>
+                <span className="text-[13px] text-amana-neutral-400">{answered} of {total} answered</span>
+              </button>
+            );
+          })}
+        </div>
       )}
     </div>
   );

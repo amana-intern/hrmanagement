@@ -11,6 +11,7 @@ import Button from '@/app/components/forms/Button';
 import TextField from '@/app/components/forms/TextField';
 import SelectField from '@/app/components/forms/SelectField';
 import SharedUploadBox from '@/app/components/forms/UploadBox';
+import StatusModal from '@/app/components/feedback/StatusModal';
 import { easeOut } from '@/app/utils/motion';
 import { formatDateTimeWIB } from '@/app/utils/formatDate';
 import { PAYMENT_KATEGORI, PAYMENT_STATUS } from '@/lib/constants';
@@ -103,6 +104,7 @@ export default function PaymentPage() {
   const [loadingPayments, setLoadingPayments] = useState(true);
   const [partnerOptions, setPartnerOptions] = useState<string[]>([]);
   const [partnerList, setPartnerList] = useState<{ nama: string; department: string }[]>([]);
+  const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
 
   // Fetch partner list dari API
   useEffect(() => {
@@ -216,7 +218,7 @@ export default function PaymentPage() {
 
       const data = await res.json();
       if (res.ok) {
-        alert(`Payment submitted successfully!\n\nType: ${paymentFor}\nStatus: Pending Ops`);
+        setMessage({ ok: true, text: `Payment submitted successfully! Type: ${paymentFor}, Status: Pending Ops` });
         setStep(1);
         setRole('');
         setPracticeGroup('');
@@ -238,14 +240,15 @@ export default function PaymentPage() {
           );
         }
       } else {
-        alert(data.error || 'Failed to submit request');
+        setMessage({ ok: false, text: data.error || 'Failed to submit request' });
       }
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Network error');
+      setMessage({ ok: false, text: err instanceof Error ? err.message : 'Network error' });
     }
   };
 
   return (
+    <>
     <div className="w-full h-full flex flex-col gap-3">
       <PageTopBar showGreeting />
 
@@ -450,5 +453,8 @@ export default function PaymentPage() {
         </motion.div>
       )}
     </div>
+
+    <StatusModal state={message} onClose={() => setMessage(null)} />
+    </>
   );
 }

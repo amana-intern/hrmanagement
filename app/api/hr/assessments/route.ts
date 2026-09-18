@@ -2,6 +2,8 @@ import { requireAuth } from '@/lib/dal';
 import { prisma } from '@/lib/prisma';
 import { ROLES } from '@/lib/roles';
 import { ASSESSMENT_STATUS } from '@/lib/constants';
+import { buildCategoriesCreateInput } from '@/lib/assessment-builder';
+import { applyScheduledAssessmentTransitions, computeAssessmentSchedule } from '@/lib/assessment-scheduler';
 
 // GET /api/hr/assessments - daftar assessment + kategorinya (HR)
 export async function GET() {
@@ -10,6 +12,8 @@ export async function GET() {
     if (auth.idRole !== ROLES.ADMIN_HR) {
       return Response.json({ error: 'Forbidden' }, { status: 403 });
     }
+
+    await applyScheduledAssessmentTransitions();
 
     const list = await prisma.assessment.findMany({
       include: {
@@ -57,53 +61,15 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { judul, deskripsi, tanggalBuka, tanggalTutup, categories, open } = body || {};
+    const { judul, deskripsi, startDate, endDate, categories } = body || {};
     if (!judul) {
       return Response.json({ error: 'Title is required' }, { status: 400 });
     }
 
-    const catList: {
-      idKategoriAsm: string;
-      namaKategori: string;
-      questions: {
-        idPertanyaan: string;
-        teks: string;
-        urutan: number;
-        tipeSoal: string | null;
-        options: { idOpsi: string; teks: string; urutan: number }[];
-      }[];
-    }[] = Array.isArray(categories)
-      ? categories
-          .filter((c: any) => c?.namaKategori)
-          .map((c: any) => ({
-            idKategoriAsm: `ASC-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-            namaKategori: String(c.namaKategori),
-            questions: Array.isArray(c.questions)
-              ? (c.questions as any[])
-                  .filter((q: any) => q?.teks)
-                  .map((q: any, i: number) => ({
-                    idPertanyaan: `ASQ-${Date.now()}-${Math.random().toString(36).slice(2, 6)}-${i}`,
-                    teks: String(q.teks),
-                    urutan: i + 1,
-                    tipeSoal: q.tipeSoal ? String(q.tipeSoal) : null,
-                    options: Array.isArray(q.options)
-                      ? (q.options as any[])
-                          .filter((o: any) => o?.teks)
-                          .map((o: any, oi: number) => ({
-                            idOpsi: `ASO-${Date.now()}-${Math.random().toString(36).slice(2, 6)}-${i}-${oi}`,
-                            teks: String(o.teks),
-                            urutan: oi + 1,
-                          }))
-                      : [],
-                  }))
-              : [],
-          }))
-      : [];
+    const schedule = computeAssessmentSchedule(startDate, endDate);
 
-    const isOpen = open !== false;
-
-    // Tutup assessment lain yang masih open bila yang baru dibuka.
-    if (isOpen) {
+    // Tutup assessment lain yang masih open bila yang baru langsung dibuka.
+    if (schedule.idStatus === ASSESSMENT_STATUS.OPEN) {
       await prisma.assessment.updateMany({
         where: { idStatus: ASSESSMENT_STATUS.OPEN },
         data: { idStatus: ASSESSMENT_STATUS.CLOSED },
@@ -115,24 +81,8 @@ export async function POST(request: Request) {
         idAssessment: `ASM-${Date.now()}`,
         judul,
         deskripsi: deskripsi ?? null,
-        tanggalBuka: tanggalBuka ? new Date(tanggalBuka) : new Date(),
-        tanggalTutup: tanggalTutup ? new Date(tanggalTutup) : null,
-        idStatus: isOpen ? ASSESSMENT_STATUS.OPEN : ASSESSMENT_STATUS.CLOSED,
-        categories: {
-          create: catList.map((c) => ({
-            idKategoriAsm: c.idKategoriAsm,
-            namaKategori: c.namaKategori,
-            questions: {
-              create: c.questions.map((q) => ({
-                idPertanyaan: q.idPertanyaan,
-                teks: q.teks,
-                urutan: q.urutan,
-                tipeSoal: q.tipeSoal,
-                options: { create: q.options },
-              })),
-            },
-          })),
-        },
+        ...schedule,
+        categories: { create: buildCategoriesCreateInput(categories) },
       },
     });
 

@@ -61,12 +61,14 @@ export const ASSESSMENT_QUESTION_TYPES = {
   MULTIPLE_CHOICE: 'multiple_choice',
   CHECKBOX: 'checkbox',
   SHORT_ANSWER: 'short_answer',
+  CHECKBOX_GRID: 'checkbox_grid',
 } as const;
 
 export const ASSESSMENT_QUESTION_TYPE_LABELS: Record<string, string> = {
   multiple_choice: 'Multiple Choice',
   checkbox: 'Checkbox',
   short_answer: 'Short Answer',
+  checkbox_grid: 'Checkbox Grid',
 };
 
 // MasterStatus — talent

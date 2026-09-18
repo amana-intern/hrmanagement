@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { X } from 'lucide-react';
@@ -24,9 +24,7 @@ interface OpenAssessment {
 }
 
 interface Submission {
-  technicalSkills: string | null;
-  selfDevelopmentAreas: string | null;
-  answers: Record<string, { level?: number | null; pilihan?: string[] | null; jawabanTeks?: string | null }>;
+  answers: Record<string, { pilihan?: string[] | null; jawabanTeks?: string | null }>;
 }
 
 export default function CompetencyAssessmentResultPage() {
@@ -48,24 +46,6 @@ export default function CompetencyAssessmentResultPage() {
       setLoading(false);
     })();
   }, []);
-
-  const bidangSkor = useMemo(() => {
-    if (!openAssessment || !submission) return undefined;
-    const result: Record<string, number | null> = {};
-    for (const cat of openAssessment.categories) {
-      let sum = 0;
-      let count = 0;
-      for (const q of cat.questions) {
-        const lvl = submission.answers?.[q.idPertanyaan]?.level;
-        if (lvl && lvl >= 1 && lvl <= 4) {
-          sum += lvl;
-          count += 1;
-        }
-      }
-      result[cat.idKategoriAsm] = count > 0 ? +(sum / count).toFixed(2) : null;
-    }
-    return result;
-  }, [openAssessment, submission]);
 
   if (loading) return <CardStackSkeleton blocks={2} />;
 
@@ -93,10 +73,7 @@ export default function CompetencyAssessmentResultPage() {
           <AssessmentResultView
             categories={openAssessment.categories}
             assessment={{
-              bidangSkor,
               answers: submission.answers,
-              technicalSkills: submission.technicalSkills,
-              selfDevelopmentAreas: submission.selfDevelopmentAreas,
             }}
           />
         ) : (
