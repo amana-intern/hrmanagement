@@ -272,7 +272,7 @@ export default function PaymentPage() {
           <SectionCard title="Outgoing Payments" scroll>
             {outgoingPayments.length === 0 ? (
               <p className="py-8 text-center text-[14px] text-amana-neutral-400 font-medium">
-                {loadingPayments ? 'Memuat data...' : "You haven't requested any payments yet"}
+                {loadingPayments ? 'Loading data...' : "You haven't requested any payments yet"}
               </p>
             ) : (
               <DataTable columns={paymentColumns} rows={outgoingPayments} defaultSortKey="timeSubmission" />
@@ -282,7 +282,7 @@ export default function PaymentPage() {
           <SectionCard title="Payment Request">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
               <TextField label="Submitting as" value={submittingAs} onChange={setSubmittingAs} placeholder="e.g. Siti Inertia" />
-              <TextField label="Email terkait" type="email" value={emailTerkait} onChange={setEmailTerkait} placeholder="name@amana.id" />
+              <TextField label="Related Email" type="email" value={emailTerkait} onChange={setEmailTerkait} placeholder="name@amana.id" />
             </div>
             <div className="mt-4">
               <SelectField
