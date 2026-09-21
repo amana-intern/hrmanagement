@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
 import { ROLE_HOME } from '@/lib/roles';
+import Image from 'next/image';
 
 const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? '';
 const domain = process.env.NEXT_PUBLIC_CMP_EMAIL_DOMAIN ?? 'amana.id';
@@ -79,10 +80,10 @@ export default function LoginPage() {
     <div className="min-h-screen bg-[url('/backlogin.jpg')] bg-cover bg-center bg-no-repeat flex items-center justify-center p-4 font-sans relative">
       <div className="absolute inset-0 bg-black/40 z-0 backdrop-blur-[2px]" />
 
-      <div className="relative z-10 w-full max-w-[420px] bg-white/95 backdrop-blur-sm rounded-[30px] shadow-2xl animate-scale-in px-10 py-12">
+      <div className="relative z-10 w-full max-w-105 bg-white/95 backdrop-blur-sm rounded-[30px] shadow-2xl animate-scale-in px-10 py-12">
         <div className="flex flex-col">
           <div className="flex flex-col items-center text-center">
-            <img src="/AMANA_Logo.png" className="h-10 mb-4 object-contain" alt="Amana Logo" />
+            <Image src="/amana_logo.png" width={180} height={180} className="mb-4 object-contain" alt="Amana Logo" />
             <h1 className="text-3xl font-bold mb-2 text-amana-primary-500">Sign In</h1>
             <span className="text-xs text-amana-neutral-400 mb-6">Enter your personal info</span>
 
