@@ -14,7 +14,6 @@ model User {
   googleSub    String?   @unique @db.VarChar
   pictureUrl   String?   @db.VarChar(500)
   idRole       String?   @db.VarChar
-
   role         Role?     @relation(fields: [idRole], references: [idRole])
   karyawan     Karyawan?
 }
@@ -99,18 +98,17 @@ model Karyawan {
   user            User?             @relation(fields: [idUser], references: [idUser])
   masterGrade     MasterGrade?      @relation(fields: [idGrade], references: [idGrade])
   masterDepartment MasterDepartment? @relation(fields: [department], references: [idDepartment])
-
-  pengajuanCuti    PengajuanCuti[]
-  izinSakit        IzinSakit[]
-  kontrakKaryawan  KontrakKaryawan[]
-  talentProfile    TalentProfile?
-  paymentRequests  PaymentRequest[]
-  auditTrails      AuditTrail[]
-  sertifikat       SertifikatKaryawan[]
+  pengajuanCuti   PengajuanCuti[]
+  izinSakit       IzinSakit[]
+  kontrakKaryawan KontrakKaryawan[]
+  talentProfile   TalentProfile?
+  paymentRequests PaymentRequest[]
+  auditTrails     AuditTrail[]
+  sertifikat      SertifikatKaryawan[]
   assessmentSubmissions AssessmentSubmission[]
-  hrTodos          HrTodo[]
-  notifications    Notification[]
-  karyawanHistory  KaryawanHistory[]
+  hrTodos         HrTodo[]
+  notifications   Notification[]
+  karyawanHistory KaryawanHistory[]
 }
 
 model SertifikatKaryawan {
