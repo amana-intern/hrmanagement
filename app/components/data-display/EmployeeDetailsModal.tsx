@@ -99,7 +99,7 @@ export function EmployeeDetailsContent({
             <DetailRow label="Position" value={employee.position} />
             <DetailRow label="Contract" value={employee.contractType} />
             <DetailRow label="Email" value={employee.email} href={`mailto:${employee.email}`} />
-            <DetailRow label="No. Hp" value={employee.phone} />
+            <DetailRow label="Phone" value={employee.phone} />
           </div>
           {(onRemove || onEdit) && (
             <>

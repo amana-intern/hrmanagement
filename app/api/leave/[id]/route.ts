@@ -3,7 +3,7 @@ import { requireAuth } from '@/lib/dal';
 import { prisma } from '@/lib/prisma';
 import { ROLES } from '@/lib/roles';
 import { LEAVE_TYPES } from '@/lib/constants';
-import { persistLeaveBalance } from '@/lib/leave';
+import { persistLeaveBalance, computeLeaveBalance } from '@/lib/leave';
 import { sendEmail } from '@/lib/notify';
 import { completeTodo } from '@/lib/todos';
 
@@ -58,6 +58,21 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
 
     // Jika bukan kompensasi, tetap pakai jumlahHari sebagai hari cuti
     const isCompensatory = cuti.idJenisCuti === LEAVE_TYPES.COMPENSATORY;
+
+    // Jaring pengaman: cek ulang saldo Paid Leave tepat sebelum approve, supaya
+    // beberapa pengajuan pending yang masing-masing lolos cek saat submit tidak
+    // bisa sama-sama di-approve sampai melebihi saldo asli.
+    if (action === 'approve' && cuti.idJenisCuti === LEAVE_TYPES.PAID && cuti.idKaryawan) {
+      const balance = await computeLeaveBalance(cuti.idKaryawan);
+      if ((cuti.jumlahHari ?? 0) > balance.sisa) {
+        return Response.json(
+          {
+            error: `Cannot approve: remaining Paid Leave balance is only ${balance.sisa} day(s), less than the requested ${cuti.jumlahHari} day(s). Another leave may have been approved in the meantime.`,
+          },
+          { status: 400 }
+        );
+      }
+    }
 
     const newStatus = action === 'approve' ? 'ST_LEAVE_APPROVED' : 'ST_LEAVE_REJECTED';
 

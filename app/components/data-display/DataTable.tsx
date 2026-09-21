@@ -11,8 +11,10 @@ export interface DataTableColumn<T> {
   label: string;
   render?: (row: T) => ReactNode;
   sortValue?: (row: T) => number | string;
-  /** Fixed column width (e.g. '190px'), for columns that need more room than an equal split gives them. */
+  /** Column width — a fixed px value, or a percentage so it grows/shrinks proportionally with the rest of the table. */
   width?: string;
+  /** Minimum pixel floor counted into the table's own min-width, for a percentage `width` (a px `width` is already its own floor). */
+  minPx?: number;
 }
 
 interface DataTableProps<T extends { id: number | string }> {
@@ -65,7 +67,10 @@ export default function DataTable<T extends { id: number | string }>({
   }, [rows, sortKey, sortDir, columns]);
 
   const minColWidth = compact ? 80 : 96;
-  const minTableWidth = columns.reduce((sum, c) => sum + (c.width ? parseInt(c.width, 10) : minColWidth), 0);
+  const minTableWidth = columns.reduce(
+    (sum, c) => sum + (c.minPx ?? (c.width ? parseInt(c.width, 10) : minColWidth)),
+    0
+  );
 
   return (
     <div className="flex-1 min-h-0 overflow-auto">

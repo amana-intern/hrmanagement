@@ -422,6 +422,8 @@ export default function ManageAssessmentPage() {
     {
       key: 'judul',
       label: 'Title',
+      width: '22%',
+      minPx: 220,
       render: (a) => (
         <button onClick={() => setViewAssessment(a)} className="hover:text-amana-primary-500 transition-colors font-semibold">
           {a.judul}
@@ -431,12 +433,15 @@ export default function ManageAssessmentPage() {
     {
       key: 'statusLabel',
       label: 'Status',
+      width: '13%',
+      minPx: 130,
       render: (a) => <StatusPill color={statusColorFor(a.idStatus)}>{a.statusLabel}</StatusPill>,
     },
     {
       key: 'tanggalBuka',
       label: 'Period',
-      width: '280px',
+      width: '28%',
+      minPx: 280,
       render: (a) => (
         <span className="text-[14px] leading-tight">
           {a.tanggalBuka ? formatDateWIB(a.tanggalBuka) : '-'}
@@ -444,11 +449,12 @@ export default function ManageAssessmentPage() {
         </span>
       ),
     },
-    { key: 'totalPeserta', label: 'Participants', width: '120px' },
+    { key: 'totalPeserta', label: 'Participants', width: '12%', minPx: 120 },
     {
       key: 'id',
       label: 'Action',
-      width: '240px',
+      width: '25%',
+      minPx: 240,
       render: (a) => (
         <div className="flex gap-2">
           <Button

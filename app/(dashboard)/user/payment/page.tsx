@@ -77,13 +77,18 @@ function UploadBox({
 
 export default function PaymentPage() {
   const [step, setStep] = useState(1);
-  const [role, setRole] = useState('');
+  const [submittingAs, setSubmittingAs] = useState('');
+  const [emailTerkait, setEmailTerkait] = useState('');
+  const [typeOfRequest, setTypeOfRequest] = useState('');
+  const isStep1Complete = submittingAs.trim() !== '' && emailTerkait.trim() !== '' && typeOfRequest === 'General Payment';
+
+  const [paymentFor, setPaymentFor] = useState('');
   const [practiceGroup, setPracticeGroup] = useState('');
   const [partner, setPartner] = useState('');
   const [paymentUnder, setPaymentUnder] = useState('');
-  const isStep1Complete = role !== '' && practiceGroup !== '' && partner !== '' && paymentUnder !== '';
-
-  const [paymentFor, setPaymentFor] = useState('');
+  const [partnerOptions, setPartnerOptions] = useState<string[]>([]);
+  const [partnerList, setPartnerList] = useState<{ nama: string; department: string }[]>([]);
+  const isStep2HeaderComplete = practiceGroup !== '' && partner !== '' && paymentUnder !== '';
   const [vendorName, setVendorName] = useState('');
   const [vendorNpwp, setVendorNpwp] = useState('');
   const [vendorAmount, setVendorAmount] = useState('');
@@ -102,8 +107,6 @@ export default function PaymentPage() {
 
   const [outgoingPayments, setOutgoingPayments] = useState<OutgoingPayment[]>([]);
   const [loadingPayments, setLoadingPayments] = useState(true);
-  const [partnerOptions, setPartnerOptions] = useState<string[]>([]);
-  const [partnerList, setPartnerList] = useState<{ nama: string; department: string }[]>([]);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
 
   // Fetch partner list dari API
@@ -151,8 +154,10 @@ export default function PaymentPage() {
   };
 
   const isVendorComplete =
+    isStep2HeaderComplete &&
     vendorName.trim() !== '' && vendorNpwp.trim() !== '' && vendorAmount.trim() !== '' && vendorDueDate.trim() !== '' && files['vendor-invoice'] != null;
   const isIndividualComplete =
+    isStep2HeaderComplete &&
     indActivity.trim() !== '' &&
     indReceiver.trim() !== '' &&
     individualRole !== '' &&
@@ -162,7 +167,8 @@ export default function PaymentPage() {
     indComponent.trim() !== '' &&
     indAmount.trim() !== '' &&
     files['ind-ktp'] != null;
-  const isPerDiemComplete = perDiemEvent.trim() !== '' && perDiemParticipants.trim() !== '' && files['perdiem-file'] != null;
+  const isPerDiemComplete =
+    isStep2HeaderComplete && perDiemEvent.trim() !== '' && perDiemParticipants.trim() !== '' && files['perdiem-file'] != null;
 
   const handleSubmitPayment = async () => {
     const kategoriMap: Record<string, string> = {
@@ -188,10 +194,12 @@ export default function PaymentPage() {
 
     const detail =
       paymentFor === 'Vendor'
-        ? JSON.stringify({ type: 'Vendor', vendorName, vendorNpwp, vendorDueDate })
+        ? JSON.stringify({ type: 'Vendor', submittingAs, emailTerkait, vendorName, vendorNpwp, vendorDueDate })
         : paymentFor === 'Individual(s)'
         ? JSON.stringify({
             type: 'Individual(s)',
+            submittingAs,
+            emailTerkait,
             indActivity,
             indReceiver,
             individualRole: individualRole === 'Other' ? indOtherRole : individualRole,
@@ -199,7 +207,7 @@ export default function PaymentPage() {
             indAccNumber,
             indComponent,
           })
-        : JSON.stringify({ type: 'Per Diem', perDiemEvent, perDiemParticipants });
+        : JSON.stringify({ type: 'Per Diem', submittingAs, emailTerkait, perDiemEvent, perDiemParticipants });
 
     const fd = new FormData();
     fd.append('projectID', projectID || 'Pending Detail');
@@ -220,11 +228,13 @@ export default function PaymentPage() {
       if (res.ok) {
         setMessage({ ok: true, text: `Payment submitted successfully! Type: ${paymentFor}, Status: Pending Ops` });
         setStep(1);
-        setRole('');
+        setSubmittingAs('');
+        setEmailTerkait('');
+        setTypeOfRequest('');
+        setPaymentFor('');
         setPracticeGroup('');
         setPartner('');
         setPaymentUnder('');
-        setPaymentFor('');
         const list = await fetch('/api/payment/list?scope=mine', { cache: 'no-store' });
         if (list.ok) {
           const ldata = await list.json();
@@ -262,47 +272,31 @@ export default function PaymentPage() {
           <SectionCard title="Outgoing Payments" scroll>
             {outgoingPayments.length === 0 ? (
               <p className="py-8 text-center text-[14px] text-amana-neutral-400 font-medium">
-                {loadingPayments ? 'Memuat data...' : "You haven't requested any payments yet"}
+                {loadingPayments ? 'Loading data...' : "You haven't requested any payments yet"}
               </p>
             ) : (
               <DataTable columns={paymentColumns} rows={outgoingPayments} defaultSortKey="timeSubmission" />
             )}
           </SectionCard>
 
-          <SectionCard title="Submit New Payment">
+          <SectionCard title="Payment Request">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-              <SelectField label="Submitting as" value={role} onChange={setRole} options={['Consultant', 'Project Manager']} />
+              <TextField label="Submitting as" value={submittingAs} onChange={setSubmittingAs} placeholder="e.g. Siti Inertia" />
+              <TextField label="Related Email" type="email" value={emailTerkait} onChange={setEmailTerkait} placeholder="name@amana.id" />
+            </div>
+            <div className="mt-4">
               <SelectField
-                label="Practice Group"
-                value={practiceGroup}
-                onChange={setPracticeGroup}
-                options={['Education', 'Digital', 'Strategy and Transformation', 'Health and Wellbeing', 'Operations']}
+                label="Type of Request"
+                value={typeOfRequest}
+                onChange={setTypeOfRequest}
+                options={['General Payment', 'Business Trip']}
+                placeholder="Select type of request..."
               />
-              <SelectField
-                label="Related Partner"
-                value={partner}
-                onChange={setPartner}
-                options={partnerOptions}
-                placeholder="Select partner..."
-              />
-              <div>
-                <SelectField
-                  label="Payment Under"
-                  value={paymentUnder}
-                  onChange={setPaymentUnder}
-                  options={['PT Janji Cahaya Kembar', 'Yayasan Mitra Cahaya Amanah']}
-                />
-                {paymentUnder === 'Yayasan Mitra Cahaya Amanah' && (
-                  <p className="text-[13px] text-amana-neutral-400 mt-1.5">
-                    Yayasan payments are processed every Wednesday.
-                  </p>
-                )}
-                {paymentUnder === 'PT Janji Cahaya Kembar' && (
-                  <p className="text-[13px] text-amana-neutral-400 mt-1.5">
-                    PT payments are processed on the 10th–25th of every month.
-                  </p>
-                )}
-              </div>
+              {typeOfRequest === 'Business Trip' && (
+                <p className="text-[13px] text-amana-neutral-400 mt-1.5">
+                  Business Trip requests aren&apos;t available yet — coming soon.
+                </p>
+              )}
             </div>
             <div className="flex justify-end mt-5 pt-4 border-t border-amana-neutral-200">
               <Button variant="primary" size="lg" disabled={!isStep1Complete} onClick={() => setStep(2)}>
@@ -329,6 +323,39 @@ export default function PaymentPage() {
             </div>
 
             <div className="flex flex-col gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <SelectField
+                  label="Practice Group"
+                  value={practiceGroup}
+                  onChange={setPracticeGroup}
+                  options={['Education', 'Digital', 'Strategy and Transformation', 'Health and Wellbeing', 'Operations']}
+                />
+                <SelectField
+                  label="Related Partner"
+                  value={partner}
+                  onChange={setPartner}
+                  options={partnerOptions}
+                  placeholder="Select partner..."
+                />
+              </div>
+              <div>
+                <SelectField
+                  label="Payment Under"
+                  value={paymentUnder}
+                  onChange={setPaymentUnder}
+                  options={['PT Janji Cahaya Kembar', 'Yayasan Mitra Cahaya Amanah']}
+                />
+                {paymentUnder === 'Yayasan Mitra Cahaya Amanah' && (
+                  <p className="text-[13px] text-amana-neutral-400 mt-1.5">
+                    Yayasan payments are processed every Wednesday.
+                  </p>
+                )}
+                {paymentUnder === 'PT Janji Cahaya Kembar' && (
+                  <p className="text-[13px] text-amana-neutral-400 mt-1.5">
+                    PT payments are processed on the 10th–25th of every month.
+                  </p>
+                )}
+              </div>
               <SelectField
                 label="To whom is this payment for"
                 value={paymentFor}

@@ -71,18 +71,21 @@ interface LeaveHistoryRow {
 }
 
 const leaveHistoryColumns: DataTableColumn<LeaveHistoryRow>[] = [
-  { key: 'type', label: 'Type' },
-  { key: 'submitted', label: 'Submitted' },
+  { key: 'type', label: 'Type', width: '14%', minPx: 110 },
+  { key: 'submitted', label: 'Submitted', width: '20%', minPx: 150 },
   {
     key: 'period',
     label: 'Period',
-    width: '260px',
+    width: '34%',
+    minPx: 260,
     render: (row) => <span className="block whitespace-normal break-words">{row.period}</span>,
   },
-  { key: 'duration', label: 'Duration' },
+  { key: 'duration', label: 'Duration', width: '15%', minPx: 110 },
   {
     key: 'status',
     label: 'Status',
+    width: '17%',
+    minPx: 130,
     render: (row) => (
       <div className="flex justify-center">
         <StatusPill color={statusColor(row.status)} fullWidth={false}>
@@ -396,7 +399,7 @@ export default function LeaveRequestPage() {
         </div>
 
         <div className="flex-shrink-0 flex justify-end pt-4 border-t border-amana-neutral-200">
-          <Button type="submit" variant="primary" size="lg" className="w-full max-w-[280px]" disabled={!isFormValid || submitting || !!halfDayMultiDayError}>
+          <Button type="submit" variant="primary" size="lg" className="w-full max-w-[280px]" disabled={!isFormValid || submitting || !!halfDayMultiDayError || balanceExceeded}>
             {submitting ? 'Submitting...' : 'Submit'}
           </Button>
         </div>

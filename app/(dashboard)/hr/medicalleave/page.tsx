@@ -163,13 +163,14 @@ export default function MedicalLeavePage() {
   };
 
   const columns: DataTableColumn<SickLog>[] = [
-    { key: 'name', label: 'Name', width: '200px' },
-    { key: 'department', label: 'Practice Group' },
-    { key: 'grade', label: 'Grade' },
+    { key: 'name', label: 'Name', width: '18%', minPx: 205 },
+    { key: 'department', label: 'Practice Group', width: '17%', minPx: 195 },
+    { key: 'grade', label: 'Grade', width: '11%', minPx: 125 },
     {
       key: 'startDate',
       label: 'Date',
-      width: '160px',
+      width: '14%',
+      minPx: 160,
       sortValue: (r) => (r.startDate ? new Date(r.startDate).getTime() : 0),
       render: (r) => (
         <span className="text-[13px] leading-snug">
@@ -177,11 +178,13 @@ export default function MedicalLeavePage() {
         </span>
       ),
     },
-    { key: 'duration', label: 'Duration', render: (r) => `${r.duration} Day(s)` },
-    { key: 'gejala', label: 'Sickness Type' },
+    { key: 'duration', label: 'Duration', width: '10%', minPx: 115, render: (r) => `${r.duration} Day(s)` },
+    { key: 'gejala', label: 'Sickness Type', width: '16%', minPx: 185 },
     {
       key: 'id',
       label: 'Document',
+      width: '14%',
+      minPx: 160,
       render: (r) =>
         r.buktiSakitURL ? (
           <Button variant="outline" size="sm" className="w-full" onClick={() => setPreviewPdf({ title: `${r.name} - Sick Note`, url: r.buktiSakitURL! })}>

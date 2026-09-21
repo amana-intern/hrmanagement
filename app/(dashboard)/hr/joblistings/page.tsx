@@ -178,12 +178,13 @@ export default function JobListingsPage() {
   const editIsDraft = editJob?.status === 'DRAFT';
 
   const columns: DataTableColumn<Job>[] = [
-    { key: 'title', label: 'Name' },
-    { key: 'description', label: 'Description' },
+    { key: 'title', label: 'Name', width: '22%', minPx: 180 },
+    { key: 'description', label: 'Description', width: '43%', minPx: 350 },
     {
       key: 'status',
       label: 'Status',
-      width: '140px',
+      width: '17%',
+      minPx: 140,
       render: (j) => {
         const s = STATUS_LABELS[j.status];
         return <StatusPill color={s.color}>{s.label}</StatusPill>;
@@ -192,7 +193,8 @@ export default function JobListingsPage() {
     {
       key: 'id',
       label: 'Actions',
-      width: '140px',
+      width: '18%',
+      minPx: 140,
       render: (j) => (
         <Button variant="primary" size="sm" className="w-full whitespace-nowrap" onClick={() => openEdit(j)}>
           Edit

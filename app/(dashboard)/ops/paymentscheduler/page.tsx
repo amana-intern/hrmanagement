@@ -196,20 +196,22 @@ export default function PaymentSchedulerPage() {
   };
 
   const columns: DataTableColumn<PayReq>[] = [
-    { key: 'idRequest', label: 'ID', width: '170px' },
-    { key: 'user', label: 'Requester', width: '140px' },
-    { key: 'type', label: 'Type', width: '110px' },
-    { key: 'projectID', label: 'Event/Vendor Name', width: '170px' },
+    { key: 'idRequest', label: 'ID', width: '15%', minPx: 170 },
+    { key: 'user', label: 'Requester', width: '13%', minPx: 140 },
+    { key: 'type', label: 'Type', width: '10%', minPx: 110 },
+    { key: 'projectID', label: 'Event/Vendor Name', width: '15%', minPx: 170 },
     {
       key: 'amount',
       label: 'Amount',
-      width: '120px',
+      width: '11%',
+      minPx: 120,
       render: (r) => <span className="font-semibold whitespace-nowrap">{r.amount}</span>,
     },
     {
       key: 'status',
       label: 'Status',
-      width: '120px',
+      width: '11%',
+      minPx: 120,
       render: (r) => (
         <StatusPill color={STATUS_MAP[r.status]?.color ?? 'bg-amana-neutral-400'}>
           {STATUS_MAP[r.status]?.label ?? r.status}
@@ -219,14 +221,15 @@ export default function PaymentSchedulerPage() {
     {
       key: 'details',
       label: 'Details',
-      width: '140px',
+      width: '12%',
+      minPx: 140,
       render: (r) => (
         <Button variant="outline" size="sm" className="w-full whitespace-nowrap" onClick={() => setDetailRow(r.detailRow)}>
           View
         </Button>
       ),
     },
-    { key: 'action', label: 'Action', width: '150px', render: renderAction },
+    { key: 'action', label: 'Action', width: '13%', minPx: 150, render: renderAction },
   ];
 
   if (loading) return <TableSkeleton columns={6} />;

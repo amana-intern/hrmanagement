@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
       const idKategoriPayment = form.get('idKategoriPayment')?.toString() ?? '';
       const catatan = form.get('catatan')?.toString() ?? null;
       const detailStr = form.get('detail')?.toString() ?? null;
-      const partnerDepartment = form.get('partnerDepartment')?.toString() ?? null;
+      const partnerDepartment = form.get('partnerDepartment')?.toString() || auth.department || null;
 
       if (!projectID || !nominalStr || !idKategoriPayment) {
         return Response.json({ error: 'ProjectID, amount, and category are required' }, { status: 400 });
@@ -102,7 +102,8 @@ export async function POST(request: NextRequest) {
 
     // Fallback JSON (mantan payload minimal)
     const body = await request.json();
-    const { projectID, nominal, idKategoriPayment, catatan, partnerDepartment } = body || {};
+    const { projectID, nominal, idKategoriPayment, catatan, partnerDepartment: bodyPartnerDepartment } = body || {};
+    const partnerDepartment = bodyPartnerDepartment || auth.department || null;
     if (!projectID || !nominal || !idKategoriPayment) {
       return Response.json({ error: 'ProjectID, amount, and category are required' }, { status: 400 });
     }
