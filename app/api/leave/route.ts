@@ -69,6 +69,30 @@ export async function POST(request: Request) {
       }
     }
 
+    // Paid leave tidak boleh melebihi sisa saldo (hari yang masih pending juga
+    // "dicadangkan" dulu, supaya beberapa pengajuan pending sekaligus tidak bisa
+    // melebihi saldo kalau semuanya di-approve nanti).
+    if (idJenisCuti === LEAVE_TYPES.PAID) {
+      const balance = await computeLeaveBalance(auth.idKaryawan);
+      const pendingAgg = await prisma.pengajuanCuti.aggregate({
+        where: { idKaryawan: auth.idKaryawan, idJenisCuti: LEAVE_TYPES.PAID, idStatus: 'ST_LEAVE_PENDING' },
+        _sum: { jumlahHari: true },
+      });
+      const pendingDays = pendingAgg._sum.jumlahHari ?? 0;
+      const available = balance.sisa - pendingDays;
+      if (jumlahHari > available) {
+        return Response.json(
+          {
+            error:
+              pendingDays > 0
+                ? `Requested ${jumlahHari} day(s) exceeds your remaining Paid Leave balance of ${balance.sisa} day(s) (${pendingDays} day(s) already reserved by other pending requests, ${available} available).`
+                : `Requested ${jumlahHari} day(s) exceeds your remaining Paid Leave balance of ${balance.sisa} day(s).`,
+          },
+          { status: 400 }
+        );
+      }
+    }
+
     // Fitur 10: Special menstruasi maksimal 2 hari per bulan
     if (
       idJenisCuti === LEAVE_TYPES.SPECIAL &&

@@ -7,12 +7,13 @@ import SectionCard from '@/app/components/layout/SectionCard';
 import DataTable from '@/app/components/data-display/DataTable';
 import type { DataTableColumn } from '@/app/components/data-display/DataTable';
 import StatusPill from '@/app/components/data-display/StatusPill';
-import { SearchTextField } from '@/app/components/forms/SearchFields';
+import { SearchTextField, SearchSelectField } from '@/app/components/forms/SearchFields';
 import TextField from '@/app/components/forms/TextField';
 import Button from '@/app/components/forms/Button';
 import Modal from '@/app/components/feedback/Modal';
 import { statusColor } from '@/app/utils/statusColor';
 import { useFilters } from '@/app/utils/useFilters';
+import { DEPARTMENT_OPTIONS, getAllGradeOptions } from '@/app/utils/orgStructure';
 import { downloadTSV } from '@/lib/sheets';
 import { formatDateWIB, formatDateTimeWIB } from '@/app/utils/formatDate';
 import { TableSkeleton } from '@/app/components/feedback/PageSkeleton';
@@ -72,19 +73,24 @@ const iso = (d: Date) => d.toISOString().slice(0, 10);
 
 interface Filters {
   name: string;
+  department: string;
+  grade: string;
   type: string;
-  status: string;
+  duration: string;
   from: string;
   to: string;
 }
 
-const emptyFilters: Filters = { name: '', type: '', status: '', from: '', to: '' };
+const emptyFilters: Filters = { name: '', department: '', grade: '', type: '', duration: '', from: '', to: '' };
+const durationOptions = ['<= 7 Days', '>= 7 Days'];
+const leaveTypeOptions = ['Paid Leave', 'Unpaid Leave', 'Special Leave', 'Compensatory Leave'];
 
 export default function LeaveRecordPage() {
   const [rows, setRows] = useState<LeaveRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [detailsModal, setDetailsModal] = useState<LeaveRecord | null>(null);
   const { draft, applied, setField, setFieldAndApply, handleSearch, handleReset } = useFilters<Filters>(emptyFilters);
+  const gradeOptions = useMemo(() => getAllGradeOptions(), []);
 
   const DetailField = ({ label, value }: { label: string; value: React.ReactNode }) => (
     <div className="flex items-start justify-between gap-4 py-2 border-b border-amana-neutral-200 last:border-b-0">
@@ -129,8 +135,13 @@ export default function LeaveRecordPage() {
     const t = applied.to ? new Date(applied.to + 'T23:59:59') : null;
     return rows.filter((r) => {
       if (applied.name && !r.name.toLowerCase().includes(applied.name.toLowerCase())) return false;
+      if (applied.department && r.department !== applied.department) return false;
+      if (applied.grade && r.grade !== applied.grade) return false;
       if (applied.type && r.type !== applied.type) return false;
-      if (applied.status && STATUS_LABELS[r.status] !== applied.status) return false;
+      if (applied.duration && r.totalDays != null) {
+        if (applied.duration === '<= 7 Days' && r.totalDays > 7) return false;
+        if (applied.duration === '>= 7 Days' && r.totalDays < 7) return false;
+      }
       if (f && r.startDate && new Date(r.startDate) < f) return false;
       if (t && r.startDate && new Date(r.startDate) > t) return false;
       return true;
@@ -150,17 +161,35 @@ export default function LeaveRecordPage() {
   };
 
   const columns: DataTableColumn<LeaveRecord>[] = [
-    { key: 'name', label: 'Name' },
-    { key: 'grade', label: 'Grade' },
-    { key: 'type', label: 'Leave Type' },
+    { key: 'name', label: 'Name', width: '18%', minPx: 205 },
+    { key: 'department', label: 'Practice Group', width: '17%', minPx: 195 },
+    { key: 'grade', label: 'Grade', width: '11%', minPx: 125 },
+    {
+      key: 'startDate',
+      label: 'Date',
+      width: '14%',
+      minPx: 160,
+      sortValue: (r) => (r.startDate ? new Date(r.startDate).getTime() : 0),
+      render: (r) => (
+        <span className="text-[13px] leading-snug">
+          {formatDateWIB(r.startDate)} - {formatDateWIB(r.endDate)}
+        </span>
+      ),
+    },
+    { key: 'totalDays', label: 'Duration', width: '10%', minPx: 115, render: (r) => (r.totalDays != null ? `${r.totalDays} Day(s)` : '-') },
+    { key: 'type', label: 'Leave Type', width: '11%', minPx: 125 },
     {
       key: 'status',
       label: 'Status',
+      width: '10%',
+      minPx: 115,
       render: (r) => <StatusPill color={statusColor(STATUS_LABELS[r.status] ?? r.status)}>{STATUS_LABELS[r.status] ?? r.status}</StatusPill>,
     },
     {
       key: 'id',
       label: 'Details',
+      width: '9%',
+      minPx: 105,
       render: (r) => (
         <Button variant="outline" size="sm" className="w-full whitespace-nowrap" onClick={() => setDetailsModal(r)}>
           View
@@ -169,7 +198,7 @@ export default function LeaveRecordPage() {
     },
   ];
 
-  if (loading) return <TableSkeleton columns={5} />;
+  if (loading) return <TableSkeleton columns={8} />;
 
   return (
     <div className="w-full h-full flex flex-col gap-3">
@@ -177,13 +206,15 @@ export default function LeaveRecordPage() {
 
       <SearchPanel
         title="Filter Leave Record"
-        subtitle="Filter employee leaves based on employee, leave type, status, and date range."
+        subtitle="Filter employee leaves based on employee, department, grade, leave type, and duration."
         onReset={handleReset}
         onSearch={handleSearch}
       >
         <SearchTextField label="Employee Name" value={draft.name} onChange={(v) => setField('name', v)} placeholder="Search by name..." />
-        <SearchTextField label="Leave Type" value={draft.type} onChange={(v) => setField('type', v)} placeholder="e.g. Paid Leave" />
-        <SearchTextField label="Status" value={draft.status} onChange={(v) => setField('status', v)} placeholder="Pending / Approved / Rejected" />
+        <SearchSelectField label="Practice Group" value={draft.department} onChange={(v) => setField('department', v)} options={DEPARTMENT_OPTIONS} />
+        <SearchSelectField label="Grade" value={draft.grade} onChange={(v) => setField('grade', v)} options={gradeOptions} />
+        <SearchSelectField label="Leave Type" value={draft.type} onChange={(v) => setField('type', v)} options={leaveTypeOptions} />
+        <SearchSelectField label="Duration" value={draft.duration} onChange={(v) => setField('duration', v)} options={durationOptions} />
         <TextField label="From" type="date" value={draft.from} onChange={(v) => setField('from', v)} />
         <TextField label="To" type="date" value={draft.to} onChange={(v) => setField('to', v)} />
       </SearchPanel>

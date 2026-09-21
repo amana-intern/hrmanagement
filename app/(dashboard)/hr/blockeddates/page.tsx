@@ -113,7 +113,8 @@ export default function BlockedDatesPage() {
     {
       key: 'tanggal',
       label: 'Date',
-      width: '300px',
+      width: '34%',
+      minPx: 300,
       sortValue: (r) => (r.tanggal ? new Date(r.tanggal).getTime() : 0),
       render: (r) => (
         <span className="text-[13px] leading-snug whitespace-normal break-words">
@@ -125,6 +126,8 @@ export default function BlockedDatesPage() {
     {
       key: 'alasan',
       label: 'Reason',
+      width: '46%',
+      minPx: 400,
       render: (r) => (
         <span className="block w-full text-[13px] leading-snug whitespace-normal break-words">
           {r.alasan ?? '-'}
@@ -134,7 +137,8 @@ export default function BlockedDatesPage() {
     {
       key: 'id',
       label: 'Action',
-      width: '170px',
+      width: '20%',
+      minPx: 170,
       render: (r) => (
         <Button variant="danger" size="sm" className="w-full" onClick={() => setRowToDelete(r)}>
           Remove

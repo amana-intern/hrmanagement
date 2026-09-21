@@ -56,7 +56,6 @@ const STATUS_MAP: Record<string, { label: string }> = {
   ST_LEAVE_PENDING: { label: 'Pending' },
   ST_LEAVE_APPROVED: { label: 'Approved' },
   ST_LEAVE_REJECTED: { label: 'Rejected' },
-  ST_MED_PENDING: { label: 'Pending' },
 };
 
 const STATUS_OPTIONS = Object.values(STATUS_MAP).map((v) => v.label);
@@ -135,7 +134,7 @@ function mapSickRows(rows: SickRaw[]): LeaveReq[] {
     approverNote: null,
     documentURL: s.buktiSakitURL ?? null,
     details: null,
-    status: 'ST_MED_PENDING',
+    status: 'ST_LEAVE_APPROVED',
     action: null,
     jenis: 'sakit',
     tanggalKerjaHariLibur: null,
@@ -246,13 +245,15 @@ export default function PartnerLeaveApprovalPage() {
   };
 
   const columns: DataTableColumn<LeaveReq>[] = [
-    { key: 'name', label: 'Name', width: '200px' },
-    { key: 'department', label: 'Practice Group' },
-    { key: 'grade', label: 'Grade' },
-    { key: 'type', label: 'Leave Type' },
+    { key: 'name', label: 'Name', width: '17%', minPx: 200 },
+    { key: 'department', label: 'Practice Group', width: '15%', minPx: 170 },
+    { key: 'grade', label: 'Grade', width: '11%', minPx: 130 },
+    { key: 'type', label: 'Leave Type', width: '12%', minPx: 140 },
     {
       key: 'status',
       label: 'Status',
+      width: '11%',
+      minPx: 130,
       render: (r) => (
         <StatusPill color={statusColor(STATUS_MAP[r.status]?.label ?? r.status)}>
           {STATUS_MAP[r.status]?.label ?? r.status}
@@ -262,7 +263,8 @@ export default function PartnerLeaveApprovalPage() {
     {
       key: 'details',
       label: 'Details',
-      width: '140px',
+      width: '12%',
+      minPx: 140,
       render: (r) => (
         <Button
           variant="outline"
@@ -274,7 +276,7 @@ export default function PartnerLeaveApprovalPage() {
         </Button>
       ),
     },
-    { key: 'action', label: 'Action', width: '240px', render: renderAction },
+    { key: 'action', label: 'Action', width: '22%', minPx: 240, render: renderAction },
   ];
 
   const DetailField = ({ label, value }: { label: string; value: React.ReactNode }) => (

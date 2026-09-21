@@ -170,19 +170,22 @@ export default function PaymentRequestPage() {
   );
 
   const columns: DataTableColumn<PayReq>[] = [
-    { key: 'idRequest', label: 'ID' },
-    { key: 'user', label: 'Requester' },
-    { key: 'type', label: 'Type' },
-    { key: 'projectID', label: 'Event/Vendor Name' },
+    { key: 'idRequest', label: 'ID', width: '12%', minPx: 150 },
+    { key: 'user', label: 'Requester', width: '13%', minPx: 160 },
+    { key: 'type', label: 'Type', width: '8%', minPx: 110 },
+    { key: 'projectID', label: 'Event/Vendor Name', width: '16%', minPx: 200 },
     {
       key: 'amount',
       label: 'Amount',
+      width: '10%',
+      minPx: 130,
       render: (r) => <span className="font-semibold whitespace-nowrap">{r.amount}</span>,
     },
     {
       key: 'status',
       label: 'Status',
-      width: '160px',
+      width: '13%',
+      minPx: 160,
       render: (r) => (
         <StatusPill color={STATUS_MAP[r.status]?.color ?? 'bg-amana-neutral-400'}>
           {STATUS_MAP[r.status]?.label ?? r.status}
@@ -192,14 +195,15 @@ export default function PaymentRequestPage() {
     {
       key: 'details',
       label: 'Details',
-      width: '110px',
+      width: '9%',
+      minPx: 110,
       render: (r) => (
         <Button variant="outline" size="sm" className="w-full whitespace-nowrap" onClick={() => setDetailRow(r.detailRow)}>
           View
         </Button>
       ),
     },
-    { key: 'action', label: 'Action', width: '240px', render: renderAction },
+    { key: 'action', label: 'Action', width: '19%', minPx: 240, render: renderAction },
   ];
 
   if (loading) return <TableSkeleton columns={6} />;

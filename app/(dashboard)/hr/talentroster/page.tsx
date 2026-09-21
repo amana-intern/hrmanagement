@@ -372,7 +372,7 @@ export default function TalentRosterPage() {
     { key: 'nama', label: 'Name' },
     { key: 'department', label: 'Practice Group', render: (e) => departmentLabel(e.department) },
     { key: 'grade', label: 'Grade' },
-    { key: 'roleLabel', label: 'Role' },
+    { key: 'roleLabel', label: 'Access' },
     { key: 'tipeKontrak', label: 'Contract Type', sortValue: (e) => {
       const order: Record<string, number> = { PKWTT: 1, PKWT: 2, KKI: 3, INTERNSHIP: 4, KONTRAK: 5 };
       return order[e.tipeKontrak ?? ''] ?? 9;
