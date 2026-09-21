@@ -6,7 +6,7 @@ import { prisma } from '@/lib/prisma';
 import { ROLES, canUseEmployeeFeatures } from '@/lib/roles';
 import { sendEmail } from '@/lib/notify';
 
-const UPLOAD_DIR = path.join(process.cwd(), 'public', 'uploads');
+const UPLOAD_DIR = '/tmp/uploads';
 const MAX_BYTES = 5 * 1024 * 1024;
 const ALLOWED_EXT = ['.pdf', '.jpg', '.jpeg', '.png'];
 
@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
         attachments.push({
           idAttachment: `ATT-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
           fileName: value.name,
-          fileURL: `/uploads/${safeName}`,
+          fileURL: `/api/uploads/${safeName}`,
           kategori: key,
         });
       }

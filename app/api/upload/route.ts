@@ -3,7 +3,7 @@ import { writeFile, mkdir } from 'fs/promises';
 import path from 'path';
 import { requireAuth } from '@/lib/dal';
 
-const UPLOAD_DIR = path.join(process.cwd(), 'public', 'uploads');
+const UPLOAD_DIR = '/tmp/uploads';
 const MAX_BYTES = 5 * 1024 * 1024; // 5MB
 const ALLOWED_EXT = ['.pdf', '.jpg', '.jpeg', '.png'];
 

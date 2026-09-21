@@ -5,7 +5,7 @@ import { requireAuth } from '@/lib/dal';
 import { prisma } from '@/lib/prisma';
 import { canUseCareerHub } from '@/lib/roles';
 
-const UPLOAD_DIR = path.join(process.cwd(), 'public', 'uploads');
+const UPLOAD_DIR = '/tmp/uploads';
 const MAX_BYTES = 5 * 1024 * 1024;
 const ALLOWED_EXT = ['.pdf'];
 
@@ -35,7 +35,7 @@ export async function PATCH(request: NextRequest) {
     const safeName = `cv-${Date.now()}${ext}`;
     const bytes = Buffer.from(await file.arrayBuffer());
     await writeFile(path.join(UPLOAD_DIR, safeName), bytes);
-    const fileURL = `/uploads/${safeName}`;
+    const fileURL = `/api/uploads/${safeName}`;
 
     const profile = await prisma.talentProfile.upsert({
       where: { idKaryawan: auth.idKaryawan },

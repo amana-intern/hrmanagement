@@ -5,7 +5,7 @@ import { requireAuth } from '@/lib/dal';
 import { prisma } from '@/lib/prisma';
 import { ROLES } from '@/lib/roles';
 
-const UPLOAD_DIR = path.join(process.cwd(), 'public', 'uploads');
+const UPLOAD_DIR = '/tmp/uploads';
 const MAX_BYTES = 5 * 1024 * 1024;
 const ALLOWED_EXT = ['.pdf', '.jpg', '.jpeg', '.png'];
 
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
       const safeName = `sk-${Date.now()}${ext}`;
       const bytes = Buffer.from(await file.arrayBuffer());
       await writeFile(path.join(UPLOAD_DIR, safeName), bytes);
-      buktiSakitURL = `/uploads/${safeName}`;
+      buktiSakitURL = `/api/uploads/${safeName}`;
     }
 
     const sick = await prisma.izinSakit.create({

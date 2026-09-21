@@ -11,7 +11,7 @@ import path from 'path';
 
 export type StorageProvider = 'local' | 'supabase';
 
-const UPLOAD_DIR = path.join(process.cwd(), 'public', 'uploads');
+const UPLOAD_DIR = '/tmp/uploads';
 
 function getProvider(): StorageProvider {
   const p = (process.env.STORAGE_PROVIDER ?? 'local').toLowerCase();
