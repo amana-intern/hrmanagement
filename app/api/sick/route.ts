@@ -56,8 +56,9 @@ export async function POST(request: NextRequest) {
 
     return Response.json({ ok: true, sick }, { status: 201 });
   } catch (e) {
+    const errorMessage = e instanceof Error ? e.message : 'Unknown error';
     const status = (e as { status?: number }).status ?? 500;
-    return Response.json({ error: 'An error occurred' }, { status });
+    return Response.json({ error: `Error: ${errorMessage}` }, { status });
   }
 }
 
