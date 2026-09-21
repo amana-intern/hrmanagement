@@ -3,7 +3,7 @@ import path from 'path';
 import { createReadStream } from 'fs';
 import { stat } from 'fs/promises';
 
-export async function GET(request: NextRequest, context: { params: { filename: string } }) {
+export async function GET(request: NextRequest,  context: { params: Promise<{ filename: string }> }) {
   const params = await context.params;
   const filePath = path.join('/tmp/uploads', params.filename);
 
