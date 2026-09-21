@@ -58,12 +58,10 @@ export async function GET() {
       submission: submission
         ? {
             idSubmission: submission.idSubmission,
-            technicalSkills: submission.technicalSkills,
-            selfDevelopmentAreas: submission.selfDevelopmentAreas,
             answers: Object.fromEntries(
               submission.answers.map((a) => [
                 a.idPertanyaan,
-                { level: a.level, pilihan: a.pilihan as string[] | null, jawabanTeks: a.jawabanTeks },
+                { pilihan: a.pilihan as string[] | null, jawabanTeks: a.jawabanTeks },
               ])
             ),
           }

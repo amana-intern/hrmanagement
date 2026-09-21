@@ -5,7 +5,6 @@ import { ASSESSMENT_STATUS } from '@/lib/constants';
 import bcrypt from 'bcryptjs';
 
 // GET /api/hr/talent-roster - data roster live + assessment (terbuka/latest) + hasil per karyawan.
-// Untuk tiap bidang dihitung skor rata-rata level (1-4) dari kompetensi yang dijawab.
 // Saat tidak ada assessment terbuka, fallback ke assessment terbaru agar hasil tetap bisa dilihat.
 export async function GET() {
   try {
@@ -81,27 +80,6 @@ export async function GET() {
       const submission = k.assessmentSubmissions[0] ?? null;
       const activeContract = activeContractOf(k);
 
-      let aggregated: Record<string, { answered: number; sum: number }> = {};
-      if (assessment) {
-        aggregated = Object.fromEntries(
-          assessment.categories.map((c) => [c.idKategoriAsm, { answered: 0, sum: 0 }])
-        );
-        for (const c of assessment.categories) {
-          for (const q of c.questions) {
-            const ans = submission?.answers.find((a) => a.idPertanyaan === q.idPertanyaan);
-            if (ans?.level) {
-              aggregated[c.idKategoriAsm].sum += ans.level;
-              aggregated[c.idKategoriAsm].answered += 1;
-            }
-          }
-        }
-      }
-
-      const bidangSkor: Record<string, number | null> = {};
-      for (const [id, v] of Object.entries(aggregated)) {
-        bidangSkor[id] = v.answered > 0 ? +(v.sum / v.answered).toFixed(2) : null;
-      }
-
       return {
         idKaryawan: k.idKaryawan,
         nama: k.nama ?? '-',
@@ -129,16 +107,13 @@ export async function GET() {
         assessment: submission
           ? {
               idSubmission: submission.idSubmission,
-              technicalSkills: submission.technicalSkills,
-              selfDevelopmentAreas: submission.selfDevelopmentAreas,
               tanggalSelesai: submission.tanggalSelesai,
               answers: Object.fromEntries(
                 submission.answers.map((a) => [
                   a.idPertanyaan,
-                  { level: a.level, pilihan: a.pilihan as string[] | null, jawabanTeks: a.jawabanTeks },
+                  { pilihan: a.pilihan as string[] | null, jawabanTeks: a.jawabanTeks },
                 ])
               ),
-              bidangSkor,
             }
           : null,
       };

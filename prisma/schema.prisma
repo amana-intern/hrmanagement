@@ -248,6 +248,9 @@ model Assessment {
   tanggalBuka  DateTime?              @db.Timestamp()
   tanggalTutup DateTime?              @db.Timestamp()
   idStatus     String?                @db.VarChar
+  // Sudah pernah di-auto-open oleh scheduler (lib/assessment-scheduler.ts) saat tanggalBuka tiba —
+  // mencegah assessment yang sengaja ditutup manual dibuka ulang otomatis oleh scheduler berikutnya.
+  autoOpened   Boolean                @default(false)
   masterStatus MasterStatus?          @relation(fields: [idStatus], references: [idStatus])
   categories   AssessmentCategory[]
   submissions  AssessmentSubmission[]
@@ -278,8 +281,10 @@ model AssessmentQuestion {
   idKategoriAsm String?                    @db.VarChar
   teks          String?                    @db.VarChar
   urutan        Int?
-  // null = legacy fixed proficiency-level question (1-4). Otherwise: multiple_choice | checkbox | short_answer.
+  // multiple_choice | checkbox | short_answer | checkbox_grid.
   tipeSoal      String?                    @db.VarChar
+  // Shared by every row-question belonging to the same checkbox_grid; null for all other question types.
+  gridId        String?                    @db.VarChar
   kategori      AssessmentCategory?        @relation(fields: [idKategoriAsm], references: [idKategoriAsm])
   options       AssessmentQuestionOption[]
   answers       AssessmentAnswer[]

@@ -86,6 +86,7 @@ function mapRows(rows: PaymentRaw[]): PayReq[] {
       createdAt: c.createdAt,
       attachments: c.attachments ?? [],
       masterKategoriPayment: c.masterKategoriPayment,
+      statusLabel: STATUS_MAP[c.idStatus]?.label ?? c.idStatus,
     },
   }));
 }
@@ -170,20 +171,19 @@ export default function PartnerPaymentApprovalPage() {
   );
 
   const columns: DataTableColumn<PayReq>[] = [
-    { key: 'idRequest', label: 'ID', width: '170px' },
-    { key: 'user', label: 'Requester', width: '140px' },
-    { key: 'type', label: 'Type', width: '110px' },
-    { key: 'projectID', label: 'Event/Vendor Name', width: '170px' },
+    { key: 'idRequest', label: 'ID' },
+    { key: 'user', label: 'Requester' },
+    { key: 'type', label: 'Type' },
+    { key: 'projectID', label: 'Event/Vendor Name' },
     {
       key: 'amount',
       label: 'Amount',
-      width: '120px',
       render: (r) => <span className="font-semibold whitespace-nowrap">{r.amount}</span>,
     },
     {
       key: 'status',
       label: 'Status',
-      width: '120px',
+      width: '160px',
       render: (r) => (
         <StatusPill color={statusColor(STATUS_MAP[r.status]?.label ?? r.status)}>
           {STATUS_MAP[r.status]?.label ?? r.status}
@@ -193,14 +193,14 @@ export default function PartnerPaymentApprovalPage() {
     {
       key: 'details',
       label: 'Details',
-      width: '140px',
+      width: '110px',
       render: (r) => (
-        <Button variant="primary" size="sm" onClick={() => setDetailRow(r.detailRow)}>
-          View Details
+        <Button variant="outline" size="sm" className="w-full whitespace-nowrap" onClick={() => setDetailRow(r.detailRow)}>
+          View
         </Button>
       ),
     },
-    { key: 'action', label: 'Action', width: '180px', render: renderAction },
+    { key: 'action', label: 'Action', width: '240px', render: renderAction },
   ];
 
   if (loading) return <TableSkeleton columns={6} />;
@@ -232,6 +232,7 @@ export default function PartnerPaymentApprovalPage() {
             defaultSortKey="createdAt"
             defaultSortDir="desc"
             emptyMessage="No requests found."
+            compact
           />
         </SectionCard>
       </div>

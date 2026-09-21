@@ -82,6 +82,7 @@ function mapRows(rows: PaymentRaw[]): PayReq[] {
       createdAt: c.createdAt,
       attachments: c.attachments ?? [],
       masterKategoriPayment: c.masterKategoriPayment,
+      statusLabel: STATUS_MAP[c.idStatus]?.label ?? c.idStatus,
     },
   }));
 }
@@ -220,8 +221,8 @@ export default function PaymentSchedulerPage() {
       label: 'Details',
       width: '140px',
       render: (r) => (
-        <Button variant="primary" size="sm" onClick={() => setDetailRow(r.detailRow)}>
-          View Details
+        <Button variant="outline" size="sm" className="w-full whitespace-nowrap" onClick={() => setDetailRow(r.detailRow)}>
+          View
         </Button>
       ),
     },

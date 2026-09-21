@@ -6,6 +6,7 @@ import PageTopBar from '@/app/components/layout/PageTopBar';
 import SectionCard from '@/app/components/layout/SectionCard';
 import StatBox from '@/app/components/data-display/StatBox';
 import StatusPill from '@/app/components/data-display/StatusPill';
+import DataTable, { DataTableColumn } from '@/app/components/data-display/DataTable';
 import SelectField from '@/app/components/forms/SelectField';
 import TextField from '@/app/components/forms/TextField';
 import Button from '@/app/components/forms/Button';
@@ -50,6 +51,48 @@ const DAY_TYPE_MAP: Record<string, string> = {
   'Half Day (0.5 day)': 'HALF',
 };
 
+interface LeaveListItem {
+  idCuti: string;
+  tanggalMulai: string | null;
+  tanggalSelesai: string | null;
+  jumlahHari: number | null;
+  tanggalPengajuan: string | null;
+  masterJenisCuti?: { namaJenis: string } | null;
+  masterStatus?: { namaStatus: string } | null;
+}
+
+interface LeaveHistoryRow {
+  id: string;
+  type: string;
+  submitted: string;
+  period: string;
+  duration: string;
+  status: string;
+}
+
+const leaveHistoryColumns: DataTableColumn<LeaveHistoryRow>[] = [
+  { key: 'type', label: 'Type' },
+  { key: 'submitted', label: 'Submitted' },
+  {
+    key: 'period',
+    label: 'Period',
+    width: '260px',
+    render: (row) => <span className="block whitespace-normal break-words">{row.period}</span>,
+  },
+  { key: 'duration', label: 'Duration' },
+  {
+    key: 'status',
+    label: 'Status',
+    render: (row) => (
+      <div className="flex justify-center">
+        <StatusPill color={statusColor(row.status)} fullWidth={false}>
+          {row.status}
+        </StatusPill>
+      </div>
+    ),
+  },
+];
+
 export default function LeaveRequestPage() {
   const [selectedLeave, setSelectedLeave] = useState('');
   const [selectedSpecialLeave, setSelectedSpecialLeave] = useState('');
@@ -67,6 +110,8 @@ export default function LeaveRequestPage() {
   const [compensatoryLeaveUsed, setCompensatoryLeaveUsed] = useState<number | null>(null);
   const [compDetails, setCompDetails] = useState<{ tanggalPengajuan: string; tanggalMulai: string; tanggalSelesai: string; jumlahHari: number; status: string }[]>([]);
   const [showCompModal, setShowCompModal] = useState(false);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [leaveHistory, setLeaveHistory] = useState<LeaveHistoryRow[]>([]);
 
   const loadBalance = async () => {
     try {
@@ -82,9 +127,29 @@ export default function LeaveRequestPage() {
     } catch {}
   };
 
+  const loadHistory = async () => {
+    try {
+      const res = await fetch('/api/leave/list', { cache: 'no-store' });
+      if (res.ok) {
+        const data = await res.json();
+        const rows: LeaveListItem[] = data.list ?? [];
+        setLeaveHistory(
+          rows.map((r) => ({
+            id: r.idCuti,
+            type: r.masterJenisCuti?.namaJenis ?? '-',
+            submitted: r.tanggalPengajuan ? formatDateWIB(r.tanggalPengajuan) : '-',
+            period: r.tanggalMulai && r.tanggalSelesai ? `${formatDateWIB(r.tanggalMulai)} - ${formatDateWIB(r.tanggalSelesai)}` : '-',
+            duration: r.jumlahHari != null ? `${r.jumlahHari} Day(s)` : '-',
+            status: r.masterStatus?.namaStatus ?? '-',
+          }))
+        );
+      }
+    } catch {}
+  };
+
   useEffect(() => {
     (async () => {
-      await loadBalance();
+      await Promise.all([loadBalance(), loadHistory()]);
     })();
   }, []);
 
@@ -176,6 +241,7 @@ export default function LeaveRequestPage() {
       setHolidayWorkEndDate('');
       setDayType('');
       loadBalance();
+      loadHistory();
     } else {
       setMessage({ ok: false, text: data.error || 'Failed to submit request.' });
     }
@@ -203,6 +269,9 @@ export default function LeaveRequestPage() {
         <div className="flex-shrink-0 flex items-center gap-2 pb-1.5 mb-2 border-b border-amana-primary-500">
           <h3 className="text-[20px] font-semibold text-amana-primary-500">Request Leave</h3>
           <CalendarCheck className="w-5 h-5 text-amana-primary-500" />
+          <Button type="button" variant="outline" size="sm" className="ml-auto" onClick={() => setShowHistoryModal(true)}>
+            View Leave History
+          </Button>
         </div>
 
         <div className="flex-1 min-h-0 overflow-y-auto scroll-smooth pr-1">
@@ -334,6 +403,17 @@ export default function LeaveRequestPage() {
       </SectionCard>
 
       <StatusModal state={message} onClose={() => setMessage(null)} />
+
+      {showHistoryModal && (
+        <Modal title="Leave History" onClose={() => setShowHistoryModal(false)} maxWidth="max-w-4xl" className="max-h-[80vh]">
+          <div className="flex-1 min-h-0 overflow-y-auto px-5 pt-3 pb-2 flex flex-col">
+            <DataTable columns={leaveHistoryColumns} rows={leaveHistory} emptyMessage="No leave history yet." />
+          </div>
+          <div className="px-5 py-3 border-t border-amana-neutral-300 flex justify-end flex-shrink-0">
+            <Button variant="outline" onClick={() => setShowHistoryModal(false)}>Close</Button>
+          </div>
+        </Modal>
+      )}
 
       {/* Compensatory Leave Details Modal */}
       {showCompModal && (

@@ -134,6 +134,7 @@ export default function PartnerContractTrackingPage() {
       {confirmTarget && confirmAction && (
         <ConfirmModal
           title={confirmAction === 'offboarding' ? 'Confirm Offboarding' : 'Confirm Renewal'}
+          tone={confirmAction === 'offboarding' ? 'danger' : 'primary'}
           message={
             confirmAction === 'offboarding'
               ? <>Are you sure you want to initiate offboarding for <span className="font-semibold">{confirmTarget.name}</span>? This will send a request to HR and the employee.</>

@@ -1,7 +1,9 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { AlertTriangle } from 'lucide-react';
+import { durationFast, easeOut } from '@/app/utils/motion';
 import PageTopBar from '@/app/components/layout/PageTopBar';
 import QuickSearchBox from '@/app/components/data-display/QuickSearchBox';
 import SectionCard from '@/app/components/layout/SectionCard';
@@ -11,7 +13,7 @@ import Button from '@/app/components/forms/Button';
 import Modal from '@/app/components/feedback/Modal';
 import StatusModal from '@/app/components/feedback/StatusModal';
 import PdfPreviewModal, { PdfPreviewTarget } from '@/app/components/feedback/PdfPreviewModal';
-import EmployeeDetailsModal, { AssessmentBadge } from '@/app/components/data-display/EmployeeDetailsModal';
+import { AssessmentBadge, EmployeeDetailsContent } from '@/app/components/data-display/EmployeeDetailsModal';
 import CareerHistoryModal, { type CareerHistoryEntry } from '@/app/components/data-display/CareerHistoryModal';
 import TextField from '@/app/components/forms/TextField';
 import SelectField from '@/app/components/forms/SelectField';
@@ -50,11 +52,8 @@ interface Employee {
   certificates: Certificate[];
   assessment: {
     idSubmission: string;
-    technicalSkills: string | null;
-    selfDevelopmentAreas: string | null;
     tanggalSelesai: string;
-    answers: Record<string, { level?: number | null; pilihan?: string[] | null; jawabanTeks?: string | null }>;
-    bidangSkor: Record<string, number | null>;
+    answers: Record<string, { pilihan?: string[] | null; jawabanTeks?: string | null }>;
   } | null;
 }
 
@@ -132,7 +131,7 @@ export default function TalentRosterPage() {
   const [deleteModal, setDeleteModal] = useState<Employee | null>(null);
   const [deletingUser, setDeletingUser] = useState(false);
 
-  const [editModal, setEditModal] = useState<Employee | null>(null);
+  const [modalMode, setModalMode] = useState<'view' | 'edit'>('view');
   const [editForm, setEditForm] = useState({ department: '', grade: '', roleLabel: '', akses: 'employee', contractStartDate: '', contractEndDate: '', noTelepon: '', tanggalLahir: '' });
   const [customEditGrade, setCustomEditGrade] = useState('');
   const [savingEdit, setSavingEdit] = useState(false);
@@ -262,11 +261,12 @@ export default function TalentRosterPage() {
     });
     setCustomEditGrade('');
     setEditMsg('');
-    setEditModal(e);
+    setDetailsModal(e);
+    setModalMode('edit');
   };
 
   const handleSaveEdit = async () => {
-    if (!editModal) return;
+    if (!detailsModal) return;
     if (!editForm.department) {
       setEditMsg('Practice Group is required');
       return;
@@ -286,19 +286,19 @@ export default function TalentRosterPage() {
     setSavingEdit(true);
     setEditMsg('');
     try {
-      const hasContract = !!(editModal.contractStartDate || editModal.contractEndDate);
+      const hasContract = !!(detailsModal.contractStartDate || detailsModal.contractEndDate);
       const datesChanged =
         hasContract &&
-        (editForm.contractStartDate !== (editModal.contractStartDate ?? '') ||
-          editForm.contractEndDate !== (editModal.contractEndDate ?? ''));
+        (editForm.contractStartDate !== (detailsModal.contractStartDate ?? '') ||
+          editForm.contractEndDate !== (detailsModal.contractEndDate ?? ''));
       if (datesChanged && (!editForm.contractStartDate || !editForm.contractEndDate)) {
         setEditMsg('Both contract start & end date are required');
         return;
       }
       const contactChanged =
-        editForm.noTelepon !== (editModal.noTelepon || '') ||
-        editForm.tanggalLahir !== (editModal.tanggalLahir ? editModal.tanggalLahir.slice(0, 10) : '');
-      const res = await fetch(`/api/hr/talent-roster/${editModal.idKaryawan}`, {
+        editForm.noTelepon !== (detailsModal.noTelepon || '') ||
+        editForm.tanggalLahir !== (detailsModal.tanggalLahir ? detailsModal.tanggalLahir.slice(0, 10) : '');
+      const res = await fetch(`/api/hr/talent-roster/${detailsModal.idKaryawan}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -328,7 +328,7 @@ export default function TalentRosterPage() {
         const d2 = await res2.json();
         setEmployees((d2.list ?? []) as Employee[]);
       }
-      setEditModal(null);
+      setDetailsModal(null);
       setEditMsg('');
     } catch {
       setEditMsg('A network error occurred');
@@ -386,25 +386,16 @@ export default function TalentRosterPage() {
       key: 'id',
       label: 'Details',
       render: (e) => (
-        <Button variant="primary" size="sm" className="w-full whitespace-nowrap" onClick={() => setDetailsModal(e)}>
-          Details
-        </Button>
-      ),
-    },
-    {
-      key: 'id',
-      label: 'Action',
-      render: (e) => (
-        <Button variant="primary" size="sm" className="w-full whitespace-nowrap" onClick={() => handleOpenEdit(e)}>
-          Edit
+        <Button variant="outline" size="sm" className="w-full whitespace-nowrap" onClick={() => { setDetailsModal(e); setModalMode('view'); }}>
+          View
         </Button>
       ),
     },
   ];
 
-  const isSelfEdit = !!myEmail && editModal?.email === myEmail;
+  const isSelfEdit = !!myEmail && detailsModal?.email === myEmail;
 
-  if (loading) return <TableSkeleton columns={8} />;
+  if (loading) return <TableSkeleton columns={7} />;
 
   return (
     <>
@@ -437,23 +428,193 @@ export default function TalentRosterPage() {
       </div>
 
       {detailsModal && (
-        <EmployeeDetailsModal
-          employee={{
-            name: detailsModal.nama,
-            grade: detailsModal.grade,
-            department: departmentLabel(detailsModal.department),
-            email: detailsModal.email,
-            phone: detailsModal.noTelepon || '-',
-            photoSrc: detailsModal.pictureUrl ?? undefined,
-            assessmentDone: !!detailsModal.assessment,
-            assessmentName: assessmentName ?? undefined,
-            certificates: detailsModal.certificates.map((c) => ({ title: c.judul, fileURL: c.fileURL })),
-          }}
-          onClose={() => setDetailsModal(null)}
-          onViewAssessment={() => setAssessmentModal(detailsModal)}
-          onViewCertificate={(cert) => cert.fileURL && setPreviewPdf({ title: cert.title, url: cert.fileURL })}
-          onViewCareerHistory={() => openCareerHistory(detailsModal)}
-        />
+        <Modal
+          title={modalMode === 'edit' ? `Edit Talent - ${detailsModal.nama || ''}` : 'Employee Details'}
+          onClose={() => { setDetailsModal(null); setEditMsg(''); setCustomEditGrade(''); }}
+          maxWidth="max-w-4xl"
+          className="max-h-[90vh]"
+          showCloseButton={modalMode === 'view'}
+        >
+          <AnimatePresence mode="wait" initial={false}>
+            {modalMode === 'view' ? (
+              <motion.div
+                key="view"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: durationFast, ease: easeOut }}
+                className="flex-1 min-h-0 flex flex-col"
+              >
+                <EmployeeDetailsContent
+                  employee={{
+                    name: detailsModal.nama,
+                    grade: detailsModal.grade,
+                    department: departmentLabel(detailsModal.department),
+                    position: detailsModal.roleLabel || '-',
+                    contractType: contractLabel(detailsModal.tipeKontrak),
+                    email: detailsModal.email,
+                    phone: detailsModal.noTelepon || '-',
+                    photoSrc: detailsModal.pictureUrl ?? undefined,
+                    assessmentDone: !!detailsModal.assessment,
+                    assessmentName: assessmentName ?? undefined,
+                    certificates: detailsModal.certificates.map((c) => ({ title: c.judul, fileURL: c.fileURL })),
+                  }}
+                  onEdit={() => handleOpenEdit(detailsModal)}
+                  onRemove={detailsModal.email !== myEmail ? () => { setDetailsModal(null); setDeleteModal(detailsModal); } : undefined}
+                  onViewAssessment={() => setAssessmentModal(detailsModal)}
+                  onViewCertificate={(cert) => cert.fileURL && setPreviewPdf({ title: cert.title, url: cert.fileURL })}
+                  onViewCareerHistory={() => openCareerHistory(detailsModal)}
+                />
+              </motion.div>
+            ) : (
+              <motion.div
+                key="edit"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: durationFast, ease: easeOut }}
+                className="flex-1 min-h-0 flex flex-col"
+              >
+                <div className="w-full flex-1 min-h-0 flex flex-col">
+                  {isSelfEdit && (
+                    <div className="mx-5 mt-4 flex-shrink-0 flex items-center gap-2 rounded-[5px] border border-amana-warning-500 bg-amana-warning-100 px-4 py-2.5 text-[14px] font-medium text-amana-warning-500">
+                      <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                      You can edit your own profile data, but not your own role/access.
+                    </div>
+                  )}
+                  <div className="flex-1 min-h-0 overflow-y-auto scroll-smooth p-5 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                    <TextField
+                      label="Phone Number"
+                      value={editForm.noTelepon}
+                      onChange={(v) => setEditForm((p) => ({ ...p, noTelepon: v }))}
+                      placeholder="e.g.: 0812-3456-7890"
+                    />
+                    <TextField
+                      label="Birth Date"
+                      type="date"
+                      value={editForm.tanggalLahir}
+                      onChange={(v) => setEditForm((p) => ({ ...p, tanggalLahir: v }))}
+                    />
+
+                    <SelectField
+                      label="Practice Group"
+                      value={editForm.department}
+                      onChange={(v) => setEditForm((p) => ({ ...p, department: v, grade: '' }))}
+                      options={DEPARTMENT_OPTION_LIST}
+                      labels={DEPARTMENT_LABELS}
+                      placeholder="Choose Practice Group"
+                    />
+
+                    <div>
+                      <SelectField
+                        label="Grade"
+                        value={editForm.grade === '__other__' ? '__other__' : editForm.grade}
+                        onChange={(v) => setEditForm((p) => ({ ...p, grade: v }))}
+                        options={[...(editForm.department === 'ops' ? OPS_GRADES : editForm.department ? NON_OPS_GRADES : []), '__other__']}
+                        labels={{ __other__: 'Other / Custom' }}
+                        disabled={!editForm.department}
+                        placeholder={editForm.department ? 'Choose Grade' : 'Select department first'}
+                      />
+                      {editForm.grade === '__other__' && (
+                        <div className="pt-2">
+                          <TextField value={customEditGrade} onChange={setCustomEditGrade} placeholder="Custom Grade, e.g. Intern" label="Custom Grade" />
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <TextField
+                        label="Role"
+                        value={
+                          LEADER_GRADES.includes((editForm.grade === '__other__' ? customEditGrade : editForm.grade).toLowerCase())
+                            ? 'Partner'
+                            : editForm.akses === 'admin_hr' || editForm.akses === 'admin_ops'
+                              ? ACCESS_LABELS[editForm.akses]
+                              : editForm.roleLabel
+                        }
+                        onChange={(v) => setEditForm((p) => ({ ...p, roleLabel: v }))}
+                        disabled={
+                          isSelfEdit ||
+                          LEADER_GRADES.includes((editForm.grade === '__other__' ? customEditGrade : editForm.grade).toLowerCase()) ||
+                          editForm.akses === 'admin_hr' ||
+                          editForm.akses === 'admin_ops'
+                        }
+                        placeholder="e.g.: Software Engineer, Data Analyst"
+                      />
+                      {LEADER_GRADES.includes((editForm.grade === '__other__' ? customEditGrade : editForm.grade).toLowerCase()) && (
+                        <p className="pt-1.5 text-[12px] text-amana-neutral-400">Grade Head/Partner automatically becomes role Partner.</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <SelectField
+                        label="Access"
+                        value={editForm.akses}
+                        onChange={(v) => setEditForm((p) => ({ ...p, akses: v }))}
+                        options={ACCESS_OPTIONS}
+                        labels={ACCESS_LABELS}
+                        disabled={isSelfEdit || LEADER_GRADES.includes((editForm.grade === '__other__' ? customEditGrade : editForm.grade).toLowerCase())}
+                        placeholder="Choose Access"
+                      />
+                      {LEADER_GRADES.includes((editForm.grade === '__other__' ? customEditGrade : editForm.grade).toLowerCase()) && (
+                        <p className="pt-1.5 text-[12px] text-amana-neutral-400">Grade Head/Partner automatically becomes access Partner.</p>
+                      )}
+                    </div>
+
+                    {(detailsModal.contractStartDate || detailsModal.contractEndDate) && (
+                      <div className="md:col-span-2 border-t border-amana-neutral-200 pt-4">
+                        <h4 className="text-[16px] font-semibold text-amana-primary-500 mb-3">Contract Dates</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                          <TextField
+                            label="Contract Start"
+                            type="date"
+                            value={editForm.contractStartDate}
+                            onChange={(v) => setEditForm((p) => ({ ...p, contractStartDate: v }))}
+                          />
+                          <TextField
+                            label="Contract End"
+                            type="date"
+                            value={editForm.contractEndDate}
+                            onChange={(v) => setEditForm((p) => ({ ...p, contractEndDate: v }))}
+                          />
+                        </div>
+                        <p className="pt-1.5 text-[12px] text-amana-neutral-400">
+                          Fix wrong contract dates here (e.g. from a mistaken Extend Contract input).
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {editMsg && (
+                    <p className="px-5 pb-1 text-[13px] font-medium text-amana-danger-500">{editMsg}</p>
+                  )}
+
+                  <div className="flex-shrink-0 flex items-center justify-between gap-3 px-5 py-4 border-t border-amana-neutral-200">
+                    <Button
+                      variant="danger-outline"
+                      size="lg"
+                      disabled={isSelfEdit}
+                      onClick={() => {
+                        setDeleteModal(detailsModal);
+                        setDetailsModal(null);
+                      }}
+                    >
+                      Remove
+                    </Button>
+                    <div className="flex gap-3">
+                      <Button variant="outline" size="lg" onClick={() => { setModalMode('view'); setEditMsg(''); setCustomEditGrade(''); }}>
+                        Cancel
+                      </Button>
+                      <Button variant="primary" size="lg" disabled={savingEdit} onClick={handleSaveEdit}>
+                        {savingEdit ? 'Saving...' : 'Save Changes'}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </Modal>
       )}
 
       {careerHistoryModal && (
@@ -568,151 +729,6 @@ export default function TalentRosterPage() {
         </Modal>
       )}
 
-      {editModal && (
-        <Modal
-          title={`Edit Talent - ${editModal.nama || ''}`}
-          onClose={() => setEditModal(null)}
-          maxWidth="max-w-2xl"
-          className="max-h-[90vh]"
-          showCloseButton={false}
-        >
-          {isSelfEdit && (
-            <div className="mx-5 mt-4 flex-shrink-0 flex items-center gap-2 rounded-[5px] border border-amana-warning-500 bg-amana-warning-100 px-4 py-2.5 text-[14px] font-medium text-amana-warning-500">
-              <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-              You can edit your own profile data, but not your own role/access.
-            </div>
-          )}
-          <div className="flex-1 min-h-0 overflow-y-auto scroll-smooth p-5 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-            <TextField
-              label="Phone Number"
-              value={editForm.noTelepon}
-              onChange={(v) => setEditForm((p) => ({ ...p, noTelepon: v }))}
-              placeholder="e.g.: 0812-3456-7890"
-            />
-            <TextField
-              label="Birth Date"
-              type="date"
-              value={editForm.tanggalLahir}
-              onChange={(v) => setEditForm((p) => ({ ...p, tanggalLahir: v }))}
-            />
-
-            <SelectField
-              label="Practice Group"
-              value={editForm.department}
-              onChange={(v) => setEditForm((p) => ({ ...p, department: v, grade: '' }))}
-              options={DEPARTMENT_OPTION_LIST}
-              labels={DEPARTMENT_LABELS}
-              placeholder="Choose Practice Group"
-            />
-
-            <div>
-              <SelectField
-                label="Grade"
-                value={editForm.grade === '__other__' ? '__other__' : editForm.grade}
-                onChange={(v) => setEditForm((p) => ({ ...p, grade: v }))}
-                options={[...(editForm.department === 'ops' ? OPS_GRADES : editForm.department ? NON_OPS_GRADES : []), '__other__']}
-                labels={{ __other__: 'Other / Custom' }}
-                disabled={!editForm.department}
-                placeholder={editForm.department ? 'Choose Grade' : 'Select department first'}
-              />
-              {editForm.grade === '__other__' && (
-                <div className="pt-2">
-                  <TextField value={customEditGrade} onChange={setCustomEditGrade} placeholder="Custom Grade, e.g. Intern" label="Custom Grade" />
-                </div>
-              )}
-            </div>
-
-            <div>
-              <TextField
-                label="Role"
-                value={
-                  LEADER_GRADES.includes((editForm.grade === '__other__' ? customEditGrade : editForm.grade).toLowerCase())
-                    ? 'Partner'
-                    : editForm.akses === 'admin_hr' || editForm.akses === 'admin_ops'
-                      ? ACCESS_LABELS[editForm.akses]
-                      : editForm.roleLabel
-                }
-                onChange={(v) => setEditForm((p) => ({ ...p, roleLabel: v }))}
-                disabled={
-                  isSelfEdit ||
-                  LEADER_GRADES.includes((editForm.grade === '__other__' ? customEditGrade : editForm.grade).toLowerCase()) ||
-                  editForm.akses === 'admin_hr' ||
-                  editForm.akses === 'admin_ops'
-                }
-                placeholder="e.g.: Software Engineer, Data Analyst"
-              />
-              {LEADER_GRADES.includes((editForm.grade === '__other__' ? customEditGrade : editForm.grade).toLowerCase()) && (
-                <p className="pt-1.5 text-[12px] text-amana-neutral-400">Grade Head/Partner automatically becomes role Partner.</p>
-              )}
-            </div>
-
-            <div>
-              <SelectField
-                label="Access"
-                value={editForm.akses}
-                onChange={(v) => setEditForm((p) => ({ ...p, akses: v }))}
-                options={ACCESS_OPTIONS}
-                labels={ACCESS_LABELS}
-                disabled={isSelfEdit || LEADER_GRADES.includes((editForm.grade === '__other__' ? customEditGrade : editForm.grade).toLowerCase())}
-                placeholder="Choose Access"
-              />
-              {LEADER_GRADES.includes((editForm.grade === '__other__' ? customEditGrade : editForm.grade).toLowerCase()) && (
-                <p className="pt-1.5 text-[12px] text-amana-neutral-400">Grade Head/Partner automatically becomes access Partner.</p>
-              )}
-            </div>
-
-            {(editModal.contractStartDate || editModal.contractEndDate) && (
-              <div className="md:col-span-2 border-t border-amana-neutral-200 pt-4">
-                <h4 className="text-[16px] font-semibold text-amana-primary-500 mb-3">Contract Dates</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-                  <TextField
-                    label="Contract Start"
-                    type="date"
-                    value={editForm.contractStartDate}
-                    onChange={(v) => setEditForm((p) => ({ ...p, contractStartDate: v }))}
-                  />
-                  <TextField
-                    label="Contract End"
-                    type="date"
-                    value={editForm.contractEndDate}
-                    onChange={(v) => setEditForm((p) => ({ ...p, contractEndDate: v }))}
-                  />
-                </div>
-                <p className="pt-1.5 text-[12px] text-amana-neutral-400">
-                  Fix wrong contract dates here (e.g. from a mistaken Extend Contract input).
-                </p>
-              </div>
-            )}
-          </div>
-
-          {editMsg && (
-            <p className="px-5 pb-1 text-[13px] font-medium text-amana-danger-500">{editMsg}</p>
-          )}
-
-          <div className="flex-shrink-0 flex items-center justify-between gap-3 px-5 py-4 border-t border-amana-neutral-200">
-            <Button
-              variant="danger"
-              size="lg"
-              disabled={isSelfEdit}
-              onClick={() => {
-                setDeleteModal(editModal);
-                setEditModal(null);
-              }}
-            >
-              Delete
-            </Button>
-            <div className="flex gap-3">
-              <Button variant="primary" size="lg" disabled={savingEdit} onClick={handleSaveEdit}>
-                {savingEdit ? 'Saving...' : 'Save Changes'}
-              </Button>
-              <Button variant="outline" size="lg" onClick={() => { setEditModal(null); setEditMsg(''); setCustomEditGrade(''); }}>
-                Cancel
-              </Button>
-            </div>
-          </div>
-        </Modal>
-      )}
-
       {deleteModal && (
         <Modal title={`Delete Employee - ${deleteModal.nama || ''}`} onClose={() => setDeleteModal(null)} maxWidth="max-w-md" showCloseButton={false}>
           <div className="p-5 flex flex-col gap-4">
@@ -721,10 +737,10 @@ export default function TalentRosterPage() {
               Employee data along with all their records will be permanently deleted and cannot be recovered.
             </p>
             <div className="flex justify-end gap-3 pt-2">
-              <Button variant="danger" size="lg" disabled={deletingUser} onClick={handleDeleteUser}>
-                {deletingUser ? 'Processing...' : 'Delete'}
+              <Button variant="danger-outline" size="lg" disabled={deletingUser} onClick={handleDeleteUser}>
+                {deletingUser ? 'Processing...' : 'Remove'}
               </Button>
-              <Button variant="outline" size="lg" onClick={() => setDeleteModal(null)}>Cancel</Button>
+              <Button variant="primary" size="lg" onClick={() => setDeleteModal(null)}>Cancel</Button>
             </div>
           </div>
         </Modal>

@@ -4,7 +4,9 @@ import { ReactNode, useState } from 'react';
 import Modal from './feedback/Modal';
 import PdfPreviewModal, { PdfPreviewTarget } from './feedback/PdfPreviewModal';
 import Button from './forms/Button';
+import StatusPill from './data-display/StatusPill';
 import { formatDateWIB } from '@/app/utils/formatDate';
+import { statusColor } from '@/app/utils/statusColor';
 import { PAYMENT_KATEGORI } from '@/lib/constants';
 
 interface Attachment {
@@ -22,6 +24,7 @@ export interface PaymentDetailRow {
   createdAt?: string | null;
   attachments?: Attachment[];
   masterKategoriPayment?: { namaKategori?: string | null } | null;
+  statusLabel?: string | null;
 }
 
 interface PaymentDetailModalProps {
@@ -33,28 +36,24 @@ interface PaymentDetailModalProps {
 function Field({ label, value }: { label: string; value?: string | number | null }) {
   if (value === null || value === undefined || value === '') return null;
   return (
-    <div className="py-2.5 border-b border-amana-neutral-200 last:border-0">
-      <p className="text-xs font-medium text-amana-neutral-500 mb-0.5">{label}</p>
-      <p className="text-sm font-semibold text-amana-neutral-700 break-words">{value}</p>
+    <div className="flex items-start justify-between gap-4 py-2 border-b border-amana-neutral-200 last:border-b-0">
+      <span className="text-[14px] font-semibold text-amana-neutral-400 flex-shrink-0">{label}</span>
+      <span className="text-[15px] text-amana-neutral-500 text-right break-words">{value}</span>
     </div>
   );
 }
 
 function AttachmentLink({ file, label, onPreview }: { file?: Attachment | null; label: string; onPreview: (f: Attachment) => void }) {
-  if (!file?.fileURL) {
-    return (
-      <div className="py-2.5 border-b border-amana-neutral-200 last:border-0">
-        <p className="text-xs font-medium text-amana-neutral-500 mb-0.5">{label}</p>
-        <p className="text-sm text-amana-neutral-400 italic">No attachment</p>
-      </div>
-    );
-  }
   return (
-    <div className="py-2.5 border-b border-amana-neutral-200 last:border-0">
-      <p className="text-xs font-medium text-amana-neutral-500 mb-1">{label}</p>
-      <Button variant="outline" size="sm" onClick={() => onPreview(file)}>
-        View {file.fileName || label}
-      </Button>
+    <div className="flex items-center justify-between gap-4 py-2 border-b border-amana-neutral-200 last:border-b-0">
+      <span className="text-[14px] font-semibold text-amana-neutral-400 flex-shrink-0">{label}</span>
+      {file?.fileURL ? (
+        <Button variant="outline" size="sm" onClick={() => onPreview(file)}>
+          View {file.fileName || label}
+        </Button>
+      ) : (
+        <span className="text-[15px] text-amana-neutral-400 italic">No attachment</span>
+      )}
     </div>
   );
 }
@@ -134,6 +133,12 @@ export default function PaymentDetailModal({ row, open, onClose }: PaymentDetail
           <div className="px-5 py-2 max-h-[70vh] overflow-y-auto bg-amana-neutral-100">
             <Field label="To Whom" value={row.masterKategoriPayment?.namaKategori ?? row.idKategoriPayment} />
             <Field label="Event / Vendor Name" value={row.projectID} />
+            {row.statusLabel && (
+              <div className="flex items-start justify-between gap-4 py-2 border-b border-amana-neutral-200">
+                <span className="text-[14px] font-semibold text-amana-neutral-400 flex-shrink-0">Status</span>
+                <StatusPill color={statusColor(row.statusLabel)}>{row.statusLabel}</StatusPill>
+              </div>
+            )}
             {body}
           </div>
         </Modal>

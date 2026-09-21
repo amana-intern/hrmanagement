@@ -120,6 +120,7 @@ export async function GET() {
         displayGrade,
         department: auth.department,
         noTelepon: auth.noTelepon,
+        tipeKontrak: auth.tipeKontrak,
         pictureUrl: auth.pictureUrl,
         permissions: auth.rolePermissions,
         cvURL,

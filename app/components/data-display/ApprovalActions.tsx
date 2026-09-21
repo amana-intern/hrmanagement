@@ -19,7 +19,7 @@ export default function ApprovalActions({
 }: ApprovalActionsProps) {
   return (
     <div className="flex gap-2">
-      <Button variant="danger" size="sm" className="flex-1 whitespace-nowrap" disabled={disabled} onClick={onReject}>
+      <Button variant="danger-outline" size="sm" className="flex-1 whitespace-nowrap" disabled={disabled} onClick={onReject}>
         {rejectLabel}
       </Button>
       <Button variant="primary" size="sm" className="flex-1 whitespace-nowrap" disabled={disabled} onClick={onApprove}>

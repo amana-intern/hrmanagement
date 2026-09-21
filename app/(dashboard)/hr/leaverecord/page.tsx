@@ -162,7 +162,7 @@ export default function LeaveRecordPage() {
       key: 'id',
       label: 'Details',
       render: (r) => (
-        <Button variant="primary" size="sm" className="w-full whitespace-nowrap" onClick={() => setDetailsModal(r)}>
+        <Button variant="outline" size="sm" className="w-full whitespace-nowrap" onClick={() => setDetailsModal(r)}>
           View
         </Button>
       ),

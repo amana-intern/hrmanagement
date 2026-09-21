@@ -64,9 +64,15 @@ export default function DataTable<T extends { id: number | string }>({
     return arr;
   }, [rows, sortKey, sortDir, columns]);
 
+  const minColWidth = compact ? 80 : 96;
+  const minTableWidth = columns.reduce((sum, c) => sum + (c.width ? parseInt(c.width, 10) : minColWidth), 0);
+
   return (
     <div className="flex-1 min-h-0 overflow-auto">
-      <table className="w-full table-fixed text-center border-separate border-spacing-0">
+      <table
+        className="w-full table-fixed text-center border-separate border-spacing-0"
+        style={{ minWidth: `${minTableWidth}px` }}
+      >
         <thead>
           <tr>
             {columns.map((c, i) => (

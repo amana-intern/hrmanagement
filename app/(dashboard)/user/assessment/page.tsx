@@ -7,7 +7,6 @@ import PageTopBar from '@/app/components/layout/PageTopBar';
 import SectionCard from '@/app/components/layout/SectionCard';
 import Button from '@/app/components/forms/Button';
 import StatusModal from '@/app/components/feedback/StatusModal';
-import { ASSESSMENT_LEVELS } from '@/lib/assessment-template';
 import { CardStackSkeleton } from '@/app/components/feedback/PageSkeleton';
 
 interface AsmOption {
@@ -19,7 +18,29 @@ interface AsmQuestion {
   idPertanyaan: string;
   teks: string;
   tipeSoal: string | null;
+  gridId?: string | null;
   options: AsmOption[];
+}
+
+type RenderItem =
+  | { kind: 'question'; q: AsmQuestion }
+  | { kind: 'grid'; gridId: string; columns: AsmOption[]; rows: AsmQuestion[] };
+
+function groupRenderItems(questions: AsmQuestion[]): RenderItem[] {
+  const items: RenderItem[] = [];
+  for (const q of questions) {
+    if (q.tipeSoal === 'checkbox_grid' && q.gridId) {
+      const last = items[items.length - 1];
+      if (last?.kind === 'grid' && last.gridId === q.gridId) {
+        last.rows.push(q);
+        continue;
+      }
+      items.push({ kind: 'grid', gridId: q.gridId, columns: q.options, rows: [q] });
+      continue;
+    }
+    items.push({ kind: 'question', q });
+  }
+  return items;
 }
 
 interface AsmCategory {
@@ -35,7 +56,7 @@ interface OpenAssessment {
   categories: AsmCategory[];
 }
 
-type AnswerValue = { level?: number; pilihan?: string[]; jawabanTeks?: string };
+type AnswerValue = { pilihan?: string[]; jawabanTeks?: string };
 
 export default function AssessmentPage() {
   const router = useRouter();
@@ -43,8 +64,6 @@ export default function AssessmentPage() {
   const [openAssessment, setOpenAssessment] = useState<OpenAssessment | null>(null);
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<Record<string, AnswerValue>>({});
-  const [technicalSkills, setTechnicalSkills] = useState('');
-  const [selfDevelopmentAreas, setSelfDevelopmentAreas] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [status, setStatus] = useState<{ ok: boolean; text: string } | null>(null);
@@ -86,8 +105,6 @@ export default function AssessmentPage() {
     })();
   }, []);
 
-  const isSelfAssessmentComplete = technicalSkills.trim() !== '' && selfDevelopmentAreas.trim() !== '';
-
   const clearAnswer = (idPertanyaan: string) => {
     setAnswers((prev) => {
       const next = { ...prev };
@@ -98,7 +115,7 @@ export default function AssessmentPage() {
 
   const toggleChoice = (q: AsmQuestion, idOpsi: string) => {
     setAnswers((prev) => {
-      if (q.tipeSoal === 'checkbox') {
+      if (q.tipeSoal === 'checkbox' || q.tipeSoal === 'checkbox_grid') {
         const current = prev[q.idPertanyaan]?.pilihan ?? [];
         const next = current.includes(idOpsi) ? current.filter((id) => id !== idOpsi) : [...current, idOpsi];
         return { ...prev, [q.idPertanyaan]: { pilihan: next } };
@@ -108,7 +125,7 @@ export default function AssessmentPage() {
   };
 
   const handleSubmit = async () => {
-    if (!openAssessment || !isSelfAssessmentComplete) return;
+    if (!openAssessment) return;
     setSubmitting(true);
     try {
       const res = await fetch('/api/assessments/submit', {
@@ -117,8 +134,6 @@ export default function AssessmentPage() {
         body: JSON.stringify({
           idAssessment: openAssessment.idAssessment,
           answers,
-          technicalSkills,
-          selfDevelopmentAreas,
         }),
       });
       const data = await res.json();
@@ -185,9 +200,9 @@ export default function AssessmentPage() {
     );
   }
 
-  const totalSteps = openAssessment.categories.length + 1;
+  const totalSteps = openAssessment.categories.length;
   const lastStep = totalSteps - 1;
-  const cat = step < openAssessment.categories.length ? openAssessment.categories[step] : null;
+  const cat = openAssessment.categories[step];
 
   return (
     <div className="w-full h-full flex flex-col gap-3">
@@ -199,10 +214,7 @@ export default function AssessmentPage() {
             <div>
               <h2 className="text-[24px] font-semibold text-amana-primary-500 leading-tight">{openAssessment.judul}</h2>
               <p className="text-[14px] text-amana-neutral-400 mt-1">
-                {(openAssessment.deskripsi ?? '').trim() === 'Self assessment kompetensi seluruh karyawan.'
-                  ? 'Self assessment of all employees.'
-                  : (openAssessment.deskripsi ?? undefined) ??
-                    'Choose a proficiency level for each competency. Competencies may be skipped.'}
+                {openAssessment.deskripsi || 'Answer each question below. Questions may be skipped.'}
               </p>
             </div>
             <div className="text-right flex-shrink-0">
@@ -224,39 +236,68 @@ export default function AssessmentPage() {
 
         <SectionCard scroll className="flex-1">
           <div className="flex-1 min-h-0 overflow-y-auto scroll-smooth pr-1">
-            {cat ? (
-              <div key={cat.idKategoriAsm}>
+            <div key={cat.idKategoriAsm}>
                 <p className="text-[16px] font-semibold text-amana-primary-500 mb-3">{cat.namaKategori}</p>
                 <div className="flex flex-col gap-3">
-                  {cat.questions.map((q) => (
+                  {groupRenderItems(cat.questions).map((item) =>
+                    item.kind === 'grid' ? (
+                      <div key={item.gridId} className="p-3 rounded-[8px] bg-amana-neutral-100 border border-amana-primary-500">
+                        <div className="overflow-x-auto">
+                          <table className="w-full border-collapse text-[14px]">
+                            <thead>
+                              <tr>
+                                <th className="text-left p-2" />
+                                {item.columns.map((col) => (
+                                  <th
+                                    key={col.idOpsi}
+                                    className="p-2 text-[13px] font-semibold text-amana-neutral-500 text-center border-b border-amana-neutral-300"
+                                  >
+                                    {col.teks}
+                                  </th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {item.rows.map((row) => (
+                                <tr key={row.idPertanyaan} className="border-b border-amana-neutral-300 last:border-b-0">
+                                  <td className="p-2 text-[15px] font-semibold text-amana-neutral-500 whitespace-nowrap">{row.teks}</td>
+                                  {item.columns.map((col, colIndex) => {
+                                    // Each row has its own duplicated copy of the shared columns (same text,
+                                    // different idOpsi) — must toggle/check the row's own option, not item.columns[*].
+                                    const rowOption = row.options[colIndex];
+                                    return (
+                                      <td key={col.idOpsi} className="p-2 text-center">
+                                        {rowOption && (
+                                          <input
+                                            type="checkbox"
+                                            checked={(answers[row.idPertanyaan]?.pilihan ?? []).includes(rowOption.idOpsi)}
+                                            onChange={() => toggleChoice(row, rowOption.idOpsi)}
+                                            className="accent-amana-primary-500 w-4 h-4"
+                                          />
+                                        )}
+                                      </td>
+                                    );
+                                  })}
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                        <button
+                          onClick={() => item.rows.forEach((row) => clearAnswer(row.idPertanyaan))}
+                          className="text-[13px] text-amana-neutral-400 hover:text-amana-primary-500 bg-transparent border-none cursor-pointer block ml-auto mt-2"
+                        >
+                          Delete answers on this grid
+                        </button>
+                      </div>
+                    ) : (
+                      (() => {
+                        const q = item.q;
+                        return (
                     <div key={q.idPertanyaan} className="p-3 rounded-[8px] bg-amana-neutral-100 border border-amana-primary-500">
                       <p className="text-[15px] font-semibold text-amana-neutral-500 mb-2">{q.teks}</p>
                       <div className="flex flex-col gap-1">
-                        {!q.tipeSoal ? (
-                          ASSESSMENT_LEVELS.map((lvl) => {
-                            const active = answers[q.idPertanyaan]?.level === lvl.level;
-                            return (
-                              <label
-                                key={lvl.level}
-                                className={`flex items-start gap-2 px-2.5 py-1.5 rounded-lg border cursor-pointer transition-all ${
-                                  active ? 'border-amana-primary-500 bg-amana-primary-100' : 'border-amana-neutral-300 bg-amana-neutral-100 hover:border-amana-primary-300'
-                                }`}
-                              >
-                                <input
-                                  type="radio"
-                                  name={q.idPertanyaan}
-                                  checked={active}
-                                  onChange={() => setAnswers((prev) => ({ ...prev, [q.idPertanyaan]: { level: lvl.level } }))}
-                                  className="mt-1 accent-amana-primary-500"
-                                />
-                                <span className="text-[14px]">
-                                  <span className="font-semibold text-amana-neutral-500">Level {lvl.level} ({lvl.label})</span>
-                                  <span className="block text-[13px] text-amana-neutral-400 mt-0.5">{lvl.description}</span>
-                                </span>
-                              </label>
-                            );
-                          })
-                        ) : q.tipeSoal === 'short_answer' ? (
+                        {q.tipeSoal === 'short_answer' ? (
                           <textarea
                             value={answers[q.idPertanyaan]?.jawabanTeks ?? ''}
                             onChange={(e) => setAnswers((prev) => ({ ...prev, [q.idPertanyaan]: { jawabanTeks: e.target.value } }))}
@@ -297,40 +338,12 @@ export default function AssessmentPage() {
                         </button>
                       </div>
                     </div>
-                  ))}
+                        );
+                      })()
+                    )
+                  )}
                 </div>
               </div>
-            ) : (
-              <div>
-                <p className="text-[16px] font-semibold text-amana-primary-500 mb-3">Self Assessment & Need for development</p>
-                <div className="flex flex-col gap-4">
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[16px] font-semibold text-amana-neutral-500">
-                      Please list your 1-3 most significant technical skills
-                    </label>
-                    <textarea
-                      value={technicalSkills}
-                      onChange={(e) => setTechnicalSkills(e.target.value)}
-                      rows={3}
-                      placeholder="e.g. Python, SQL, Project Management..."
-                      className="w-full border border-amana-neutral-300 rounded-[13px] px-3 py-2.5 text-[16px] text-amana-neutral-500 placeholder:text-amana-neutral-300 bg-amana-neutral-100 transition-colors duration-200 focus:outline-none focus:border-amana-primary-500"
-                    />
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[16px] font-semibold text-amana-neutral-500">
-                      Self-Development Areas
-                    </label>
-                    <textarea
-                      value={selfDevelopmentAreas}
-                      onChange={(e) => setSelfDevelopmentAreas(e.target.value)}
-                      rows={3}
-                      placeholder="e.g. Leadership, Public Speaking, Time Management..."
-                      className="w-full border border-amana-neutral-300 rounded-[13px] px-3 py-2.5 text-[16px] text-amana-neutral-500 placeholder:text-amana-neutral-300 bg-amana-neutral-100 transition-colors duration-200 focus:outline-none focus:border-amana-primary-500"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
 
           <div className="flex-shrink-0 flex items-center justify-between gap-3 mt-4 pt-4 border-t border-amana-neutral-200">
@@ -347,7 +360,7 @@ export default function AssessmentPage() {
                   Next
                 </Button>
               ) : (
-                <Button variant="primary" size="lg" disabled={submitting || !isSelfAssessmentComplete} onClick={handleSubmit}>
+                <Button variant="primary" size="lg" disabled={submitting} onClick={handleSubmit}>
                   {submitting ? 'Submitting...' : 'Submit'}
                 </Button>
               )}

@@ -21,6 +21,8 @@ export interface EmployeeDetails {
   name: string;
   grade: string;
   department: string;
+  position: string;
+  contractType: string;
   email: string;
   phone: string;
   photoSrc?: string;
@@ -29,32 +31,54 @@ export interface EmployeeDetails {
   certificates: EmployeeCertificate[];
 }
 
+function DetailRow({ label, value, href }: { label: string; value: string; href?: string }) {
+  return (
+    <div className="flex items-center justify-between gap-3 py-1.5 border-b border-amana-neutral-200 text-[14px]">
+      <span className="flex-shrink-0 font-medium text-amana-neutral-400">{label}:</span>
+      {href ? (
+        <a href={href} className="min-w-0 truncate text-amana-primary-500 hover:underline">
+          {value || '-'}
+        </a>
+      ) : (
+        <span className="min-w-0 truncate text-amana-neutral-500">{value || '-'}</span>
+      )}
+    </div>
+  );
+}
+
 interface EmployeeDetailsModalProps {
   employee: EmployeeDetails;
   onClose: () => void;
   onRemove?: () => void;
+  onEdit?: () => void;
   onViewAssessment?: () => void;
   onViewCertificate?: (cert: EmployeeCertificate) => void;
   onViewCareerHistory?: () => void;
 }
 
-export default function EmployeeDetailsModal({
+/** Content-only version (no Modal shell) — for embedding inside a persistent modal that
+ * crossfades between view/edit content instead of unmounting the whole dialog. */
+export function EmployeeDetailsContent({
   employee,
-  onClose,
   onRemove,
+  onEdit,
   onViewAssessment,
   onViewCertificate,
   onViewCareerHistory,
-}: EmployeeDetailsModalProps) {
+}: Omit<EmployeeDetailsModalProps, 'onClose'>) {
+  // No Remove/Edit alongside (self-service profile view) means these View buttons
+  // aren't competing with a stronger CTA, so they can be the plain solid blue button.
+  const viewButtonVariant = onRemove || onEdit ? 'outline' : 'primary';
+
   return (
-    <Modal title="Employee Details" onClose={onClose} maxWidth="max-w-4xl" className="max-h-[90vh]">
+    <>
       <div className="flex-1 min-h-0 overflow-y-auto scroll-smooth p-5 flex flex-col lg:flex-row gap-4">
         <div className="w-full lg:w-2/5 flex-shrink-0 flex flex-col bg-amana-neutral-100 rounded-[5px] border border-amana-primary-500 px-4 py-3">
           <h3 className="flex-shrink-0 text-[18px] font-semibold text-amana-primary-500 pb-1.5 mb-3 border-b border-amana-primary-500">
             Bio
           </h3>
-          <div className="flex flex-col items-center text-center">
-            <div className="w-[120px] h-[120px] rounded-[8px] overflow-hidden border border-amana-primary-500 shadow-sm bg-amana-neutral-200 flex items-center justify-center mb-3">
+          <div className="flex justify-center mb-3">
+            <div className="w-[120px] h-[120px] rounded-[8px] overflow-hidden border border-amana-primary-500 shadow-sm bg-amana-neutral-200 flex items-center justify-center flex-shrink-0">
               {employee.photoSrc ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={employee.photoSrc} alt="" className="w-full h-full object-cover" />
@@ -64,20 +88,34 @@ export default function EmployeeDetailsModal({
                 </span>
               )}
             </div>
-            <p className="w-full py-1.5 border-b border-amana-neutral-200 text-[18px] font-semibold text-amana-neutral-500">{employee.name}</p>
-            <p className="w-full py-1.5 border-b border-amana-neutral-200 text-[15px] text-amana-neutral-500">{employee.grade}</p>
-            <p className="w-full py-1.5 border-b border-amana-neutral-200 text-[15px] text-amana-neutral-500">{employee.department}</p>
-            <a href={`mailto:${employee.email}`} className="w-full py-1.5 border-b border-amana-neutral-200 text-[15px] text-amana-primary-500 hover:underline">
-              {employee.email}
-            </a>
-            <p className="w-full py-1.5 border-b border-amana-neutral-200 text-[15px] text-amana-neutral-500">{employee.phone}</p>
           </div>
-          {onRemove && (
+          <h4 className="flex-shrink-0 text-[15px] font-bold text-amana-neutral-500 pb-1 mb-1 border-b border-amana-neutral-300">
+            Details
+          </h4>
+          <div className="flex flex-col">
+            <DetailRow label="Name" value={employee.name} />
+            <DetailRow label="PG" value={employee.department} />
+            <DetailRow label="Grade" value={employee.grade} />
+            <DetailRow label="Position" value={employee.position} />
+            <DetailRow label="Contract" value={employee.contractType} />
+            <DetailRow label="Email" value={employee.email} href={`mailto:${employee.email}`} />
+            <DetailRow label="No. Hp" value={employee.phone} />
+          </div>
+          {(onRemove || onEdit) && (
             <>
               <div className="flex-1" />
-              <Button variant="danger" size="md" className="mt-4 w-full" onClick={onRemove}>
-                Remove Talent
-              </Button>
+              <div className="flex gap-2 mt-4">
+                {onRemove && (
+                  <Button variant="danger-outline" size="md" className="flex-1" onClick={onRemove}>
+                    Remove
+                  </Button>
+                )}
+                {onEdit && (
+                  <Button variant="primary" size="md" className="flex-1" onClick={onEdit}>
+                    Edit
+                  </Button>
+                )}
+              </div>
             </>
           )}
         </div>
@@ -90,7 +128,7 @@ export default function EmployeeDetailsModal({
               <span className="flex-1 min-w-0 text-[16px] text-amana-neutral-500">{employee.assessmentName ?? 'Competency Assessment'}</span>
               {onViewAssessment && (
                 <Button
-                  variant="primary"
+                  variant={viewButtonVariant}
                   size="sm"
                   className="w-[224px] flex-shrink-0"
                   onClick={onViewAssessment}
@@ -106,7 +144,7 @@ export default function EmployeeDetailsModal({
                 Career History
               </h4>
               <div className="flex-shrink-0 pb-3 mb-3 border-b border-amana-neutral-300">
-                <Button variant="primary" size="sm" className="w-full" onClick={onViewCareerHistory}>
+                <Button variant={viewButtonVariant} size="sm" className="w-full" onClick={onViewCareerHistory}>
                   View
                 </Button>
               </div>
@@ -122,7 +160,7 @@ export default function EmployeeDetailsModal({
                 <div key={i} className="flex items-center gap-[10px]">
                   <span className="flex-1 min-w-0 text-[15px] text-amana-neutral-500">{cert.title}</span>
                   <Button
-                    variant="primary"
+                    variant={viewButtonVariant}
                     size="sm"
                     className="w-[224px] flex-shrink-0"
                     disabled={!cert.fileURL}
@@ -138,6 +176,21 @@ export default function EmployeeDetailsModal({
           </div>
         </div>
       </div>
+    </>
+  );
+}
+
+export default function EmployeeDetailsModal({ employee, onClose, onRemove, onEdit, onViewAssessment, onViewCertificate, onViewCareerHistory }: EmployeeDetailsModalProps) {
+  return (
+    <Modal title="Employee Details" onClose={onClose} maxWidth="max-w-4xl" className="max-h-[90vh]">
+      <EmployeeDetailsContent
+        employee={employee}
+        onRemove={onRemove}
+        onEdit={onEdit}
+        onViewAssessment={onViewAssessment}
+        onViewCertificate={onViewCertificate}
+        onViewCareerHistory={onViewCareerHistory}
+      />
     </Modal>
   );
 }

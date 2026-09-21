@@ -251,27 +251,27 @@ export default function PartnerLeaveApprovalPage() {
     { key: 'grade', label: 'Grade' },
     { key: 'type', label: 'Leave Type' },
     {
-      key: 'details',
-      label: 'Details',
-      width: '140px',
-      render: (r) => (
-        <Button
-          variant="primary"
-          size="sm"
-          className="w-full whitespace-nowrap"
-          onClick={() => setDetailRow(r)}
-        >
-          View
-        </Button>
-      ),
-    },
-    {
       key: 'status',
       label: 'Status',
       render: (r) => (
         <StatusPill color={statusColor(STATUS_MAP[r.status]?.label ?? r.status)}>
           {STATUS_MAP[r.status]?.label ?? r.status}
         </StatusPill>
+      ),
+    },
+    {
+      key: 'details',
+      label: 'Details',
+      width: '140px',
+      render: (r) => (
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full whitespace-nowrap"
+          onClick={() => setDetailRow(r)}
+        >
+          View
+        </Button>
       ),
     },
     { key: 'action', label: 'Action', width: '240px', render: renderAction },
@@ -365,14 +365,13 @@ export default function PartnerLeaveApprovalPage() {
               <DetailField
                 label="Medical Document"
                 value={
-                  <a
-                    href={detailRow.documentURL}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-amana-primary-500 underline"
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => window.open(detailRow.documentURL!, '_blank', 'noopener,noreferrer')}
                   >
-                    View document
-                  </a>
+                    View Document
+                  </Button>
                 }
               />
             )}

@@ -184,7 +184,7 @@ export default function MedicalLeavePage() {
       label: 'Document',
       render: (r) =>
         r.buktiSakitURL ? (
-          <Button variant="primary" size="sm" className="w-full" onClick={() => setPreviewPdf({ title: `${r.name} - Sick Note`, url: r.buktiSakitURL! })}>
+          <Button variant="outline" size="sm" className="w-full" onClick={() => setPreviewPdf({ title: `${r.name} - Sick Note`, url: r.buktiSakitURL! })}>
             View
           </Button>
         ) : (
@@ -214,7 +214,7 @@ export default function MedicalLeavePage() {
         <TextField label="To" type="date" value={draft.to} onChange={(v) => setField('to', v)} />
       </SearchPanel>
 
-      <SectionCard title="Sick Leave Record" subtitle={`${filtered.length} record(s)`} scroll>
+      <SectionCard title="Sick Leave Record" subtitle={`${filtered.length} record(s)`} scroll className="flex-1 min-h-[220px]">
         <DataTable
           columns={columns}
           rows={filtered}
@@ -241,7 +241,7 @@ export default function MedicalLeavePage() {
         <div className="flex-1 min-h-0 overflow-y-auto scroll-smooth flex flex-col justify-center gap-3 py-2 pr-2">
           {diseaseCounts.map(({ disease, count, pct }) => (
             <div key={disease} className="flex items-center gap-3">
-              <span className="text-[16px] font-semibold text-amana-neutral-500 w-16 flex-shrink-0 truncate">{disease}</span>
+              <span title={disease} className="text-[16px] font-semibold text-amana-neutral-500 w-28 flex-shrink-0 truncate">{disease}</span>
               <div className="flex-1 h-4 bg-amana-neutral-200 rounded-full overflow-hidden">
                 <div className={`h-full rounded-full ${diseaseBarColor}`} style={{ width: `${pct}%` }} />
               </div>
