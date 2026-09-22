@@ -1,13 +1,33 @@
 'use client';
 
-import SidebarBase from '../SidebarBase';
-import type { SidebarConfig } from '../SidebarBase';
+import SidebarNavBase from '../SidebarNavBase';
+import type { NavGroup } from '../SidebarNavBase';
 
-const items: SidebarConfig = [
-  { type: 'item', href: '/ops/profile', label: 'Profile', iconP: '/icon/PProfile.png', iconB: '/icon/BProfile.png' },
-  { type: 'item', href: '/ops/paymentapproval', label: 'Payment Approval', iconP: '/icon/PPayment.png', iconB: '/icon/BPayment.png' },
+export const groups: NavGroup[] = [
+  {
+    title: 'Account',
+    links: [
+      { href: '/ops/profile', label: 'Profile' },
+      { href: '/user/careerhub', label: 'Career Hub', activePaths: ['/user/assessment', '/user/careerhub/result'] },
+    ],
+  },
+  {
+    title: 'Services',
+    links: [
+      { href: '/user/attendance/leaverequest', label: 'Leave Request' },
+      { href: '/user/attendance/sickleave', label: 'Sick Request' },
+      { href: '/user/payment', label: 'Payment Request' },
+    ],
+  },
+  {
+    title: 'OPS Center',
+    links: [
+      { href: '/ops/paymentapproval', label: 'Payment Approval' },
+      { href: '/ops/paymentscheduler', label: 'Payment Scheduler' },
+    ],
+  },
 ];
 
 export default function SidebarOPS() {
-  return <SidebarBase items={items} />;
+  return <SidebarNavBase groups={groups} />;
 }
