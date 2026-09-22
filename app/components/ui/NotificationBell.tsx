@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/lib/useAuth';
+import { ROLES } from '@/lib/roles';
 
 type Notif = {
   idNotif: string;
@@ -46,27 +48,43 @@ function renderMessage(text: string | null) {
   );
 }
 
-// Map notification type to redirect URL
-function getRedirectUrl(tipe: string): string | null {
+// Map notification type (+ role penerima) ke halaman "yang harus dilakukan".
+// notifInfo boleh null sebelum session termuat — klik hanya mark-read.
+function getRedirectUrl(tipe: string, role: string | null | undefined): string | null {
+  if (!role) return null;
+
   switch (tipe) {
-    case 'LEAVE_INFO':
-      return '/partner/leaveapproval';
-    case 'LEAVE_APPROVED':
-    case 'LEAVE_REJECTED':
-      return '/user/attendance/leaverequest';
+    // Payment — tahap approval / tindak lanjut
+    case 'PAY_INFO':
+      return role === ROLES.ADMIN_OPS ? '/ops/paymentapproval' : null;
+    case 'PAY_PENDING_PARTNER':
+      return role === ROLES.PARTNER ? '/partner/paymentapproval' : null;
+    case 'PAY_WAITING_SCHEDULE':
+      return role === ROLES.ADMIN_OPS ? '/ops/paymentscheduler' : null;
     case 'PAY_APPROVED':
-      return '/partner/paymentapproval';
     case 'PAY_REVIEW_APPROVED':
     case 'PAY_SCHEDULED':
     case 'PAY_PAID':
     case 'PAY_REJECTED':
       return '/user/payment';
+
+    // Leave
+    case 'LEAVE_INFO':
+      return role === ROLES.PARTNER ? '/partner/leaveapproval' : null;
+    case 'LEAVE_APPROVED':
+    case 'LEAVE_REJECTED':
+      return '/user/attendance/leaverequest';
+
+    // Contract — approver berikutnya bergantung role penerima
     case 'CONTRACT_REMINDER_30':
     case 'CONTRACT_REMINDER_60':
     case 'CONTRACT_REMINDER_90':
     case 'CONTRACT_RENEWAL':
     case 'CONTRACT_OFFBOARDING':
-      return '/partner/contracttracking';
+      if (role === ROLES.ADMIN_HR) return '/hr/contracttracking';
+      if (role === ROLES.PARTNER) return '/partner/contracttracking';
+      return '/user/profile';
+
     default:
       return null;
   }
@@ -76,6 +94,7 @@ function getRedirectUrl(tipe: string): string | null {
 // Data dari /api/notifications, polling tiap 30 detik.
 export default function NotificationBell() {
   const router = useRouter();
+  const { user } = useAuth();
   const [notifs, setNotifs] = useState<Notif[]>([]);
   const [unread, setUnread] = useState(0);
   const [open, setOpen] = useState(false);
@@ -179,7 +198,7 @@ export default function NotificationBell() {
                   <button
                     onClick={() => {
                       if (!n.isRead) markRead(n.idNotif);
-                      const url = getRedirectUrl(n.tipe);
+                      const url = getRedirectUrl(n.tipe, user?.idRole);
                       if (url) {
                         setOpen(false);
                         router.push(url);

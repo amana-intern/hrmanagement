@@ -50,3 +50,65 @@ export async function getDeptPartner(
   if (!partner?.email || !partner.karyawan?.idKaryawan) return null;
   return { idKaryawan: partner.karyawan.idKaryawan, email: partner.email };
 }
+
+const nota = () => `NOTIF-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+
+type BroadcastNotif = {
+  tipe: string;
+  judul: string;
+  pesan: string;
+  idReferensi: string;
+  /** Jika diisi, tiap penerima yang punya karyawan juga mendapat to-do ini (bersamaan dengan notifikasi). */
+  todo?: { teks: string; modul: string };
+};
+
+// Notifikasi ke daftar user (bell in-app + email best-effort).
+// Dipakai untuk broadcast ke Admin OPS / partner pilar.
+// Jika opts.todo diisi, to-do dibuat bersamaan untuk penerima yang punya karyawan.
+export async function notifyUsers(
+  recipients: { idKaryawan?: string | null; email?: string | null }[],
+  opts: BroadcastNotif
+): Promise<void> {
+  for (const r of recipients) {
+    if (r.idKaryawan) {
+      await prisma.notification.create({
+        data: {
+          idNotif: nota(),
+          idKaryawan: r.idKaryawan,
+          tipe: opts.tipe,
+          judul: opts.judul,
+          pesan: opts.pesan,
+          idReferensi: opts.idReferensi,
+        },
+      });
+      if (opts.todo) {
+        await prisma.hrTodo.create({
+          data: {
+            idTodo: `TODO-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+            idKaryawan: r.idKaryawan,
+            teks: opts.todo.teks,
+            modul: opts.todo.modul,
+            idReferensi: opts.idReferensi,
+          },
+        });
+      }
+    }
+    if (r.email) {
+      await sendEmail({ to: r.email, subject: opts.judul, text: opts.pesan });
+    }
+  }
+}
+
+// Notifikasi ke SEMUA Admin OPS (bell in-app selalu dibuat walau email kosong;
+// email hanya dikirim jika user punya email). Dipakai saat submit payment dan
+// saat partner final-approve (menunggu jadwal pembayaran).
+export async function notifyAllOpsAdmins(opts: BroadcastNotif): Promise<void> {
+  const opsAdmins = await prisma.user.findMany({
+    where: { idRole: ROLES.ADMIN_OPS },
+    include: { karyawan: true },
+  });
+  await notifyUsers(
+    opsAdmins.map((ops) => ({ idKaryawan: ops.karyawan?.idKaryawan, email: ops.email })),
+    opts
+  );
+}
