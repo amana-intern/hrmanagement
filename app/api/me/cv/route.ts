@@ -1,11 +1,10 @@
 import { NextRequest } from 'next/server';
-import { writeFile, mkdir } from 'fs/promises';
 import path from 'path';
 import { requireAuth } from '@/lib/dal';
 import { prisma } from '@/lib/prisma';
 import { canUseCareerHub } from '@/lib/roles';
+import { saveFile } from '@/lib/storage';
 
-const UPLOAD_DIR = path.join(process.cwd(), 'public', 'uploads');
 const MAX_BYTES = 5 * 1024 * 1024;
 const ALLOWED_EXT = ['.pdf'];
 
@@ -31,11 +30,9 @@ export async function PATCH(request: NextRequest) {
       return Response.json({ error: 'Ukuran file melebihi 5MB' }, { status: 400 });
     }
 
-    await mkdir(UPLOAD_DIR, { recursive: true });
     const safeName = `cv-${Date.now()}${ext}`;
     const bytes = Buffer.from(await file.arrayBuffer());
-    await writeFile(path.join(UPLOAD_DIR, safeName), bytes);
-    const fileURL = `/uploads/${safeName}`;
+    const fileURL = await saveFile(bytes, safeName);
 
     const profile = await prisma.talentProfile.upsert({
       where: { idKaryawan: auth.idKaryawan },
@@ -45,6 +42,7 @@ export async function PATCH(request: NextRequest) {
 
     return Response.json({ ok: true, fileURL, profile });
   } catch (e) {
+    console.error('CV upload error:', e);
     const status = (e as { status?: number }).status ?? 500;
     return Response.json({ error: 'An error occurred' }, { status });
   }

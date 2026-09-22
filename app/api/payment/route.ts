@@ -1,12 +1,11 @@
 import { NextRequest } from 'next/server';
-import { writeFile, mkdir } from 'fs/promises';
 import path from 'path';
 import { requireAuth } from '@/lib/dal';
 import { prisma } from '@/lib/prisma';
 import { ROLES, canUseEmployeeFeatures } from '@/lib/roles';
 import { sendEmail } from '@/lib/notify';
+import { saveFile } from '@/lib/storage';
 
-const UPLOAD_DIR = path.join(process.cwd(), 'public', 'uploads');
 const MAX_BYTES = 5 * 1024 * 1024;
 const ALLOWED_EXT = ['.pdf', '.jpg', '.jpeg', '.png'];
 
@@ -35,7 +34,6 @@ export async function POST(request: NextRequest) {
       }
 
       // Simpan file lampiran (field name = kategori, mis. vendor-invoice / ind-ktp).
-      await mkdir(UPLOAD_DIR, { recursive: true });
       const attachments = [];
       for (const [key, value] of form.entries()) {
         if (!(value instanceof File) || value.size <= 0) continue;
@@ -45,11 +43,11 @@ export async function POST(request: NextRequest) {
           return Response.json({ error: 'Ukuran file melebihi 5MB' }, { status: 400 });
         const safeName = `pay-${Date.now()}-${Math.random().toString(36).slice(2, 7)}${ext}`;
         const bytes = Buffer.from(await value.arrayBuffer());
-        await writeFile(path.join(UPLOAD_DIR, safeName), bytes);
+        const fileURL = await saveFile(bytes, safeName);
         attachments.push({
           idAttachment: `ATT-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
           fileName: value.name,
-          fileURL: `/uploads/${safeName}`,
+          fileURL,
           kategori: key,
         });
       }
@@ -145,6 +143,7 @@ export async function POST(request: NextRequest) {
 
     return Response.json({ ok: true, payment }, { status: 201 });
   } catch (e) {
+    console.error('Payment error:', e);
     const status = (e as { status?: number }).status ?? 500;
     return Response.json({ error: 'An error occurred' }, { status });
   }

@@ -1,5 +1,4 @@
 import { PrismaClient } from '@prisma/client';
-import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
@@ -140,19 +139,6 @@ const KATEGORI_PAYMENT = [
   { idKategori: 'KPY01', namaKategori: 'Vendor' },
   { idKategori: 'KPY02', namaKategori: 'Individual' },
   { idKategori: 'KPY03', namaKategori: 'Per Diem' },
-];
-
-const KONTRAK = [
-  { idKontrak: 'KTR001', idKaryawan: 'KRY001', hariMulai: -400, hariBerakhir: 180, carryOver: 6, annualQuota: 12 },
-  { idKontrak: 'KTR002', idKaryawan: 'KRY002', hariMulai: -300, hariBerakhir: 250, carryOver: 4, annualQuota: 12 },
-  { idKontrak: 'KTR003', idKaryawan: 'KRY003', hariMulai: -350, hariBerakhir: 75, carryOver: 5, annualQuota: 12 },
-  { idKontrak: 'KTR004', idKaryawan: 'KRY004', hariMulai: -500, hariBerakhir: 70, carryOver: 8, annualQuota: 12 },
-  { idKontrak: 'KTR005', idKaryawan: 'KRY005', hariMulai: -380, hariBerakhir: 45, carryOver: 6, annualQuota: 12 },
-  { idKontrak: 'KTR006', idKaryawan: 'KRY006', hariMulai: -260, hariBerakhir: 20, carryOver: 3, annualQuota: 12 },
-  { idKontrak: 'KTR007', idKaryawan: 'KRY007', hariMulai: -220, hariBerakhir: 100, carryOver: 2, annualQuota: 12 },
-  { idKontrak: 'KTR008', idKaryawan: 'KRY008', hariMulai: -300, hariBerakhir: 5, carryOver: 4, annualQuota: 12 },
-  { idKontrak: 'KTR009', idKaryawan: 'KRY009', hariMulai: -150, hariBerakhir: 30, carryOver: 1, annualQuota: 12 },
-  { idKontrak: 'KTR010', idKaryawan: 'KRY010', hariMulai: -100, hariBerakhir: 60, carryOver: 0, annualQuota: 12 },
 ];
 
 const LOWONGAN = [
@@ -312,8 +298,6 @@ const ASSESSMENT_CATALOG = [
   },
 ];
 
-// dummmy password for all users
-const PASSWORD = 'amana123'; // all dummy users share same password
 
 const EXCLUDED_NAMES = [
   'Normandhieva Achmad Syuhada',
@@ -397,128 +381,6 @@ type TSVUser = {
   kontrak: { tanggalMulai: string; tanggalBerakhir: string; carryOver: number }[];
 };
 
-type SeedUser = {
-  email: string;
-  nama: string;
-  role: string;
-  idKaryawan: string;
-  idGrade: string | null;
-  department: string | null;
-  tanggalLahir: string;
-  tanggalMasuk: string;
-};
-
-const USERS: SeedUser[] = [
-  // Admin HR
-  {
-    email: 'hradmin@company',
-    nama: 'Citra Lestari',
-    role: ROLES.ADMIN_HR,
-    idKaryawan: 'KRY001',
-    idGrade: null,
-    department: 'education', // matriks approver cuti: Admin HR -> Partner Education & HR
-    tanggalLahir: '1990-05-15',
-    tanggalMasuk: '2020-01-10',
-  },
-
-  // Admin OPS
-  {
-    email: 'opsadmin@company',
-    nama: 'Dimas Prayoga',
-    role: ROLES.ADMIN_OPS,
-    idKaryawan: 'KRY002',
-    idGrade: 'GRD010',
-    department: 'ops',
-    tanggalLahir: '1991-03-22',
-    tanggalMasuk: '2020-06-01',
-  },
-
-  // Partners (4 pillars)
-  {
-    email: 'partnerhealth@company',
-    nama: 'Eka Pratiwi',
-    role: ROLES.PARTNER,
-    idKaryawan: 'KRY003',
-    idGrade: 'GRD008',
-    department: 'health',
-    tanggalLahir: '1980-07-09',
-    tanggalMasuk: '2015-02-15',
-  },
-  {
-    email: 'partnerdigital@company',
-    nama: 'Fitri Handayani',
-    role: ROLES.PARTNER,
-    idKaryawan: 'KRY004',
-    idGrade: 'GRD008',
-    department: 'digital',
-    tanggalLahir: '1979-11-30',
-    tanggalMasuk: '2014-08-01',
-  },
-  {
-    email: 'partnereducation@company',
-    nama: 'Gilang Ramadhan',
-    role: ROLES.PARTNER,
-    idKaryawan: 'KRY005',
-    idGrade: 'GRD008',
-    department: 'education',
-    tanggalLahir: '1982-05-18',
-    tanggalMasuk: '2013-04-20',
-  },
-  {
-    email: 'headops@company',
-    nama: 'Budi Santoso',
-    role: ROLES.PARTNER,
-    idKaryawan: 'KRY006',
-    idGrade: 'GRD013',
-    department: 'ops',
-    tanggalLahir: '1983-02-27',
-    tanggalMasuk: '2014-09-01',
-  },
-
-  // Employees (Practice Group)
-  {
-    email: 'ahmadfauzi@company',
-    nama: 'Ahmad Fauzi',
-    role: ROLES.EMPLOYEE,
-    idKaryawan: 'KRY007',
-    idGrade: 'GRD003',
-    department: 'health',
-    tanggalLahir: '1995-04-11',
-    tanggalMasuk: '2021-03-01',
-  },
-  {
-    email: 'saridewi@company',
-    nama: 'Sari Dewi',
-    role: ROLES.EMPLOYEE,
-    idKaryawan: 'KRY008',
-    idGrade: 'GRD002',
-    department: 'digital',
-    tanggalLahir: '1996-08-24',
-    tanggalMasuk: '2022-01-15',
-  },
-  {
-    email: 'budihartono@company',
-    nama: 'Budi Hartono',
-    role: ROLES.EMPLOYEE,
-    idKaryawan: 'KRY009',
-    idGrade: 'GRD004',
-    department: 'education',
-    tanggalLahir: '1993-12-05',
-    tanggalMasuk: '2021-07-01',
-  },
-
-  // One OPS employee (non-admin)
-  {
-    email: 'dewilestari@company',
-    nama: 'Dewi Lestari',
-    role: ROLES.EMPLOYEE,
-    idKaryawan: 'KRY010',
-    idGrade: 'GRD011',
-    department: 'ops',
-    tanggalLahir: '1994-06-14',
-    tanggalMasuk: '2022-03-01',
-  },
-];
 
 const KONTRAK_BARU: { idKontrak: string; idKaryawan: string; tanggalMulai: Date; tanggalBerakhir: Date; carryOver: number; annualQuota: number }[] = [
   { idKontrak: 'KTR011', idKaryawan: 'KRY011', tanggalMulai: requireDate('1 March 2026'), tanggalBerakhir: requireDate('31 December 2099'), carryOver: 0, annualQuota: 12 },
@@ -853,30 +715,14 @@ async function main() {
     });
   }
 
-  // 10. Users
-  const passwordHash = await bcrypt.hash(PASSWORD, 10);
-  for (const u of USERS) {
-    await prisma.user.upsert({
-      where: { email: u.email },
-      update: { idRole: u.role, passwordHash },
-      create: {
-        idUser: u.idKaryawan,
-        email: u.email,
-        passwordHash,
-        idRole: u.role,
-      },
-    });
-  }
-
-  // 10b. New Users from TSV data
+  // 10. Users — login is by email only, no password.
   for (const u of TSV_USERS) {
     await prisma.user.upsert({
       where: { idUser: u.idKaryawan },
-      update: { email: u.email, idRole: u.role, passwordHash },
+      update: { email: u.email, idRole: u.role },
       create: {
         idUser: u.idKaryawan,
         email: u.email,
-        passwordHash,
         idRole: u.role,
       },
     });
@@ -888,36 +734,6 @@ async function main() {
       where: { idLowongan: l.idLowongan },
       update: { namaPosisi: l.namaPosisi, deskripsi: l.deskripsi, idStatus: l.idStatus, googleFormURL: l.googleFormURL },
       create: l,
-    });
-  }
-
-  // 11b. Kontrak Karyawan
-  const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
-  for (const k of KONTRAK) {
-    const tanggalMulai = new Date(todayStart);
-    tanggalMulai.setDate(tanggalMulai.getDate() + k.hariMulai);
-    const tanggalBerakhir = new Date(todayStart);
-    tanggalBerakhir.setDate(tanggalBerakhir.getDate() + k.hariBerakhir);
-    await prisma.kontrakKaryawan.upsert({
-      where: { idKontrak: k.idKontrak },
-      update: {
-        idKaryawan: k.idKaryawan,
-        tanggalMulai,
-        tanggalBerakhir,
-        carryOver: k.carryOver,
-        annualQuota: k.annualQuota,
-        idStatus: 'ST_KON_ACTIVE',
-      },
-      create: {
-        idKontrak: k.idKontrak,
-        idKaryawan: k.idKaryawan,
-        tanggalMulai,
-        tanggalBerakhir,
-        carryOver: k.carryOver,
-        annualQuota: k.annualQuota,
-        idStatus: 'ST_KON_ACTIVE',
-      },
     });
   }
 
@@ -1026,7 +842,6 @@ async function main() {
   }
 
   console.log('Seeding selesai.');
-  console.log('   Dummy login password untuk semua user: ' + PASSWORD);
 }
 
 main()

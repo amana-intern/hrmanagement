@@ -239,7 +239,7 @@ export default function TalentRosterPage() {
         setEmployees((d2.list ?? []) as Employee[]);
       }
       setIsAddUserOpen(false);
-      setStatus({ ok: true, text: `Talent "${newUser.nama}" successfully added. Password: "${data.password}"` });
+      setStatus({ ok: true, text: `Talent "${newUser.nama}" successfully added.` });
       setAddUserMsg('');
     } catch {
       setAddUserMsg('A network error occurred');

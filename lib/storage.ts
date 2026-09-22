@@ -4,18 +4,18 @@ import path from 'path';
 
 // Lapisan penyimpanan file terpusat. Pilih provider lewat env STORAGE_PROVIDER:
 //   - 'local'    (default) -> disk lokal public/uploads (dev & VPS/Docker dengan persistent volume)
-//   - 'supabase'           -> Supabase Storage (deployment serverless seperti Vercel; butuh env bucket)
+//   - 'blob'               -> Vercel Blob Storage (deployment serverless seperti Vercel)
 //
 // Semua fitur upload sebaiknya memanggil saveFile() agar migrasi provider
 // tidak menyentuh kode halaman/API satu per satu.
 
-export type StorageProvider = 'local' | 'supabase';
+export type StorageProvider = 'local' | 'blob';
 
 const UPLOAD_DIR = path.join(process.cwd(), 'public', 'uploads');
 
 function getProvider(): StorageProvider {
   const p = (process.env.STORAGE_PROVIDER ?? 'local').toLowerCase();
-  return p === 'supabase' ? 'supabase' : 'local';
+  return p === 'blob' ? 'blob' : 'local';
 }
 
 /**
@@ -24,8 +24,8 @@ function getProvider(): StorageProvider {
  */
 export async function saveFile(buffer: Buffer, filename: string): Promise<string> {
   const provider = getProvider();
-  if (provider === 'supabase') {
-    return saveFileSupabase(buffer, filename);
+  if (provider === 'blob') {
+    return saveFileBlob(buffer, filename);
   }
   return saveFileLocal(buffer, filename);
 }
@@ -36,10 +36,8 @@ async function saveFileLocal(buffer: Buffer, filename: string): Promise<string> 
   return `/uploads/${filename}`;
 }
 
-async function saveFileSupabase(_buffer: Buffer, _filename: string): Promise<string> {
-  // Implementasi penuh menyusul saat target deployment final ditetapkan.
-  // Butuh env: SUPABASE_URL, SUPABASE_SERVICE_KEY, SUPABASE_STORAGE_BUCKET.
-  throw new Error(
-    'Supabase Storage belum dikonfigurasi. Set STORAGE_PROVIDER=local atau lengkapi env Supabase.'
-  );
+async function saveFileBlob(buffer: Buffer, filename: string): Promise<string> {
+  const { put } = await import('@vercel/blob');
+  const blob = await put(filename, buffer, { access: 'public' });
+  return blob.url;
 }

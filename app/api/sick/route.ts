@@ -1,11 +1,10 @@
 import { NextRequest } from 'next/server';
-import { writeFile, mkdir } from 'fs/promises';
 import path from 'path';
 import { requireAuth } from '@/lib/dal';
 import { prisma } from '@/lib/prisma';
 import { ROLES } from '@/lib/roles';
+import { saveFile } from '@/lib/storage';
 
-const UPLOAD_DIR = path.join(process.cwd(), 'public', 'uploads');
 const MAX_BYTES = 5 * 1024 * 1024;
 const ALLOWED_EXT = ['.pdf', '.jpg', '.jpeg', '.png'];
 
@@ -36,11 +35,9 @@ export async function POST(request: NextRequest) {
       if (file.size > MAX_BYTES) {
         return Response.json({ error: 'Ukuran file melebihi 5MB' }, { status: 400 });
       }
-      await mkdir(UPLOAD_DIR, { recursive: true });
       const safeName = `sk-${Date.now()}${ext}`;
       const bytes = Buffer.from(await file.arrayBuffer());
-      await writeFile(path.join(UPLOAD_DIR, safeName), bytes);
-      buktiSakitURL = `/uploads/${safeName}`;
+      buktiSakitURL = await saveFile(bytes, safeName);
     }
 
     const sick = await prisma.izinSakit.create({
@@ -56,6 +53,7 @@ export async function POST(request: NextRequest) {
 
     return Response.json({ ok: true, sick }, { status: 201 });
   } catch (e) {
+    console.error('Sick leave error:', e);
     const status = (e as { status?: number }).status ?? 500;
     return Response.json({ error: 'An error occurred' }, { status });
   }
@@ -76,6 +74,7 @@ export async function GET() {
 
     return Response.json({ list });
   } catch (e) {
+    console.error('Sick leave list error:', e);
     const status = (e as { status?: number }).status ?? 500;
     return Response.json({ error: 'An error occurred' }, { status });
   }

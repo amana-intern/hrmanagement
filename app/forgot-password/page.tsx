@@ -10,7 +10,7 @@ export default function ForgotPasswordPage() {
       <div className="absolute inset-0 bg-black/40 z-0 backdrop-blur-[2px]" />
 
       <div className="relative z-10 w-full max-w-md bg-white/95 backdrop-blur-sm rounded-[30px] shadow-2xl animate-scale-in px-10 py-12 text-center">
-        <img src="/AMANA_Logo.png" className="h-10 mb-4 mx-auto object-contain" alt="Amana Logo" />
+        <img src="/AMANA_LOGO.png" className="h-10 mb-4 mx-auto object-contain" alt="Amana Logo" />
         <h1 className="text-3xl font-bold mb-2 text-amana-primary-500">Forget Password</h1>
         <p className="text-xs text-amana-neutral-400 mb-6">
           Automatic password reset is not yet available.

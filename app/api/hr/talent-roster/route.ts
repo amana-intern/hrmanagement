@@ -2,7 +2,6 @@ import { requireAuth } from '@/lib/dal';
 import { prisma } from '@/lib/prisma';
 import { ROLES } from '@/lib/roles';
 import { ASSESSMENT_STATUS } from '@/lib/constants';
-import bcrypt from 'bcryptjs';
 
 // GET /api/hr/talent-roster - data roster live + assessment (terbuka/latest) + hasil per karyawan.
 // Saat tidak ada assessment terbuka, fallback ke assessment terbaru agar hasil tetap bisa dilihat.
@@ -136,6 +135,7 @@ export async function GET() {
       list,
     });
   } catch (e) {
+    console.error('Talent roster GET error:', e);
     const status = (e as { status?: number }).status ?? 500;
     return Response.json({ error: 'An error occurred' }, { status });
   }
@@ -147,7 +147,7 @@ export async function GET() {
 // Selain itu = karyawan -> role bebas teks (custom); jika diisi Partner/Admin HR/Admin OPS ditolak,
 // dan role custom otomatis mendapat permission Employee.
     // tipeKontrak: 'PKWTT' | 'PKWT' | 'KKI' | 'INTERNSHIP' (default 'PKWT'). Kontrak (KontrakKaryawan) hanya dibuat
-// jika tipeKontrak 'KONTRAK' dan tanggalBerakhir diisi. Password default: amana123.
+// jika tipeKontrak 'KONTRAK' dan tanggalBerakhir diisi. Login pakai email saja, tanpa password.
 export async function POST(request: Request) {
   try {
     const auth = await requireAuth();
@@ -290,8 +290,6 @@ export async function POST(request: Request) {
       idKaryawan = `KRY${String(nextSeq).padStart(3, '0')}`;
     }
 
-    const passwordHash = await bcrypt.hash('amana123', 10);
-
     await prisma.$transaction(async (tx) => {
       await tx.karyawan.create({
         data: {
@@ -313,7 +311,6 @@ export async function POST(request: Request) {
         data: {
           idUser: idKaryawan,
           email: cleanEmail,
-          passwordHash,
           idRole: role.idRole,
         },
       });
@@ -333,10 +330,11 @@ export async function POST(request: Request) {
     });
 
     return Response.json(
-      { ok: true, user: { idUser: idKaryawan, nama: cleanNama, email: cleanEmail, idRole: role.idRole, namaRole: role.namaRole }, password: 'amana123' },
+      { ok: true, user: { idUser: idKaryawan, nama: cleanNama, email: cleanEmail, idRole: role.idRole, namaRole: role.namaRole } },
       { status: 201 }
     );
   } catch (e) {
+    console.error('Talent roster POST error:', e);
     const status = (e as { status?: number }).status ?? 500;
     return Response.json({ error: 'An error occurred' }, { status });
   }
