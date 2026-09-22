@@ -172,8 +172,8 @@ export default function NotificationBell() {
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-2 w-80 max-h-96 overflow-y-auto bg-white border border-amana-neutral-200 rounded-xl shadow-lg z-50">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-amana-neutral-200 sticky top-0 bg-white">
+        <div className="absolute right-0 mt-2 w-80 max-h-96 overflow-y-auto bg-amana-neutral-100 border border-amana-neutral-200 rounded-xl shadow-lg z-50">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-amana-neutral-200 sticky top-0 bg-amana-neutral-100">
             <p className="text-sm font-bold text-amana-primary-500">Notifications</p>
             <button
               onClick={unread > 0 ? markAll : undefined}

@@ -238,7 +238,7 @@ export default function PartnerPaymentApprovalPage() {
           <SearchSelectField label="Status" value={draft.status} onChange={(v) => setField('status', v)} options={STATUS_OPTIONS} />
         </SearchPanel>
 
-        <SectionCard title="Payment Approval List" subtitle={`${filtered.length} request(s)`} scroll>
+        <SectionCard title="Payment Approval List" subtitle={`${filtered.length} request(s)`} scroll className="flex-1 min-h-[220px]">
           <DataTable
             columns={columns}
             rows={filtered}

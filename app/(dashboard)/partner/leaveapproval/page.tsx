@@ -312,7 +312,7 @@ export default function PartnerLeaveApprovalPage() {
           <SearchSelectField label="Status" value={draft.status} onChange={(v) => setField('status', v)} options={STATUS_OPTIONS} />
         </SearchPanel>
 
-        <SectionCard title="Leave Approval List" subtitle={`${filtered.length} request(s)`} scroll>
+        <SectionCard title="Leave Approval List" subtitle={`${filtered.length} request(s)`} scroll className="flex-1 min-h-[220px]">
           <DataTable
             columns={columns}
             rows={filtered}

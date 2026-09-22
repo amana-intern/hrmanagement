@@ -68,7 +68,7 @@ export default function DataTable<T extends { id: number | string }>({
 
   const minColWidth = compact ? 80 : 96;
   const minTableWidth = columns.reduce(
-    (sum, c) => sum + (c.minPx ?? (c.width ? parseInt(c.width, 10) : minColWidth)),
+    (sum, c) => sum + (c.minPx ?? (c.width?.endsWith('px') ? parseInt(c.width, 10) : minColWidth)),
     0
   );
 

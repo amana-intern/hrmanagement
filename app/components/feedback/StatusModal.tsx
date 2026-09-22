@@ -4,16 +4,15 @@ import { useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { CheckCircle2, XCircle } from 'lucide-react';
 import { cn } from '@/app/utils/cn';
-import { springSnappy } from '@/app/utils/motion';
 
 export interface StatusState {
   ok: boolean;
   text: string;
 }
 
-const AUTO_DISMISS_MS = 3500;
+const AUTO_DISMISS_MS = 7000;
 
-/** Non-blocking auto-dismissing toast for success/error feedback (e.g. after submit/reject). */
+/** Auto-dismissing top-right toast for success/error feedback (Figma node 710:2945). */
 export default function StatusModal({
   state,
   onClose,
@@ -38,23 +37,38 @@ export default function StatusModal({
   if (!state) return null;
 
   return (
-    <div className="fixed bottom-6 right-6 z-[100]">
+    <div className="fixed top-6 right-6 z-[100]">
       <motion.div
         key={state.text}
-        initial={{ opacity: 0, y: 16, scale: 0.95 }}
+        initial={{ opacity: 0, y: -16, scale: 0.95 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={springSnappy}
+        exit={{ opacity: 0, y: -16, scale: 0.95 }}
+        transition={{ duration: 0.25 }}
         className={cn(
-          'flex items-center gap-3 w-[340px] max-w-[90vw] bg-amana-neutral-100 border rounded-[5px] shadow-lg px-4 py-3',
+          'flex items-start gap-3 w-[380px] max-w-[90vw] bg-white border rounded-[7px] px-4 py-3',
+          'shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)]',
           state.ok ? 'border-amana-success-500' : 'border-amana-danger-500'
         )}
       >
         {state.ok ? (
-          <CheckCircle2 className="w-5 h-5 text-amana-success-500 flex-shrink-0" />
+          <CheckCircle2 className="w-7 h-7 text-amana-success-500 flex-shrink-0" />
         ) : (
-          <XCircle className="w-5 h-5 text-amana-danger-500 flex-shrink-0" />
+          <XCircle className="w-7 h-7 text-amana-danger-500 flex-shrink-0" />
         )}
-        <p className="flex-1 min-w-0 text-[14px] text-amana-neutral-500">{state.text}</p>
+        <div className="flex-1 min-w-0 flex flex-col gap-2 pt-0.5">
+          <p className={cn('text-[16px] leading-snug', state.ok ? 'text-amana-success-500' : 'text-amana-danger-500')}>
+            {state.text}
+          </p>
+          <div className="h-[6px] w-full rounded-full bg-amana-neutral-100 overflow-hidden">
+            <motion.div
+              key={state.text}
+              initial={{ width: '100%' }}
+              animate={{ width: '0%' }}
+              transition={{ duration: AUTO_DISMISS_MS / 1000, ease: 'linear' }}
+              className={cn('h-full rounded-full', state.ok ? 'bg-amana-success-500' : 'bg-amana-danger-500')}
+            />
+          </div>
+        </div>
       </motion.div>
     </div>
   );

@@ -256,7 +256,7 @@ export default function PaymentSchedulerPage() {
           <SearchSelectField label="Status" value={draft.status} onChange={(v) => setField('status', v)} options={STATUS_OPTIONS} />
         </SearchPanel>
 
-        <SectionCard title="Payment Schedule" subtitle={`${filtered.length} payment(s)`} scroll>
+        <SectionCard title="Payment Schedule" subtitle={`${filtered.length} payment(s)`} scroll className="flex-1 min-h-[220px]">
           <DataTable
             columns={columns}
             rows={filtered}

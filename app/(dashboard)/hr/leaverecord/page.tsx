@@ -233,6 +233,7 @@ export default function LeaveRecordPage() {
         title="Leave Record"
         subtitle={`${filtered.length} record(s)`}
         scroll
+        className="flex-1 min-h-[220px]"
         action={
           <div className="flex items-center gap-2">
             <input

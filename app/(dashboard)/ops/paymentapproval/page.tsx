@@ -237,7 +237,7 @@ export default function PaymentRequestPage() {
           <SearchSelectField label="Status" value={draft.status} onChange={(v) => setField('status', v)} options={STATUS_OPTIONS} />
         </SearchPanel>
 
-        <SectionCard title="Payment Request List" subtitle={`${filtered.length} request(s)`} scroll>
+        <SectionCard title="Payment Request List" subtitle={`${filtered.length} request(s)`} scroll className="flex-1 min-h-[220px]">
           <DataTable
             columns={columns}
             rows={filtered}
