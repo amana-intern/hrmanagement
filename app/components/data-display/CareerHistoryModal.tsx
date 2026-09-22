@@ -23,6 +23,13 @@ const FIELD_LABELS: Record<string, string> = {
   ROLE: 'Role',
 };
 
+// Versi singkat dipakai saat beberapa field berubah sekaligus (judul digabung jadi "PG, Grade, Role").
+const FIELD_LABELS_SHORT: Record<string, string> = {
+  DEPARTMENT: 'PG',
+  GRADE: 'Grade',
+  ROLE: 'Role',
+};
+
 export default function CareerHistoryModal({
   employeeName,
   history,
@@ -34,16 +41,17 @@ export default function CareerHistoryModal({
   loading: boolean;
   onClose: () => void;
 }) {
-  const rows = history.flatMap((entry) =>
-    (entry.changes ?? []).map((c, i) => ({
-      key: `${entry.id}-${i}`,
+  const rows = history.map((entry) => {
+    const changes = entry.changes ?? [];
+    const labelFor = changes.length > 1 ? FIELD_LABELS_SHORT : FIELD_LABELS;
+    return {
+      key: entry.id,
       aktor: entry.aktor,
       waktu: entry.waktu,
-      label: FIELD_LABELS[c.field] ?? c.field,
-      from: c.from,
-      to: c.to,
-    }))
-  );
+      title: changes.map((c) => labelFor[c.field] ?? c.field).join(', '),
+      changes,
+    };
+  });
 
   return (
     <Modal title={`Career History - ${employeeName}`} onClose={onClose} maxWidth="max-w-2xl" className="max-h-[90vh]">
@@ -63,12 +71,14 @@ export default function CareerHistoryModal({
                 <p className="text-[12px] font-semibold text-amana-neutral-300">
                   Changed by {row.aktor ?? '-'}, {formatDateTimeWIB(row.waktu)}
                 </p>
-                <p className="text-[24px] font-semibold italic text-amana-primary-500">{row.label}</p>
-                <div className="flex items-center gap-1 text-[16px] text-amana-neutral-500">
-                  <span>{row.from || '-'}</span>
-                  <ChevronRight className="w-5 h-5 text-amana-primary-500 flex-shrink-0" />
-                  <span>{row.to || '-'}</span>
-                </div>
+                <p className="text-[24px] font-semibold italic text-amana-primary-500">{row.title}</p>
+                {row.changes.map((c, i) => (
+                  <div key={i} className="flex items-center gap-1 text-[16px] text-amana-neutral-500">
+                    <span>{c.from || '-'}</span>
+                    <ChevronRight className="w-5 h-5 text-amana-primary-500 flex-shrink-0" />
+                    <span>{c.to || '-'}</span>
+                  </div>
+                ))}
               </div>
             </div>
           ))

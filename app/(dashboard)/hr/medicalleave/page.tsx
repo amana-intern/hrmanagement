@@ -6,8 +6,7 @@ import SearchPanel from '@/app/components/data-display/SearchPanel';
 import SectionCard from '@/app/components/layout/SectionCard';
 import DataTable from '@/app/components/data-display/DataTable';
 import type { DataTableColumn } from '@/app/components/data-display/DataTable';
-import { SearchTextField, SearchSelectField } from '@/app/components/forms/SearchFields';
-import TextField from '@/app/components/forms/TextField';
+import { SearchTextField, SearchSelectField, SearchDateRangeCalendarField } from '@/app/components/forms/SearchFields';
 import Button from '@/app/components/forms/Button';
 import StatusModal from '@/app/components/feedback/StatusModal';
 import PdfPreviewModal, { PdfPreviewTarget } from '@/app/components/feedback/PdfPreviewModal';
@@ -213,8 +212,13 @@ export default function MedicalLeavePage() {
         <SearchSelectField label="Grade" value={draft.grade} onChange={(v) => setField('grade', v)} options={gradeOptions} />
         <SearchSelectField label="Sickness Type" value={draft.gejala} onChange={(v) => setField('gejala', v)} options={gejalaOptions} />
         <SearchSelectField label="Duration" value={draft.duration} onChange={(v) => setField('duration', v)} options={durationOptions} />
-        <TextField label="From" type="date" value={draft.from} onChange={(v) => setField('from', v)} />
-        <TextField label="To" type="date" value={draft.to} onChange={(v) => setField('to', v)} />
+        <SearchDateRangeCalendarField
+          label="Start Date"
+          fromValue={draft.from}
+          toValue={draft.to}
+          onFromChange={(v) => setField('from', v)}
+          onToChange={(v) => setField('to', v)}
+        />
       </SearchPanel>
 
       <SectionCard title="Sick Leave Record" subtitle={`${filtered.length} record(s)`} scroll className="flex-1 min-h-[220px]">

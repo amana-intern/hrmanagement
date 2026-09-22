@@ -7,8 +7,7 @@ import SectionCard from '@/app/components/layout/SectionCard';
 import DataTable from '@/app/components/data-display/DataTable';
 import type { DataTableColumn } from '@/app/components/data-display/DataTable';
 import StatusPill from '@/app/components/data-display/StatusPill';
-import { SearchTextField, SearchSelectField } from '@/app/components/forms/SearchFields';
-import TextField from '@/app/components/forms/TextField';
+import { SearchTextField, SearchSelectField, SearchDateRangeCalendarField } from '@/app/components/forms/SearchFields';
 import Button from '@/app/components/forms/Button';
 import Modal from '@/app/components/feedback/Modal';
 import { statusColor } from '@/app/utils/statusColor';
@@ -215,8 +214,13 @@ export default function LeaveRecordPage() {
         <SearchSelectField label="Grade" value={draft.grade} onChange={(v) => setField('grade', v)} options={gradeOptions} />
         <SearchSelectField label="Leave Type" value={draft.type} onChange={(v) => setField('type', v)} options={leaveTypeOptions} />
         <SearchSelectField label="Duration" value={draft.duration} onChange={(v) => setField('duration', v)} options={durationOptions} />
-        <TextField label="From" type="date" value={draft.from} onChange={(v) => setField('from', v)} />
-        <TextField label="To" type="date" value={draft.to} onChange={(v) => setField('to', v)} />
+        <SearchDateRangeCalendarField
+          label="Start Date"
+          fromValue={draft.from}
+          toValue={draft.to}
+          onFromChange={(v) => setField('from', v)}
+          onToChange={(v) => setField('to', v)}
+        />
       </SearchPanel>
 
       <SectionCard

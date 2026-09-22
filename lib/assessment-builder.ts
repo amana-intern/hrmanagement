@@ -37,6 +37,7 @@ export function buildCategoriesCreateInput(categories: unknown) {
           return {
             idKategoriAsm: `ASC-${Date.now()}-${Math.random().toString(36).slice(2, 6)}-${ci}`,
             namaKategori: String(c.namaKategori),
+            urutan: ci + 1,
             questions: {
               create: flattened.map((q, qi) => ({
                 idPertanyaan: `ASQ-${Date.now()}-${Math.random().toString(36).slice(2, 6)}-${ci}-${qi}`,

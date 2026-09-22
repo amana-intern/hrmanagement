@@ -79,8 +79,7 @@ export default function PaymentPage() {
   const [step, setStep] = useState(1);
   const [submittingAs, setSubmittingAs] = useState('');
   const [emailTerkait, setEmailTerkait] = useState('');
-  const [typeOfRequest, setTypeOfRequest] = useState('');
-  const isStep1Complete = submittingAs.trim() !== '' && emailTerkait.trim() !== '' && typeOfRequest === 'General Payment';
+  const isStep1Complete = submittingAs.trim() !== '' && emailTerkait.trim() !== '';
 
   const [paymentFor, setPaymentFor] = useState('');
   const [practiceGroup, setPracticeGroup] = useState('');
@@ -230,7 +229,6 @@ export default function PaymentPage() {
         setStep(1);
         setSubmittingAs('');
         setEmailTerkait('');
-        setTypeOfRequest('');
         setPaymentFor('');
         setPracticeGroup('');
         setPartner('');
@@ -283,20 +281,6 @@ export default function PaymentPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
               <TextField label="Submitting as" value={submittingAs} onChange={setSubmittingAs} placeholder="e.g. Siti Inertia" />
               <TextField label="Related Email" type="email" value={emailTerkait} onChange={setEmailTerkait} placeholder="name@amana.id" />
-            </div>
-            <div className="mt-4">
-              <SelectField
-                label="Type of Request"
-                value={typeOfRequest}
-                onChange={setTypeOfRequest}
-                options={['General Payment', 'Business Trip']}
-                placeholder="Select type of request..."
-              />
-              {typeOfRequest === 'Business Trip' && (
-                <p className="text-[13px] text-amana-neutral-400 mt-1.5">
-                  Business Trip requests aren&apos;t available yet — coming soon.
-                </p>
-              )}
             </div>
             <div className="flex justify-end mt-5 pt-4 border-t border-amana-neutral-200">
               <Button variant="primary" size="lg" disabled={!isStep1Complete} onClick={() => setStep(2)}>

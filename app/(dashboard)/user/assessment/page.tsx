@@ -334,7 +334,7 @@ export default function AssessmentPage() {
                           onClick={() => clearAnswer(q.idPertanyaan)}
                           className="text-[13px] text-amana-neutral-400 hover:text-amana-primary-500 bg-transparent border-none cursor-pointer self-end"
                         >
-                          Delete answer on this competency
+                          Remove Answer
                         </button>
                       </div>
                     </div>

@@ -16,6 +16,8 @@ interface ServerContract {
   nama: string | null;
   grade: string | null;
   department: string | null;
+  startDate: string | null;
+  endDate: string | null;
   daysLeft: number | null;
   needAction?: string | null;
 }
@@ -48,6 +50,8 @@ export default function PartnerContractTrackingPage() {
             name: c.nama ?? '-',
             department: dept,
             grade: c.grade ?? '-',
+            startDate: c.startDate ? c.startDate.slice(0, 10) : '',
+            endDate: c.endDate ? c.endDate.slice(0, 10) : '',
             daysLeft: c.daysLeft ?? 0,
             needAction: c.needAction ?? null,
           };

@@ -59,6 +59,7 @@ export default function HRContractTrackingPage() {
             grade: c.grade ?? '-',
             daysLeft: c.daysLeft ?? 0,
             startDate: c.startDate ? c.startDate.slice(0, 10) : '',
+            endDate: c.endDate ? c.endDate.slice(0, 10) : '',
             needAction: c.needAction ?? null,
           };
         })
