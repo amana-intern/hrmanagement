@@ -1,5 +1,4 @@
 import { PrismaClient } from '@prisma/client';
-import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
@@ -299,8 +298,6 @@ const ASSESSMENT_CATALOG = [
   },
 ];
 
-// dummmy password for all users
-const PASSWORD = 'amana123'; // all dummy users share same password
 
 const EXCLUDED_NAMES = [
   'Normandhieva Achmad Syuhada',
@@ -718,18 +715,14 @@ async function main() {
     });
   }
 
-  // 10. Users
-  const passwordHash = await bcrypt.hash(PASSWORD, 10);
-
-  // 10b. New Users from TSV data
+  // 10. Users — login is by email only, no password.
   for (const u of TSV_USERS) {
     await prisma.user.upsert({
       where: { idUser: u.idKaryawan },
-      update: { email: u.email, idRole: u.role, passwordHash },
+      update: { email: u.email, idRole: u.role },
       create: {
         idUser: u.idKaryawan,
         email: u.email,
-        passwordHash,
         idRole: u.role,
       },
     });
@@ -849,7 +842,6 @@ async function main() {
   }
 
   console.log('Seeding selesai.');
-  console.log('   Dummy login password untuk semua user: ' + PASSWORD);
 }
 
 main()
