@@ -136,6 +136,7 @@ export async function GET() {
       list,
     });
   } catch (e) {
+    console.error('Talent roster GET error:', e);
     const status = (e as { status?: number }).status ?? 500;
     return Response.json({ error: 'An error occurred' }, { status });
   }
@@ -337,6 +338,7 @@ export async function POST(request: Request) {
       { status: 201 }
     );
   } catch (e) {
+    console.error('Talent roster POST error:', e);
     const status = (e as { status?: number }).status ?? 500;
     return Response.json({ error: 'An error occurred' }, { status });
   }
