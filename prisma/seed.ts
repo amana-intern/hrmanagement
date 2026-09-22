@@ -821,6 +821,32 @@ async function main() {
     });
   }
 
+  // 9a. Karyawan for hardcoded USERS (KRY001-KRY010) — must exist before Users (step 10)
+  for (const u of USERS) {
+    await prisma.karyawan.upsert({
+      where: { idKaryawan: u.idKaryawan },
+      update: {
+        idUser: u.idKaryawan,
+        nama: u.nama,
+        idGrade: u.idGrade,
+        department: u.department,
+        tanggalLahir: u.tanggalLahir ? new Date(u.tanggalLahir) : null,
+        tanggalMasuk: u.tanggalMasuk ? new Date(u.tanggalMasuk) : null,
+      },
+      create: {
+        idKaryawan: u.idKaryawan,
+        idUser: u.idKaryawan,
+        nama: u.nama,
+        idGrade: u.idGrade,
+        department: u.department,
+        tanggalLahir: u.tanggalLahir ? new Date(u.tanggalLahir) : null,
+        tanggalMasuk: u.tanggalMasuk ? new Date(u.tanggalMasuk) : null,
+        sisaCutiTahunan: 12,
+        accrualRate: 1,
+      },
+    });
+  }
+
   // 9b. New Karyawan from TSV data
   for (const u of TSV_USERS) {
     await prisma.karyawan.upsert({
@@ -857,8 +883,8 @@ async function main() {
   const passwordHash = await bcrypt.hash(PASSWORD, 10);
   for (const u of USERS) {
     await prisma.user.upsert({
-      where: { email: u.email },
-      update: { idRole: u.role, passwordHash },
+      where: { idUser: u.idKaryawan },
+      update: { email: u.email, idRole: u.role, passwordHash },
       create: {
         idUser: u.idKaryawan,
         email: u.email,
