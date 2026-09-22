@@ -168,6 +168,9 @@ export default function PaymentSchedulerPage() {
   };
 
   const renderAction = (r: PayReq) => {
+    const actionText = (label: string) => (
+      <span className="text-[14px] text-amana-neutral-400 italic whitespace-nowrap">{label}</span>
+    );
     if (r.status === 'ST_PAY_APPROVED') {
       return (
         <Button variant="primary" size="sm" className="w-full" onClick={() => setScheduleTarget(r)}>
@@ -188,11 +191,10 @@ export default function PaymentSchedulerPage() {
         </Button>
       );
     }
-    return (
-      <Button variant="primary" size="sm" className="w-full" disabled>
-        Schedule
-      </Button>
-    );
+    // Setelah aksi selesai, tampilkan teks sesuai status, bukan tombol disabled.
+    if (r.status === 'ST_PAY_PAID') return actionText('Paid');
+    if (r.status === 'ST_PAY_REJECTED') return actionText('Rejected');
+    return actionText('Approved');
   };
 
   const columns: DataTableColumn<PayReq>[] = [

@@ -162,13 +162,22 @@ export default function PartnerPaymentApprovalPage() {
     setRejectTarget(null);
   };
 
-  const renderAction = (r: PayReq) => (
-    <ApprovalActions
-      disabled={r.status !== 'ST_PAY_PENDING_PARTNER'}
-      onApprove={() => handleAction(r.id, 'final_approve')}
-      onReject={() => setRejectTarget(r.id)}
-    />
+  const actionText = (label: string) => (
+    <span className="text-[14px] text-amana-neutral-400 italic whitespace-nowrap">{label}</span>
   );
+
+  const renderAction = (r: PayReq) => {
+    // Setelah action, tombol berubah jadi teks sesuai hasil.
+    if (r.status === 'ST_PAY_REJECTED') return actionText('Rejected');
+    if (r.status !== 'ST_PAY_PENDING_PARTNER') return actionText('Approved');
+    return (
+      <ApprovalActions
+        disabled={rejecting}
+        onApprove={() => handleAction(r.id, 'final_approve')}
+        onReject={() => setRejectTarget(r.id)}
+      />
+    );
+  };
 
   const columns: DataTableColumn<PayReq>[] = [
     { key: 'idRequest', label: 'ID', width: '12%', minPx: 150 },

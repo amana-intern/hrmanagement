@@ -176,6 +176,7 @@ export default function JobListingsPage() {
   };
 
   const editIsDraft = editJob?.status === 'DRAFT';
+  const editIsClosed = editJob?.status === 'CLOSED';
 
   const columns: DataTableColumn<Job>[] = [
     { key: 'title', label: 'Name', width: '22%', minPx: 180 },
@@ -292,7 +293,11 @@ export default function JobListingsPage() {
           )}
 
           <div className="flex-shrink-0 flex items-center justify-between gap-3 px-5 py-4 border-t border-amana-neutral-200">
-            {editIsDraft ? (
+            {editIsClosed ? (
+              <Button variant="danger-outline" size="lg" disabled={busy} onClick={() => setShowDeleteModal(editJob)}>
+                Delete
+              </Button>
+            ) : editIsDraft ? (
               <Button variant="danger" size="lg" disabled={busy} onClick={() => setShowDeleteModal(editJob)}>
                 Delete Listing
               </Button>

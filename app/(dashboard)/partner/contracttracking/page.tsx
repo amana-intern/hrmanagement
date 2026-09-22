@@ -8,7 +8,6 @@ import type { DataTableColumn } from '@/app/components/data-display/DataTable';
 import Button from '@/app/components/forms/Button';
 import ConfirmModal from '@/app/components/feedback/ConfirmModal';
 import StatusModal from '@/app/components/feedback/StatusModal';
-import StatusPill from '@/app/components/data-display/StatusPill';
 import { TableSkeleton } from '@/app/components/feedback/PageSkeleton';
 
 interface ServerContract {
@@ -95,10 +94,15 @@ export default function PartnerContractTrackingPage() {
     label: 'Decision',
     width: '220px',
     render: (c) => {
-      // Decision sudah diinput -> tampilkan teks status, bukan tombol.
+      // Decision sudah diinput -> tampilkan teks status (bukan badge/tombol),
+      // bergaya sama seperti "View Only" pada kolom Action di Leave Approval.
       const badge = needActionBadge(c.needAction);
       if (badge) {
-        return <StatusPill color={badge.color}>{badge.label}</StatusPill>;
+        return (
+          <span className="text-[14px] text-amana-neutral-400 italic whitespace-nowrap">
+            {badge.label}
+          </span>
+        );
       }
       return (
         <div className="flex gap-2">
