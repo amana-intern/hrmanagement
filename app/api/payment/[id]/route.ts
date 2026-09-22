@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { requireAuth, partnerForDepartment } from '@/lib/dal';
 import { prisma } from '@/lib/prisma';
 import { ROLES } from '@/lib/roles';
-import { sendEmail } from '@/lib/notify';
+import { sendEmail, notifyAllOpsAdmins, notifyUsers } from '@/lib/notify';
 import { completeTodo } from '@/lib/todos';
 
 const nota = () => `NOTIF-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -72,10 +72,21 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
           'Ops review passed',
           `Your payment request ${id} has passed the Ops review and is waiting for final Partner approval.`
         );
-        // Buat to-do untuk partner di department yang sama
+        // Buat to-do + notifikasi bell/email untuk partner di department yang sama
         const empDept = payment.karyawan?.department;
         if (empDept) {
           const partners = await partnerForDepartment(empDept);
+          await notifyUsers(
+            partners
+              .filter((p) => p.idUser !== auth.idUser && p.karyawan?.idKaryawan)
+              .map((p) => ({ idKaryawan: p.karyawan?.idKaryawan, email: p.email })),
+            {
+              tipe: 'PAY_PENDING_PARTNER',
+              judul: 'Payment awaiting Partner approval',
+              pesan: `Payment request ${id} from ${payment.karyawan?.nama ?? 'an employee'} has passed Ops review and is waiting for your final approval.`,
+              idReferensi: id,
+            }
+          );
           for (const partner of partners) {
             if (partner.karyawan?.idKaryawan) {
               await prisma.hrTodo.create({
@@ -90,6 +101,8 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
             }
           }
         }
+        // To-do OPS "Review payment…" (dibuat saat submit) selesai setelah review/reject
+        await completeTodo('PAYMENT_REVIEW', id);
         return Response.json({ ok: true, payment: updated });
       }
       if (action === 'schedule') {
@@ -120,6 +133,8 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
           'Payment schedule',
           `Your payment request ${id} is scheduled to be paid on ${tanggal.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}.`
         );
+        // To-do OPS "Schedule payment…" selesai setelah schedule
+        await completeTodo('PAYMENT_SCHEDULE', id);
         return Response.json({ ok: true, payment: updated });
       }
       if (action === 'paid') {
@@ -167,6 +182,8 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
           return u;
         });
         await sendNotifEmail('Payment request rejected', `Your payment request ${id} was rejected. Reason: ${catatan}`);
+        // To-do OPS "Review payment…" selesai setelah reject
+        await completeTodo('PAYMENT_REVIEW', id);
         return Response.json({ ok: true, payment: updated });
       }
       return Response.json({ error: 'Invalid action for OPS' }, { status: 400 });
@@ -193,6 +210,18 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
           'Payment request approved',
           `Your payment request ${id} has been approved and is waiting for a payment schedule.`
         );
+        // Beri tahu semua Admin OPS + to-do "Schedule payment" (bersamaan)
+        await notifyAllOpsAdmins({
+          tipe: 'PAY_WAITING_SCHEDULE',
+          judul: 'Payment ready to schedule',
+          pesan: `Payment request ${id} from ${payment.karyawan?.nama ?? 'an employee'} has been approved. Please schedule the payment.`,
+          idReferensi: id,
+          todo: {
+            teks: `Schedule payment ${payment.karyawan?.nama ?? '-'} (${id})`,
+            modul: 'PAYMENT_SCHEDULE',
+          },
+        });
+        // To-do Partner selesai setelah final approve
         await completeTodo('PAYMENT', id);
         return Response.json({ ok: true, payment: updated });
       }

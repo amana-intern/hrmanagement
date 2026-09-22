@@ -154,7 +154,7 @@ export default function PaymentPage() {
 
   const isVendorComplete =
     isStep2HeaderComplete &&
-    vendorName.trim() !== '' && vendorNpwp.trim() !== '' && vendorAmount.trim() !== '' && vendorDueDate.trim() !== '' && files['vendor-invoice'] != null;
+    vendorName.trim() !== '' && vendorNpwp.trim() !== '' && /[0-9]/.test(vendorAmount) && vendorDueDate.trim() !== '' && files['vendor-invoice'] != null;
   const isIndividualComplete =
     isStep2HeaderComplete &&
     indActivity.trim() !== '' &&
@@ -164,7 +164,7 @@ export default function PaymentPage() {
     indBankName.trim() !== '' &&
     indAccNumber.trim() !== '' &&
     indComponent.trim() !== '' &&
-    indAmount.trim() !== '' &&
+    /[0-9]/.test(indAmount) &&
     files['ind-ktp'] != null;
   const isPerDiemComplete =
     isStep2HeaderComplete && perDiemEvent.trim() !== '' && perDiemParticipants.trim() !== '' && files['perdiem-file'] != null;
@@ -176,9 +176,11 @@ export default function PaymentPage() {
       'Per Diem': PAYMENT_KATEGORI.PER_DIEM,
     };
 
+    // Normalisasi nominal: buang pemisah ribuan/titik sehingga murni angka untuk API.
+    const normalizeAmount = (v: string) => v.replace(/[^0-9]/g, '');
     const nominal =
-      paymentFor === 'Vendor' ? vendorAmount
-      : paymentFor === 'Individual(s)' ? indAmount
+      paymentFor === 'Vendor' ? normalizeAmount(vendorAmount)
+      : paymentFor === 'Individual(s)' ? normalizeAmount(indAmount)
       : 0;
 
     const projectID =
@@ -354,8 +356,22 @@ export default function PaymentPage() {
               {paymentFor === 'Vendor' && (
                 <div className="flex flex-col gap-4">
                   <TextField label="Vendor Name" value={vendorName} onChange={setVendorName} placeholder="Enter vendor name" />
-                  <TextField label="NPWP Vendor" type="number" value={vendorNpwp} onChange={setVendorNpwp} placeholder="Enter NPWP" />
-                  <TextField label="Payment Amount" type="number" value={vendorAmount} onChange={setVendorAmount} placeholder="e.g. 1500000" />
+                  <TextField
+                    label="NPWP Vendor"
+                    type="text"
+                    inputMode="numeric"
+                    value={vendorNpwp}
+                    onChange={(v) => setVendorNpwp(v.replace(/[^0-9.-]/g, ''))}
+                    placeholder="e.g. 01.234.567.8-012.000"
+                  />
+                  <TextField
+                    label="Payment Amount"
+                    type="text"
+                    inputMode="numeric"
+                    value={vendorAmount}
+                    onChange={(v) => setVendorAmount(v.replace(/[^0-9.]/g, ''))}
+                    placeholder="e.g. 1500000"
+                  />
                   <TextField label="Due Date" type="date" value={vendorDueDate} onChange={setVendorDueDate} />
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[16px] font-semibold text-amana-neutral-500">Attach Invoice</label>
@@ -392,11 +408,25 @@ export default function PaymentPage() {
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <TextField label="Bank Account Name" value={indBankName} onChange={setIndBankName} placeholder="Account Name" />
-                    <TextField label="Bank Account Number" type="number" value={indAccNumber} onChange={setIndAccNumber} placeholder="Account Number" />
+                    <TextField
+                      label="Bank Account Number"
+                      type="text"
+                      inputMode="numeric"
+                      value={indAccNumber}
+                      onChange={(v) => setIndAccNumber(v.replace(/[^0-9.-]/g, ''))}
+                      placeholder="Account Number"
+                    />
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <TextField label="Honor Components" value={indComponent} onChange={setIndComponent} placeholder="Component" />
-                    <TextField label="Amount" type="number" value={indAmount} onChange={setIndAmount} placeholder="Rp" />
+                    <TextField
+                      label="Amount"
+                      type="text"
+                      inputMode="numeric"
+                      value={indAmount}
+                      onChange={(v) => setIndAmount(v.replace(/[^0-9.]/g, ''))}
+                      placeholder="Rp"
+                    />
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[16px] font-semibold text-amana-neutral-500">

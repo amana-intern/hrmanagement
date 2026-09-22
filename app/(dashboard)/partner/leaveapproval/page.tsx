@@ -227,14 +227,15 @@ export default function PartnerLeaveApprovalPage() {
     setRejectTarget(null);
   };
 
+  const actionText = (label: string) => (
+    <span className="text-[14px] text-amana-neutral-400 italic whitespace-nowrap">{label}</span>
+  );
+
   const renderAction = (r: LeaveReq) => {
-    if (r.jenis === 'sakit') {
-      return (
-        <span className="text-[14px] text-amana-neutral-400 italic whitespace-nowrap">
-          View Only
-        </span>
-      );
-    }
+    if (r.jenis === 'sakit') return actionText('View Only');
+    // Setelah action, tombol berubah jadi teks sesuai hasil (Approve/Reject).
+    if (r.status === 'ST_LEAVE_APPROVED') return actionText('Approved');
+    if (r.status === 'ST_LEAVE_REJECTED') return actionText('Rejected');
     return (
       <ApprovalActions
         disabled={r.status !== 'ST_LEAVE_PENDING'}

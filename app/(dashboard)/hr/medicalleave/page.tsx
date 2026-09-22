@@ -12,7 +12,7 @@ import StatusModal from '@/app/components/feedback/StatusModal';
 import PdfPreviewModal, { PdfPreviewTarget } from '@/app/components/feedback/PdfPreviewModal';
 import { useFilters } from '@/app/utils/useFilters';
 import { DEPARTMENT_OPTIONS, getAllGradeOptions } from '@/app/utils/orgStructure';
-import { downloadTSV, copyTSV } from '@/lib/sheets';
+import { copyTSV } from '@/lib/sheets';
 import { TableSkeleton } from '@/app/components/feedback/PageSkeleton';
 import { formatDateWIB } from '@/app/utils/formatDate';
 
@@ -64,7 +64,7 @@ export default function MedicalLeavePage() {
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<{ ok: boolean; text: string } | null>(null);
   const [previewPdf, setPreviewPdf] = useState<PdfPreviewTarget | null>(null);
-  const { draft, applied, setField, handleSearch, handleReset } = useFilters<Filters>(emptyFilters);
+  const { draft, applied, setField, setFieldAndApply, handleSearch, handleReset } = useFilters<Filters>(emptyFilters);
   const gradeOptions = useMemo(() => getAllGradeOptions(), []);
 
   useEffect(() => {
@@ -149,10 +149,6 @@ export default function MedicalLeavePage() {
     return [header, ...lines];
   };
 
-  const handleExportCsv = () => {
-    downloadTSV(`medical-leave_${new Date().toISOString().slice(0, 10)}.tsv`, buildTSV());
-  };
-
   const handleCopySheets = async () => {
     const ok = await copyTSV(buildTSV());
     setStatus({
@@ -221,7 +217,32 @@ export default function MedicalLeavePage() {
         />
       </SearchPanel>
 
-      <SectionCard title="Sick Leave Record" subtitle={`${filtered.length} record(s)`} scroll className="flex-1 min-h-[220px]">
+      <SectionCard
+        title="Sick Leave Record"
+        subtitle={`${filtered.length} record(s)`}
+        scroll
+        className="flex-1 min-h-[220px]"
+        action={
+          <div className="flex items-center gap-2">
+            <input
+              type="date"
+              value={draft.from}
+              onChange={(e) => setFieldAndApply('from', e.target.value)}
+              className="px-2 py-1.5 border border-amana-neutral-300 rounded-lg text-[14px] outline-none focus:border-amana-primary-500 bg-amana-neutral-100"
+            />
+            <span className="text-amana-neutral-400 text-[14px]">to</span>
+            <input
+              type="date"
+              value={draft.to}
+              onChange={(e) => setFieldAndApply('to', e.target.value)}
+              className="px-2 py-1.5 border border-amana-neutral-300 rounded-lg text-[14px] outline-none focus:border-amana-primary-500 bg-amana-neutral-100"
+            />
+            <Button variant="outline" size="md" disabled={filtered.length === 0} onClick={handleCopySheets}>
+              Copy for Sheets
+            </Button>
+          </div>
+        }
+      >
         <DataTable
           columns={columns}
           rows={filtered}
@@ -234,16 +255,6 @@ export default function MedicalLeavePage() {
         title="Frequent Diseases"
         scroll
         className="h-[260px] flex-shrink-0"
-        action={
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={handleExportCsv} disabled={filtered.length === 0}>
-              Download TSV
-            </Button>
-            <Button variant="outline" size="sm" onClick={handleCopySheets} disabled={filtered.length === 0}>
-              Copy for Sheets
-            </Button>
-          </div>
-        }
       >
         <div className="flex-1 min-h-0 overflow-y-auto scroll-smooth flex flex-col justify-center gap-3 py-2 pr-2">
           {diseaseCounts.map(({ disease, count, pct }) => (

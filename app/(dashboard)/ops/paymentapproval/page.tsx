@@ -161,13 +161,22 @@ export default function PaymentRequestPage() {
     await handleAction(id, 'reject', reason);
   };
 
-  const renderAction = (r: PayReq) => (
-    <ApprovalActions
-      disabled={r.status !== 'ST_PAY_PENDING_OPS' || processingId === r.id}
-      onApprove={() => handleAction(r.id, 'review_approve')}
-      onReject={() => setRejectTarget(r.id)}
-    />
+  const actionText = (label: string) => (
+    <span className="text-[14px] text-amana-neutral-400 italic whitespace-nowrap">{label}</span>
   );
+
+  const renderAction = (r: PayReq) => {
+    // Setelah action, tombol berubah jadi teks sesuai hasil.
+    if (r.status === 'ST_PAY_REJECTED') return actionText('Rejected');
+    if (r.status !== 'ST_PAY_PENDING_OPS') return actionText('Approved');
+    return (
+      <ApprovalActions
+        disabled={processingId === r.id}
+        onApprove={() => handleAction(r.id, 'review_approve')}
+        onReject={() => setRejectTarget(r.id)}
+      />
+    );
+  };
 
   const columns: DataTableColumn<PayReq>[] = [
     { key: 'idRequest', label: 'ID', width: '12%', minPx: 150 },
