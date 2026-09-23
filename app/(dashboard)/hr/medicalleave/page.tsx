@@ -8,6 +8,7 @@ import DataTable from '@/app/components/data-display/DataTable';
 import type { DataTableColumn } from '@/app/components/data-display/DataTable';
 import { SearchTextField, SearchSelectField, SearchDateRangeCalendarField } from '@/app/components/forms/SearchFields';
 import Button from '@/app/components/forms/Button';
+import Modal from '@/app/components/feedback/Modal';
 import StatusModal from '@/app/components/feedback/StatusModal';
 import PdfPreviewModal, { PdfPreviewTarget } from '@/app/components/feedback/PdfPreviewModal';
 import { useFilters } from '@/app/utils/useFilters';
@@ -64,6 +65,7 @@ export default function MedicalLeavePage() {
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<{ ok: boolean; text: string } | null>(null);
   const [previewPdf, setPreviewPdf] = useState<PdfPreviewTarget | null>(null);
+  const [showDiseases, setShowDiseases] = useState(false);
   const { draft, applied, setField, setFieldAndApply, handleSearch, handleReset } = useFilters<Filters>(emptyFilters);
   const gradeOptions = useMemo(() => getAllGradeOptions(), []);
 
@@ -240,6 +242,9 @@ export default function MedicalLeavePage() {
             <Button variant="outline" size="md" disabled={filtered.length === 0} onClick={handleCopySheets}>
               Copy for Sheets
             </Button>
+            <Button variant="primary" size="md" onClick={() => setShowDiseases(true)}>
+              View Freq
+            </Button>
           </div>
         }
       >
@@ -251,26 +256,24 @@ export default function MedicalLeavePage() {
         />
       </SectionCard>
 
-      <SectionCard
-        title="Frequent Diseases"
-        scroll
-        className="h-[260px] flex-shrink-0"
-      >
-        <div className="flex-1 min-h-0 overflow-y-auto scroll-smooth flex flex-col justify-center gap-3 py-2 pr-2">
-          {diseaseCounts.map(({ disease, count, pct }) => (
-            <div key={disease} className="flex items-center gap-3">
-              <span title={disease} className="text-[16px] font-semibold text-amana-neutral-500 w-28 flex-shrink-0 truncate">{disease}</span>
-              <div className="flex-1 h-4 bg-amana-neutral-200 rounded-full overflow-hidden">
-                <div className={`h-full rounded-full ${diseaseBarColor}`} style={{ width: `${pct}%` }} />
+      {showDiseases && (
+        <Modal title="Frequent Diseases" onClose={() => setShowDiseases(false)} maxWidth="max-w-4xl" className="max-h-[80vh]">
+          <div className="p-5 flex flex-col gap-3 overflow-y-auto">
+            {diseaseCounts.map(({ disease, count, pct }) => (
+              <div key={disease} className="flex items-center gap-3">
+                <span title={disease} className="text-[16px] font-semibold text-amana-neutral-500 w-28 flex-shrink-0 truncate">{disease}</span>
+                <div className="flex-1 h-4 bg-amana-neutral-200 rounded-full overflow-hidden">
+                  <div className={`h-full rounded-full ${diseaseBarColor}`} style={{ width: `${pct}%` }} />
+                </div>
+                <span className="text-[16px] font-semibold text-amana-neutral-500 w-5 text-right flex-shrink-0">{count}</span>
               </div>
-              <span className="text-[16px] font-semibold text-amana-neutral-500 w-5 text-right flex-shrink-0">{count}</span>
-            </div>
-          ))}
-          {diseaseCounts.length === 0 && (
-            <p className="text-[14px] text-amana-neutral-400 text-center">No data available</p>
-          )}
-        </div>
-      </SectionCard>
+            ))}
+            {diseaseCounts.length === 0 && (
+              <p className="text-[14px] text-amana-neutral-400 text-center">No data available</p>
+            )}
+          </div>
+        </Modal>
+      )}
 
       <PdfPreviewModal target={previewPdf} onClose={() => setPreviewPdf(null)} />
       <StatusModal state={status} onClose={() => setStatus(null)} />

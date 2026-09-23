@@ -71,7 +71,7 @@ function DocumentUploadModal({
         </div>
         <div className={cn('flex-shrink-0 flex px-5 py-4 border-t border-amana-neutral-200', onDelete ? 'items-center gap-3' : 'justify-end')}>
           {onDelete && (
-            <Button type="button" variant="danger" size="lg" className="flex-1" onClick={onDelete}>
+            <Button type="button" variant="danger-outline" size="lg" className="flex-1" onClick={onDelete}>
               Delete
             </Button>
           )}

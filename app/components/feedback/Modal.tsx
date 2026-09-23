@@ -62,6 +62,7 @@ export default function Modal({
           <h2 className="text-[24px] font-semibold text-amana-primary-500">{title}</h2>
           {showCloseButton && (
             <motion.button
+              type="button"
               onClick={onClose}
               whileHover={{ rotate: 90 }}
               whileTap={{ scale: 0.9 }}

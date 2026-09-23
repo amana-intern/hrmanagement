@@ -408,7 +408,7 @@ export default function LeaveRequestPage() {
       <StatusModal state={message} onClose={() => setMessage(null)} />
 
       {showHistoryModal && (
-        <Modal title="Leave History" onClose={() => setShowHistoryModal(false)} maxWidth="max-w-4xl" className="max-h-[80vh]">
+        <Modal title="Leave History" onClose={() => setShowHistoryModal(false)} maxWidth="max-w-4xl" className="max-h-[80vh]" showCloseButton={false}>
           <div className="flex-1 min-h-0 overflow-y-auto px-5 pt-3 pb-2 flex flex-col">
             <DataTable columns={leaveHistoryColumns} rows={leaveHistory} emptyMessage="No leave history yet." />
           </div>
@@ -420,7 +420,7 @@ export default function LeaveRequestPage() {
 
       {/* Compensatory Leave Details Modal */}
       {showCompModal && (
-        <Modal title="Your Compensatory Leave" onClose={() => setShowCompModal(false)} maxWidth="max-w-2xl" className="max-h-[80vh]">
+        <Modal title="Your Compensatory Leave" onClose={() => setShowCompModal(false)} maxWidth="max-w-2xl" className="max-h-[80vh]" showCloseButton={false}>
           <div className="flex-1 overflow-y-auto px-5 pt-3 pb-2">
             {compDetails.length === 0 ? (
               <p className="text-sm text-amana-neutral-400 text-center py-8">No compensatory leave records found.</p>
