@@ -35,8 +35,8 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ idKar
       return Response.json({ error: 'Not your department' }, { status: 403 });
     }
 
-    // Cari user HR (role ADMIN_HR) utk notifikasi
-    const hrUser = await prisma.user.findFirst({
+    // Cari semua user HR (role ADMIN_HR) utk notifikasi
+    const hrUsers = await prisma.user.findMany({
       where: { idRole: ROLES.ADMIN_HR },
       include: { karyawan: true },
     });
@@ -101,26 +101,29 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ idKar
         },
       });
 
-      // Notifikasi ke HR
-      if (hrUser?.karyawan?.idKaryawan) {
-        await tx.notification.create({
-          data: {
-            idNotif: nota(),
-            idKaryawan: hrUser.karyawan.idKaryawan,
-            tipe: isRenewal ? 'CONTRACT_RENEWAL' : 'CONTRACT_OFFBOARDING',
-            judul: judulHR,
-            pesan: pesanHR,
-            idReferensi: idKaryawan,
-          },
-        });
+      // Notifikasi ke semua HR
+      for (const hrUser of hrUsers) {
+        if (hrUser.karyawan?.idKaryawan) {
+          await tx.notification.create({
+            data: {
+              idNotif: nota(),
+              idKaryawan: hrUser.karyawan.idKaryawan,
+              tipe: isRenewal ? 'CONTRACT_RENEWAL' : 'CONTRACT_OFFBOARDING',
+              judul: judulHR,
+              pesan: pesanHR,
+              idReferensi: idKaryawan,
+            },
+          });
+        }
       }
     });
 
-    // Email notifikasi ke karyawan & HR (renewal maupun offboarding).
+    // Email notifikasi ke karyawan & semua HR (renewal maupun offboarding).
     const employeeEmail = karyawan.user?.email;
-    const hrEmail = hrUser?.email;
     if (employeeEmail) await sendEmail({ to: employeeEmail, ...emailKaryawan });
-    if (hrEmail) await sendEmail({ to: hrEmail, ...emailHR });
+    for (const hrUser of hrUsers) {
+      if (hrUser.email) await sendEmail({ to: hrUser.email, ...emailHR });
+    }
 
     // Tandai to-do partner selesai
     const activeContract = await prisma.kontrakKaryawan.findFirst({
