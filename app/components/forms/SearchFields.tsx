@@ -89,7 +89,7 @@ function parseISODate(iso: string): Date | null {
   return new Date(y, m - 1, d);
 }
 
-function addMonths(d: Date, n: number): Date {
+export function addMonths(d: Date, n: number): Date {
   return new Date(d.getFullYear(), d.getMonth() + n, 1);
 }
 
@@ -156,7 +156,7 @@ function MonthYearLabel({ month, onSetMonth }: { month: Date; onSetMonth: (m: Da
   );
 }
 
-function CalendarMonth({
+export function CalendarMonth({
   month,
   fromValue,
   toValue,
@@ -211,7 +211,7 @@ function CalendarMonth({
               type="button"
               onClick={() => onPick(iso)}
               className={[
-                'text-[13px] aspect-square w-full rounded-full flex items-center justify-center transition-colors',
+                'text-[13px] h-8 w-full rounded-full flex items-center justify-center transition-colors',
                 isFrom || isTo
                   ? 'bg-amana-primary-500 text-white font-semibold'
                   : inRange
@@ -245,7 +245,7 @@ export function SearchDateRangeCalendarField({
   onToChange: (v: string) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [pos, setPos] = useState<{ top: number; left: number; width: number } | null>(null);
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
   const [leftMonth, setLeftMonth] = useState(() => {
     const base = parseISODate(fromValue) ?? new Date();
     return new Date(base.getFullYear(), base.getMonth(), 1);
@@ -253,12 +253,26 @@ export function SearchDateRangeCalendarField({
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
 
+  // Fixed compact width — two months don't need to stretch to the trigger's own (often much
+  // wider) width. Kept modest so it doesn't overhang neighboring fields in a narrow SearchPanel grid.
+  const PANEL_WIDTH = 420;
+
   // Panel is portal'd to <body> so it can escape SearchPanel's animated overflow:hidden wrapper.
+  // Height is a constant (day rows are a fixed h-8, not tied to width) — clamp `top`/`left` so the
+  // whole two-month panel always fits on screen (prefer below, flip above, or nudge into view).
   useEffect(() => {
     if (!open) return;
+    const HEIGHT_ESTIMATE = 330;
     const update = () => {
       const r = triggerRef.current?.getBoundingClientRect();
-      if (r) setPos({ top: r.bottom + 4, left: r.left, width: r.width });
+      if (!r) return;
+      const spaceBelow = window.innerHeight - r.bottom - 8;
+      const spaceAbove = r.top - 8;
+      const openUp = spaceBelow < HEIGHT_ESTIMATE && spaceAbove > spaceBelow;
+      const rawTop = openUp ? r.top - 4 - HEIGHT_ESTIMATE : r.bottom + 4;
+      const top = Math.max(8, Math.min(rawTop, window.innerHeight - HEIGHT_ESTIMATE - 8));
+      const left = Math.max(8, Math.min(r.left, window.innerWidth - PANEL_WIDTH - 8));
+      setPos({ top, left });
     };
     update();
     window.addEventListener('scroll', update, true);
@@ -307,15 +321,15 @@ export function SearchDateRangeCalendarField({
         <span className={`truncate ${fromValue ? 'text-amana-neutral-500' : 'text-amana-neutral-300'}`}>
           {displayText}
         </span>
-        <ChevronDown
-          className={`w-4 h-4 text-amana-neutral-400 flex-shrink-0 transition-transform ${open ? 'rotate-180' : ''}`}
+        <ChevronRight
+          className={`w-4 h-4 text-amana-neutral-400 flex-shrink-0 transition-transform duration-200 ${open ? 'rotate-90' : ''}`}
         />
       </button>
 
       {open && pos && typeof document !== 'undefined' && createPortal(
         <div
           ref={panelRef}
-          style={{ position: 'fixed', top: pos.top, left: pos.left, width: pos.width }}
+          style={{ position: 'fixed', top: pos.top, left: pos.left, width: PANEL_WIDTH }}
           className="z-50 bg-amana-neutral-100 border border-amana-primary-500 rounded-[8px] shadow-lg p-4"
         >
           <div className="flex items-center gap-4 pb-2 mb-2 border-b border-amana-primary-500 text-[12px] text-amana-neutral-400">

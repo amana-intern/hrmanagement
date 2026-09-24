@@ -7,6 +7,7 @@ import DataTable from '@/app/components/data-display/DataTable';
 import type { DataTableColumn } from '@/app/components/data-display/DataTable';
 import Button from '@/app/components/forms/Button';
 import TextField from '@/app/components/forms/TextField';
+import { SearchDateRangeCalendarField } from '@/app/components/forms/SearchFields';
 import ConfirmModal from '@/app/components/feedback/ConfirmModal';
 import StatusModal from '@/app/components/feedback/StatusModal';
 import { TableSkeleton } from '@/app/components/feedback/PageSkeleton';
@@ -157,9 +158,14 @@ export default function BlockedDatesPage() {
         title="Add Blocked Date"
         subtitle="Blocked dates cannot be used for leave requests (all leave types)."
       >
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4">
-          <TextField label="Start Date" type="date" value={newDate} onChange={setNewDate} />
-          <TextField label="End Date (optional)" type="date" value={newEndDate} onChange={setNewEndDate} />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+          <SearchDateRangeCalendarField
+            label="Blocked Period"
+            fromValue={newDate}
+            toValue={newEndDate}
+            onFromChange={setNewDate}
+            onToChange={setNewEndDate}
+          />
           <TextField label="Reason (optional)" value={newReason} onChange={setNewReason} placeholder="e.g., National holiday" />
         </div>
         <div className="flex justify-end pt-4">

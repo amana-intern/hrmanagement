@@ -137,7 +137,7 @@ export default function PartnerContractTrackingPage() {
 
   return (
     <>
-      <ContractTrackingPage contracts={contracts} actionsColumn={actionsColumn} />
+      <ContractTrackingPage contracts={contracts} showStartDate actionsColumn={actionsColumn} />
 
       {confirmTarget && confirmAction && (
         <ConfirmModal

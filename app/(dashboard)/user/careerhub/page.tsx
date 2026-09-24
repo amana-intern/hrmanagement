@@ -12,8 +12,10 @@ import UploadBox from '@/app/components/forms/UploadBox';
 import Modal from '@/app/components/feedback/Modal';
 import ConfirmModal from '@/app/components/feedback/ConfirmModal';
 import StatusModal from '@/app/components/feedback/StatusModal';
+import UploadProgressModal from '@/app/components/feedback/UploadProgressModal';
 import PdfPreviewModal, { PdfPreviewTarget } from '@/app/components/feedback/PdfPreviewModal';
 import { cn } from '@/app/utils/cn';
+import { uploadWithProgress } from '@/app/utils/uploadWithProgress';
 import { canUseCareerHub } from '@/lib/roles';
 import { CareerHubSkeleton } from '@/app/components/feedback/PageSkeleton';
 
@@ -103,11 +105,12 @@ export default function CareerHubPage() {
   const [idRole, setIdRole] = useState('');
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<{ ok: boolean; text: string } | null>(null);
+  const [uploadPct, setUploadPct] = useState<number | null>(null);
 
   const uploadFile = async (file: File): Promise<string> => {
     const fd = new FormData();
     fd.append('file', file);
-    const res = await fetch('/api/upload', { method: 'POST', body: fd });
+    const res = await uploadWithProgress('/api/upload', fd, setUploadPct);
     const data = await res.json();
     if (!res.ok || !data.url) throw new Error(data.error || 'Upload failed');
     return data.url;
@@ -169,11 +172,13 @@ export default function CareerHubPage() {
     e.preventDefault();
     if (!selectedCvFile) return;
     setLoading(true);
+    setUploadPct(0);
     try {
       const fd = new FormData();
       fd.append('file', selectedCvFile);
-      const res = await fetch('/api/me/cv', { method: 'PATCH', body: fd });
+      const res = await uploadWithProgress('/api/me/cv', fd, setUploadPct, 'PATCH');
       const data = await res.json().catch(() => null);
+      await new Promise((r) => setTimeout(r, 350)); // let the "Upload Complete" state be visible briefly
       if (!res.ok || !data?.fileURL) {
         setStatus({ ok: false, text: data?.error || 'Failed to save CV' });
         return;
@@ -184,6 +189,7 @@ export default function CareerHubPage() {
       setStatus({ ok: false, text: err instanceof Error ? err.message : 'Failed to upload CV' });
     } finally {
       setLoading(false);
+      setUploadPct(null);
     }
   };
 
@@ -210,7 +216,11 @@ export default function CareerHubPage() {
     try {
       const fileName = selectedCertFile ? selectedCertFile.name : 'document.pdf';
       let fileURL = '';
-      if (selectedCertFile) fileURL = await uploadFile(selectedCertFile);
+      if (selectedCertFile) {
+        setUploadPct(0);
+        fileURL = await uploadFile(selectedCertFile);
+        await new Promise((r) => setTimeout(r, 350)); // let the "Upload Complete" state be visible briefly
+      }
 
       if (editingCertId) {
         const res = await fetch(`/api/certificates/${editingCertId}`, {
@@ -244,6 +254,8 @@ export default function CareerHubPage() {
     } catch (err) {
       setStatus({ ok: false, text: err instanceof Error ? err.message : 'A network error occurred' });
       return;
+    } finally {
+      setUploadPct(null);
     }
     setIsCertModalOpen(false);
   };
@@ -428,6 +440,7 @@ export default function CareerHubPage() {
         </AnimatePresence>
 
         <StatusModal state={status} onClose={() => setStatus(null)} />
+        <UploadProgressModal open={uploadPct !== null} percent={uploadPct ?? 0} />
       </div>
     </>
   );

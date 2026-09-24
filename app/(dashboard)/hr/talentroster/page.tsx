@@ -16,6 +16,8 @@ import PdfPreviewModal, { PdfPreviewTarget } from '@/app/components/feedback/Pdf
 import { AssessmentBadge, EmployeeDetailsContent } from '@/app/components/data-display/EmployeeDetailsModal';
 import CareerHistoryModal, { type CareerHistoryEntry } from '@/app/components/data-display/CareerHistoryModal';
 import TextField from '@/app/components/forms/TextField';
+import DateField from '@/app/components/forms/DateField';
+import { SearchDateRangeCalendarField } from '@/app/components/forms/SearchFields';
 import SelectField from '@/app/components/forms/SelectField';
 import AssessmentResultView from '@/app/components/hr/AssessmentResultView';
 import { TableSkeleton } from '@/app/components/feedback/PageSkeleton';
@@ -489,9 +491,8 @@ export default function TalentRosterPage() {
                       onChange={(v) => setEditForm((p) => ({ ...p, noTelepon: v }))}
                       placeholder="e.g.: 0812-3456-7890"
                     />
-                    <TextField
+                    <DateField
                       label="Birth Date"
-                      type="date"
                       value={editForm.tanggalLahir}
                       onChange={(v) => setEditForm((p) => ({ ...p, tanggalLahir: v }))}
                     />
@@ -564,20 +565,13 @@ export default function TalentRosterPage() {
                     {(detailsModal.contractStartDate || detailsModal.contractEndDate) && (
                       <div className="md:col-span-2 border-t border-amana-neutral-200 pt-4">
                         <h4 className="text-[16px] font-semibold text-amana-primary-500 mb-3">Contract Dates</h4>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-                          <TextField
-                            label="Contract Start"
-                            type="date"
-                            value={editForm.contractStartDate}
-                            onChange={(v) => setEditForm((p) => ({ ...p, contractStartDate: v }))}
-                          />
-                          <TextField
-                            label="Contract End"
-                            type="date"
-                            value={editForm.contractEndDate}
-                            onChange={(v) => setEditForm((p) => ({ ...p, contractEndDate: v }))}
-                          />
-                        </div>
+                        <SearchDateRangeCalendarField
+                          label="Contract Period"
+                          fromValue={editForm.contractStartDate}
+                          toValue={editForm.contractEndDate}
+                          onFromChange={(v) => setEditForm((p) => ({ ...p, contractStartDate: v }))}
+                          onToChange={(v) => setEditForm((p) => ({ ...p, contractEndDate: v }))}
+                        />
                         <p className="pt-1.5 text-[12px] text-amana-neutral-400">
                           Fix wrong contract dates here (e.g. from a mistaken Extend Contract input).
                         </p>
@@ -647,7 +641,7 @@ export default function TalentRosterPage() {
           <div className="flex-1 min-h-0 overflow-y-auto scroll-smooth p-5 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
             <TextField label="Talent Email" value={newUser.email} onChange={(v) => setNewUser((p) => ({ ...p, email: v }))} placeholder="e.g.: name@company" />
             <TextField label="Talent Name" value={newUser.nama} onChange={(v) => setNewUser((p) => ({ ...p, nama: v }))} placeholder="Full Name" />
-            <TextField label="Birth Date" type="date" value={newUser.tanggalLahir} onChange={(v) => setNewUser((p) => ({ ...p, tanggalLahir: v }))} />
+            <DateField label="Birth Date" value={newUser.tanggalLahir} onChange={(v) => setNewUser((p) => ({ ...p, tanggalLahir: v }))} />
             <TextField label="Phone Number" value={newUser.noTelepon} onChange={(v) => setNewUser((p) => ({ ...p, noTelepon: v }))} placeholder="e.g.: 0812-3456-7890" />
 
             <SelectField
@@ -708,9 +702,16 @@ export default function TalentRosterPage() {
               placeholder="Choose Contract Type"
             />
 
-            <TextField label="Start Date" type="date" value={newUser.tanggalMasuk} onChange={(v) => setNewUser((p) => ({ ...p, tanggalMasuk: v }))} />
-            {newUser.tipeKontrak && newUser.tipeKontrak !== 'PKWTT' && (
-              <TextField label="End Date" type="date" value={newUser.tanggalBerakhir} onChange={(v) => setNewUser((p) => ({ ...p, tanggalBerakhir: v }))} />
+            {newUser.tipeKontrak && newUser.tipeKontrak !== 'PKWTT' ? (
+              <SearchDateRangeCalendarField
+                label="Contract Period"
+                fromValue={newUser.tanggalMasuk}
+                toValue={newUser.tanggalBerakhir}
+                onFromChange={(v) => setNewUser((p) => ({ ...p, tanggalMasuk: v }))}
+                onToChange={(v) => setNewUser((p) => ({ ...p, tanggalBerakhir: v }))}
+              />
+            ) : (
+              <DateField label="Start Date" value={newUser.tanggalMasuk} onChange={(v) => setNewUser((p) => ({ ...p, tanggalMasuk: v }))} />
             )}
           </div>
 

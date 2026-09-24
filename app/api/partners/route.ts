@@ -33,6 +33,7 @@ export async function GET() {
         idKaryawan: p.karyawan!.idKaryawan,
         nama: p.karyawan!.nama ?? '-',
         department: p.karyawan!.department ?? '',
+        departments: p.karyawan!.departments ?? [],
       }));
 
     return Response.json({ list });

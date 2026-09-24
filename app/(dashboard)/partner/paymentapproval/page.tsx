@@ -8,22 +8,26 @@ import DataTable from '@/app/components/data-display/DataTable';
 import type { DataTableColumn } from '@/app/components/data-display/DataTable';
 import StatusPill from '@/app/components/data-display/StatusPill';
 import ApprovalActions from '@/app/components/data-display/ApprovalActions';
-import { SearchTextField, SearchSelectField } from '@/app/components/forms/SearchFields';
+import { SearchTextField, SearchSelectField, SearchDateRangeCalendarField } from '@/app/components/forms/SearchFields';
+import ComboboxField from '@/app/components/forms/ComboboxField';
 import Button from '@/app/components/forms/Button';
 import StatusModal from '@/app/components/feedback/StatusModal';
 import RejectReasonModal from '@/app/components/feedback/RejectReasonModal';
 import { useFilters } from '@/app/utils/useFilters';
 import { statusColor } from '@/app/utils/statusColor';
+import { formatDateWIB } from '@/app/utils/formatDate';
 import PaymentDetailModal, { PaymentDetailRow } from '@/app/components/PaymentDetailModal';
-import { PAYMENT_KATEGORI } from '@/lib/constants';
+import { parsePaymentDetail } from '@/lib/paymentDetail';
+import { CHARGECODE_OPTIONS } from '@/lib/chargecodes';
 import { TableSkeleton } from '@/app/components/feedback/PageSkeleton';
 
 interface PayReq {
   id: string;
   idRequest: string;
   user: string;
-  type: string;
-  amount: string;
+  chargecode: string;
+  pm: string;
+  paymentUnder: string;
   projectID: string;
   status: string;
   createdAt: string | null;
@@ -39,22 +43,12 @@ interface PaymentRaw {
   nominal: string | number;
   projectID: string | null;
   detail: string | null;
+  catatan: string | null;
   createdAt: string | null;
+  tanggalJadwalPembayaran: string | null;
   attachments?: { fileName?: string | null; fileURL?: string | null; kategori?: string | null }[];
   karyawan?: { nama?: string | null };
   masterKategoriPayment?: { namaKategori?: string | null };
-}
-
-function amountLabel(c: PaymentRaw): string {
-  if (c.idKategoriPayment === PAYMENT_KATEGORI.PER_DIEM) {
-    try {
-      const detail = typeof c.detail === 'string' ? JSON.parse(c.detail) : c.detail;
-      const p = Number(detail?.perDiemParticipants);
-      if (Number.isFinite(p) && p > 0) return `${p} peserta`;
-    } catch {}
-    return 'View file';
-  }
-  return `Rp ${Number(c.nominal).toLocaleString('en-US')}`;
 }
 
 const STATUS_MAP: Record<string, { label: string }> = {
@@ -66,37 +60,46 @@ const STATUS_MAP: Record<string, { label: string }> = {
 const STATUS_OPTIONS = Object.values(STATUS_MAP).map((v) => v.label);
 
 function mapRows(rows: PaymentRaw[]): PayReq[] {
-  return rows.map((c) => ({
-    id: c.idRequest,
-    idRequest: c.idRequest,
-    user: c.karyawan?.nama ?? '-',
-    type: c.masterKategoriPayment?.namaKategori ?? '-',
-    amount: amountLabel(c),
-    projectID: c.projectID ?? '-',
-    status: c.idStatus,
-    createdAt: c.createdAt ?? null,
-    details: null,
-    action: null,
-    detailRow: {
+  return rows.map((c) => {
+    const d = parsePaymentDetail(c.detail);
+    return {
+      id: c.idRequest,
       idRequest: c.idRequest,
-      idKategoriPayment: c.idKategoriPayment,
-      nominal: c.nominal,
-      projectID: c.projectID,
-      detail: c.detail,
-      createdAt: c.createdAt,
-      attachments: c.attachments ?? [],
-      masterKategoriPayment: c.masterKategoriPayment,
-      statusLabel: STATUS_MAP[c.idStatus]?.label ?? c.idStatus,
-    },
-  }));
+      user: c.karyawan?.nama ?? '-',
+      chargecode: d.chargecode ?? '-',
+      pm: d.submittingAs ?? '-',
+      paymentUnder: d.paymentUnder ?? '-',
+      projectID: c.projectID ?? '-',
+      status: c.idStatus,
+      createdAt: c.createdAt ?? null,
+      details: null,
+      action: null,
+      detailRow: {
+        idRequest: c.idRequest,
+        idKategoriPayment: c.idKategoriPayment,
+        nominal: c.nominal,
+        projectID: c.projectID,
+        detail: c.detail,
+        catatan: c.catatan,
+        createdAt: c.createdAt,
+        tanggalJadwalPembayaran: c.tanggalJadwalPembayaran,
+        attachments: c.attachments ?? [],
+        masterKategoriPayment: c.masterKategoriPayment,
+        statusLabel: STATUS_MAP[c.idStatus]?.label ?? c.idStatus,
+      },
+    };
+  });
 }
 
 interface Filters {
-  search: string;
+  chargecode: string;
+  pm: string;
   status: string;
+  from: string;
+  to: string;
 }
 
-const emptyFilters: Filters = { search: '', status: '' };
+const emptyFilters: Filters = { chargecode: '', pm: '', status: '', from: '', to: '' };
 
 export default function PartnerPaymentApprovalPage() {
   const [requests, setRequests] = useState<PayReq[]>([]);
@@ -105,6 +108,7 @@ export default function PartnerPaymentApprovalPage() {
   const [detailRow, setDetailRow] = useState<PaymentDetailRow | null>(null);
   const [rejectTarget, setRejectTarget] = useState<string | null>(null);
   const [rejecting, setRejecting] = useState(false);
+  const [processingId, setProcessingId] = useState<string | null>(null);
   const { draft, applied, setField, handleSearch, handleReset } = useFilters<Filters>(emptyFilters);
 
   const load = async () => {
@@ -126,20 +130,24 @@ export default function PartnerPaymentApprovalPage() {
   }, []);
 
   const filtered = useMemo(() => {
-    const q = applied.search.trim().toLowerCase();
+    const chargecodeQ = applied.chargecode.trim().toLowerCase();
+    const pmQ = applied.pm.trim().toLowerCase();
+    const from = applied.from ? new Date(applied.from + 'T00:00:00') : null;
+    const to = applied.to ? new Date(applied.to + 'T23:59:59') : null;
     return requests.filter((r) => {
-      const matchSearch =
-        !q ||
-        r.idRequest.toLowerCase().includes(q) ||
-        r.user.toLowerCase().includes(q) ||
-        r.projectID.toLowerCase().includes(q);
+      const matchChargecode = !chargecodeQ || r.chargecode.toLowerCase().includes(chargecodeQ);
+      const matchPM = !pmQ || r.pm.toLowerCase().includes(pmQ);
       const matchStatus =
         !applied.status || (STATUS_MAP[r.status]?.label ?? r.status) === applied.status;
-      return matchSearch && matchStatus;
+      const submitted = r.createdAt ? new Date(r.createdAt) : null;
+      const matchDate = (!from || (submitted && submitted >= from)) && (!to || (submitted && submitted <= to));
+      return matchChargecode && matchPM && matchStatus && matchDate;
     });
   }, [requests, applied]);
 
   const handleAction = async (id: string, action: 'final_approve' | 'reject', catatan?: string) => {
+    if (processingId) return; // cegah double-processing
+    setProcessingId(id);
     const res = await fetch(`/api/payment/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -152,6 +160,7 @@ export default function PartnerPaymentApprovalPage() {
       const data = await res.json().catch(() => ({}));
       setMessage({ ok: false, text: data?.error ?? 'Failed to process request' });
     }
+    setProcessingId(null);
   };
 
   const handleConfirmReject = async (reason: string) => {
@@ -172,30 +181,33 @@ export default function PartnerPaymentApprovalPage() {
     if (r.status !== 'ST_PAY_PENDING_PARTNER') return actionText('Approved');
     return (
       <ApprovalActions
-        disabled={rejecting}
+        loading={processingId === r.id}
         onApprove={() => handleAction(r.id, 'final_approve')}
         onReject={() => setRejectTarget(r.id)}
+        rejectVariant="danger"
       />
     );
   };
 
   const columns: DataTableColumn<PayReq>[] = [
-    { key: 'idRequest', label: 'ID', width: '12%', minPx: 150 },
-    { key: 'user', label: 'Requester', width: '13%', minPx: 160 },
-    { key: 'type', label: 'Type', width: '8%', minPx: 110 },
-    { key: 'projectID', label: 'Event/Vendor Name', width: '16%', minPx: 200 },
+    { key: 'idRequest', label: 'ID', width: '7%', minPx: 75 },
+    { key: 'chargecode', label: 'Chargecode', width: '12%', minPx: 125 },
+    { key: 'user', label: 'Requester', width: '10%', minPx: 100 },
+    { key: 'pm', label: 'PM', width: '9%', minPx: 90 },
+    { key: 'paymentUnder', label: 'Payment Under', width: '9%', minPx: 90 },
     {
-      key: 'amount',
-      label: 'Amount',
-      width: '10%',
-      minPx: 130,
-      render: (r) => <span className="font-semibold whitespace-nowrap">{r.amount}</span>,
+      key: 'createdAt',
+      label: 'Submitted',
+      width: '15%',
+      minPx: 150,
+      sortValue: (r) => (r.createdAt ? new Date(r.createdAt).getTime() : 0),
+      render: (r) => <span className="whitespace-nowrap">{formatDateWIB(r.createdAt)}</span>,
     },
     {
       key: 'status',
       label: 'Status',
-      width: '13%',
-      minPx: 160,
+      width: '12%',
+      minPx: 120,
       render: (r) => (
         <StatusPill color={statusColor(STATUS_MAP[r.status]?.label ?? r.status)}>
           {STATUS_MAP[r.status]?.label ?? r.status}
@@ -205,15 +217,15 @@ export default function PartnerPaymentApprovalPage() {
     {
       key: 'details',
       label: 'Details',
-      width: '9%',
-      minPx: 110,
+      width: '8%',
+      minPx: 80,
       render: (r) => (
         <Button variant="outline" size="sm" className="w-full whitespace-nowrap" onClick={() => setDetailRow(r.detailRow)}>
           View
         </Button>
       ),
     },
-    { key: 'action', label: 'Action', width: '19%', minPx: 240, render: renderAction },
+    { key: 'action', label: 'Action', width: '17%', minPx: 165, render: renderAction },
   ];
 
   if (loading) return <TableSkeleton columns={6} />;
@@ -225,17 +237,31 @@ export default function PartnerPaymentApprovalPage() {
 
         <SearchPanel
           title="Search Payment Approval"
-          subtitle="Filter payment requests by ID, requester, event/vendor name, or status."
+          subtitle="Filter payment requests by Chargecode, Project Manager, Status, or Submitted Date."
           onReset={handleReset}
           onSearch={handleSearch}
         >
+          <ComboboxField
+            label="Chargecode"
+            value={draft.chargecode}
+            onChange={(v) => setField('chargecode', v)}
+            options={CHARGECODE_OPTIONS}
+            placeholder="Type or select chargecode..."
+          />
           <SearchTextField
-            label="ID / Requester / Event"
-            value={draft.search}
-            onChange={(v) => setField('search', v)}
+            label="Project Manager"
+            value={draft.pm}
+            onChange={(v) => setField('pm', v)}
             placeholder="Search..."
           />
           <SearchSelectField label="Status" value={draft.status} onChange={(v) => setField('status', v)} options={STATUS_OPTIONS} />
+          <SearchDateRangeCalendarField
+            label="Submitted Date"
+            fromValue={draft.from}
+            toValue={draft.to}
+            onFromChange={(v) => setField('from', v)}
+            onToChange={(v) => setField('to', v)}
+          />
         </SearchPanel>
 
         <SectionCard title="Payment Approval List" subtitle={`${filtered.length} request(s)`} scroll className="flex-1 min-h-[220px]">

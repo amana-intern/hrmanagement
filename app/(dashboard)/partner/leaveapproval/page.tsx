@@ -160,6 +160,7 @@ export default function PartnerLeaveApprovalPage() {
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [rejectTarget, setRejectTarget] = useState<string | null>(null);
   const [rejecting, setRejecting] = useState(false);
+  const [processingId, setProcessingId] = useState<string | null>(null);
   const [detailRow, setDetailRow] = useState<LeaveReq | null>(null);
   const { draft, applied, setField, handleSearch, handleReset } = useFilters<Filters>(emptyFilters);
   const gradeOptions = useMemo(() => getAllGradeOptions(), []);
@@ -205,6 +206,8 @@ export default function PartnerLeaveApprovalPage() {
   }, [requests, applied]);
 
   const handleAction = async (id: string, action: 'approve' | 'reject', catatan?: string) => {
+    if (processingId) return; // cegah double-processing
+    setProcessingId(id);
     const res = await fetch(`/api/leave/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -217,6 +220,7 @@ export default function PartnerLeaveApprovalPage() {
       const data = await res.json().catch(() => ({}));
       setMessage({ ok: false, text: data?.error ?? 'Failed to process request' });
     }
+    setProcessingId(null);
   };
 
   const handleConfirmReject = async (reason: string) => {
@@ -238,7 +242,7 @@ export default function PartnerLeaveApprovalPage() {
     if (r.status === 'ST_LEAVE_REJECTED') return actionText('Rejected');
     return (
       <ApprovalActions
-        disabled={r.status !== 'ST_LEAVE_PENDING'}
+        loading={processingId === r.id}
         onApprove={() => handleAction(r.id, 'approve')}
         onReject={() => setRejectTarget(r.id)}
       />

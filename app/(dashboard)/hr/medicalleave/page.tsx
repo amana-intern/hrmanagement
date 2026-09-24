@@ -243,7 +243,7 @@ export default function MedicalLeavePage() {
               Copy for Sheets
             </Button>
             <Button variant="primary" size="md" onClick={() => setShowDiseases(true)}>
-              View Freq
+              Frequent Desease
             </Button>
           </div>
         }
@@ -251,7 +251,8 @@ export default function MedicalLeavePage() {
         <DataTable
           columns={columns}
           rows={filtered}
-          defaultSortKey="name"
+          defaultSortKey="startDate"
+          defaultSortDir="desc"
           emptyMessage="No sick leave records match your filters."
         />
       </SectionCard>

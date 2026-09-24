@@ -59,7 +59,7 @@ export default function StatusModal({
           <p className={cn('text-[16px] leading-snug', state.ok ? 'text-amana-success-500' : 'text-amana-danger-500')}>
             {state.text}
           </p>
-          <div className="h-[6px] w-full rounded-full bg-amana-neutral-100 overflow-hidden">
+          <div className="h-[6px] w-full rounded-full bg-amana-neutral-100 overflow-hidden flex justify-end">
             <motion.div
               key={state.text}
               initial={{ width: '100%' }}

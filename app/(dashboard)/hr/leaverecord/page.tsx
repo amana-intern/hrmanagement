@@ -258,7 +258,7 @@ export default function LeaveRecordPage() {
         <DataTable
           columns={columns}
           rows={filtered}
-          defaultSortKey="submittedDate"
+          defaultSortKey="startDate"
           defaultSortDir="desc"
           emptyMessage="No leave records match your filters."
         />

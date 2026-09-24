@@ -4,9 +4,12 @@ import { useState } from 'react';
 import PageTopBar from '@/app/components/layout/PageTopBar';
 import SectionCard from '@/app/components/layout/SectionCard';
 import TextField from '@/app/components/forms/TextField';
+import { SearchDateRangeCalendarField } from '@/app/components/forms/SearchFields';
 import UploadBox from '@/app/components/forms/UploadBox';
 import Button from '@/app/components/forms/Button';
 import StatusModal from '@/app/components/feedback/StatusModal';
+import UploadProgressModal from '@/app/components/feedback/UploadProgressModal';
+import { uploadWithProgress } from '@/app/utils/uploadWithProgress';
 
 export default function SickLeavePage() {
   const [startDate, setStartDate] = useState('');
@@ -14,6 +17,7 @@ export default function SickLeavePage() {
   const [symptom, setSymptom] = useState('');
   const [medicalFile, setMedicalFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [uploadPct, setUploadPct] = useState<number | null>(null);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
 
   const isFormValid = startDate !== '' && endDate !== '' && medicalFile !== null;
@@ -24,6 +28,7 @@ export default function SickLeavePage() {
 
     setSubmitting(true);
     setMessage(null);
+    setUploadPct(0);
 
     const form = new FormData();
     form.append('tanggalMulai', startDate);
@@ -31,18 +36,23 @@ export default function SickLeavePage() {
     if (symptom) form.append('gejala', symptom);
     if (medicalFile) form.append('file', medicalFile);
 
-    const res = await fetch('/api/sick', { method: 'POST', body: form });
-    const data = await res.json();
-    setSubmitting(false);
+    try {
+      const res = await uploadWithProgress('/api/sick', form, setUploadPct);
+      const data = await res.json();
+      await new Promise((r) => setTimeout(r, 350)); // let the "Upload Complete" state be visible briefly
 
-    if (res.ok) {
-      setMessage({ ok: true, text: 'Sick leave submitted successfully!' });
-      setStartDate('');
-      setEndDate('');
-      setSymptom('');
-      setMedicalFile(null);
-    } else {
-      setMessage({ ok: false, text: data.error || 'Failed to submit request.' });
+      if (res.ok) {
+        setMessage({ ok: true, text: 'Sick leave submitted successfully!' });
+        setStartDate('');
+        setEndDate('');
+        setSymptom('');
+        setMedicalFile(null);
+      } else {
+        setMessage({ ok: false, text: data.error || 'Failed to submit request.' });
+      }
+    } finally {
+      setSubmitting(false);
+      setUploadPct(null);
     }
   };
 
@@ -52,10 +62,13 @@ export default function SickLeavePage() {
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-3">
         <SectionCard title="Sick Leave Schedule">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <TextField label="Start Date" type="date" value={startDate} onChange={setStartDate} />
-            <TextField label="End Date" type="date" value={endDate} onChange={setEndDate} />
-          </div>
+          <SearchDateRangeCalendarField
+            label="Sick Leave Period"
+            fromValue={startDate}
+            toValue={endDate}
+            onFromChange={setStartDate}
+            onToChange={setEndDate}
+          />
           <div className="mt-4">
             <TextField
               label="Symptom / Diagnosis"
@@ -82,6 +95,7 @@ export default function SickLeavePage() {
       </form>
 
       <StatusModal state={message} onClose={() => setMessage(null)} />
+      <UploadProgressModal open={uploadPct !== null} percent={uploadPct ?? 0} />
     </div>
   );
 }

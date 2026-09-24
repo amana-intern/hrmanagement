@@ -9,6 +9,7 @@ import StatusPill from '@/app/components/data-display/StatusPill';
 import DataTable, { DataTableColumn } from '@/app/components/data-display/DataTable';
 import SelectField from '@/app/components/forms/SelectField';
 import TextField from '@/app/components/forms/TextField';
+import { SearchDateRangeCalendarField } from '@/app/components/forms/SearchFields';
 import Button from '@/app/components/forms/Button';
 import Modal from '@/app/components/feedback/Modal';
 import StatusModal from '@/app/components/feedback/StatusModal';
@@ -57,6 +58,10 @@ interface LeaveListItem {
   tanggalSelesai: string | null;
   jumlahHari: number | null;
   tanggalPengajuan: string | null;
+  keterangan: string | null;
+  catatan: string | null;
+  tanggalKerjaHariLibur: string | null;
+  tanggalSelesaiKerjaLibur: string | null;
   masterJenisCuti?: { namaJenis: string } | null;
   masterStatus?: { namaStatus: string } | null;
 }
@@ -68,33 +73,62 @@ interface LeaveHistoryRow {
   period: string;
   duration: string;
   status: string;
+  reason: string | null;
+  note: string | null;
+  holidayWork: string | null;
+  details: null;
 }
 
-const leaveHistoryColumns: DataTableColumn<LeaveHistoryRow>[] = [
-  { key: 'type', label: 'Type', width: '14%', minPx: 110 },
-  { key: 'submitted', label: 'Submitted', width: '20%', minPx: 150 },
-  {
-    key: 'period',
-    label: 'Period',
-    width: '34%',
-    minPx: 260,
-    render: (row) => <span className="block whitespace-normal break-words">{row.period}</span>,
-  },
-  { key: 'duration', label: 'Duration', width: '15%', minPx: 110 },
-  {
-    key: 'status',
-    label: 'Status',
-    width: '17%',
-    minPx: 130,
-    render: (row) => (
-      <div className="flex justify-center">
-        <StatusPill color={statusColor(row.status)} fullWidth={false}>
-          {row.status}
-        </StatusPill>
-      </div>
-    ),
-  },
-];
+function HistoryField({ label, value }: { label: string; value?: string | null }) {
+  if (!value) return null;
+  return (
+    <div className="flex items-start justify-between gap-4 py-2 border-b border-amana-neutral-200 last:border-b-0">
+      <span className="text-[14px] font-semibold text-amana-neutral-400 flex-shrink-0">{label}</span>
+      <span className="text-[15px] text-amana-neutral-500 text-right break-words">{value}</span>
+    </div>
+  );
+}
+
+function makeLeaveHistoryColumns(onView: (row: LeaveHistoryRow) => void): DataTableColumn<LeaveHistoryRow>[] {
+  return [
+    { key: 'type', label: 'Type', width: '13%', minPx: 100 },
+    { key: 'submitted', label: 'Submitted', width: '17%', minPx: 140 },
+    {
+      key: 'period',
+      label: 'Period',
+      width: '24%',
+      minPx: 200,
+      render: (row) => <span className="block whitespace-normal break-words">{row.period}</span>,
+    },
+    { key: 'duration', label: 'Duration', width: '14%', minPx: 120 },
+    {
+      key: 'status',
+      label: 'Status',
+      width: '15%',
+      minPx: 120,
+      render: (row) => (
+        <div className="flex justify-center">
+          <StatusPill color={statusColor(row.status)} fullWidth={false}>
+            {row.status}
+          </StatusPill>
+        </div>
+      ),
+    },
+    {
+      key: 'details',
+      label: 'Details',
+      width: '13%',
+      minPx: 110,
+      render: (row) => (
+        <div className="flex justify-center">
+          <Button variant="outline" size="sm" onClick={() => onView(row)}>
+            View
+          </Button>
+        </div>
+      ),
+    },
+  ];
+}
 
 export default function LeaveRequestPage() {
   const [selectedLeave, setSelectedLeave] = useState('');
@@ -115,6 +149,7 @@ export default function LeaveRequestPage() {
   const [showCompModal, setShowCompModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [leaveHistory, setLeaveHistory] = useState<LeaveHistoryRow[]>([]);
+  const [historyDetail, setHistoryDetail] = useState<LeaveHistoryRow | null>(null);
 
   const loadBalance = async () => {
     try {
@@ -144,6 +179,13 @@ export default function LeaveRequestPage() {
             period: r.tanggalMulai && r.tanggalSelesai ? `${formatDateWIB(r.tanggalMulai)} - ${formatDateWIB(r.tanggalSelesai)}` : '-',
             duration: r.jumlahHari != null ? `${r.jumlahHari} Day(s)` : '-',
             status: r.masterStatus?.namaStatus ?? '-',
+            reason: r.keterangan ?? null,
+            note: r.catatan ?? null,
+            holidayWork:
+              r.tanggalKerjaHariLibur && r.tanggalSelesaiKerjaLibur
+                ? `${formatDateWIB(r.tanggalKerjaHariLibur)} - ${formatDateWIB(r.tanggalSelesaiKerjaLibur)}`
+                : null,
+            details: null,
           }))
         );
       }
@@ -321,18 +363,13 @@ export default function LeaveRequestPage() {
 
         {selectedLeave === 'Compensatory Leave' && (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <TextField
-                label="Holiday Work Start Date"
-                type="date"
-                value={holidayWorkDate}
-                onChange={setHolidayWorkDate}
-              />
-              <TextField
-                label="Holiday Work End Date"
-                type="date"
-                value={holidayWorkEndDate}
-                onChange={setHolidayWorkEndDate}
+            <div className="mb-4">
+              <SearchDateRangeCalendarField
+                label="Holiday Work Period"
+                fromValue={holidayWorkDate}
+                toValue={holidayWorkEndDate}
+                onFromChange={setHolidayWorkDate}
+                onToChange={setHolidayWorkEndDate}
               />
             </div>
             <div className="mb-4">
@@ -360,18 +397,13 @@ export default function LeaveRequestPage() {
           </>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          <TextField
-            label={selectedLeave === 'Compensatory Leave' ? 'Compensatory Leave Start Date' : 'Start Date'}
-            type="date"
-            value={startDate}
-            onChange={setStartDate}
-          />
-          <TextField
-            label={selectedLeave === 'Compensatory Leave' ? 'Compensatory Leave End Date' : 'End Date'}
-            type="date"
-            value={endDate}
-            onChange={setEndDate}
+        <div className="mb-4">
+          <SearchDateRangeCalendarField
+            label={selectedLeave === 'Compensatory Leave' ? 'Compensatory Leave Period' : 'Leave Period'}
+            fromValue={startDate}
+            toValue={endDate}
+            onFromChange={setStartDate}
+            onToChange={setEndDate}
           />
         </div>
 
@@ -410,10 +442,32 @@ export default function LeaveRequestPage() {
       {showHistoryModal && (
         <Modal title="Leave History" onClose={() => setShowHistoryModal(false)} maxWidth="max-w-4xl" className="max-h-[80vh]" showCloseButton={false}>
           <div className="flex-1 min-h-0 overflow-y-auto px-5 pt-3 pb-2 flex flex-col">
-            <DataTable columns={leaveHistoryColumns} rows={leaveHistory} emptyMessage="No leave history yet." />
+            <DataTable columns={makeLeaveHistoryColumns(setHistoryDetail)} rows={leaveHistory} emptyMessage="No leave history yet." />
           </div>
           <div className="px-5 py-3 border-t border-amana-neutral-300 flex justify-end flex-shrink-0">
             <Button variant="outline" onClick={() => setShowHistoryModal(false)}>Close</Button>
+          </div>
+        </Modal>
+      )}
+
+      {historyDetail && (
+        <Modal title={`${historyDetail.type} Detail`} onClose={() => setHistoryDetail(null)} maxWidth="max-w-lg" showCloseButton={false} zIndex={60}>
+          <div className="px-5 py-2 flex flex-col">
+            <HistoryField label="Submitted" value={historyDetail.submitted} />
+            <HistoryField label="Period" value={historyDetail.period} />
+            <HistoryField label="Duration" value={historyDetail.duration} />
+            <HistoryField label="Holiday Work Period" value={historyDetail.holidayWork} />
+            <HistoryField label="Reason" value={historyDetail.reason} />
+            <HistoryField label="Approver Note" value={historyDetail.note} />
+            <div className="flex items-center justify-between gap-4 py-2">
+              <span className="text-[14px] font-semibold text-amana-neutral-400 flex-shrink-0">Status</span>
+              <StatusPill color={statusColor(historyDetail.status)} fullWidth={false}>
+                {historyDetail.status}
+              </StatusPill>
+            </div>
+          </div>
+          <div className="px-5 py-3 border-t border-amana-neutral-300 flex justify-end flex-shrink-0">
+            <Button variant="outline" onClick={() => setHistoryDetail(null)}>Close</Button>
           </div>
         </Modal>
       )}

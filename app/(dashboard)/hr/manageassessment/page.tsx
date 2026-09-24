@@ -7,6 +7,7 @@ import { X } from 'lucide-react';
 import PageTopBar from '@/app/components/layout/PageTopBar';
 import Button from '@/app/components/forms/Button';
 import TextField from '@/app/components/forms/TextField';
+import { SearchDateRangeCalendarField } from '@/app/components/forms/SearchFields';
 import SelectField from '@/app/components/forms/SelectField';
 import Modal from '@/app/components/feedback/Modal';
 import ConfirmModal from '@/app/components/feedback/ConfirmModal';
@@ -489,10 +490,13 @@ export default function ManageAssessmentPage() {
           <div className="flex-1 min-h-0 overflow-y-auto scroll-smooth flex flex-col gap-4 pt-1">
             <TextField label="Assessment Title" value={judul} onChange={setJudul} placeholder="Assessment Title" />
             <TextField label="Assessment Description" value={deskripsi} onChange={setDeskripsi} placeholder="Short description" />
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-              <TextField label="Start Date (optional)" type="date" value={startDate} onChange={setStartDate} />
-              <TextField label="End Date (optional)" type="date" value={endDate} onChange={setEndDate} />
-            </div>
+            <SearchDateRangeCalendarField
+              label="Open/Close Period (optional)"
+              fromValue={startDate}
+              toValue={endDate}
+              onFromChange={setStartDate}
+              onToChange={setEndDate}
+            />
             <p className="text-[13px] text-amana-neutral-400 -mt-2">
               Leave both empty to open immediately with no auto-close. If set, the assessment opens automatically on the start date and closes automatically on the end date.
             </p>
