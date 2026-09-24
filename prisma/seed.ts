@@ -968,39 +968,6 @@ async function main() {
     }
   }
 
-  // 12b. Assessment submissions for new employees (dummy answers, Level 3 selected)
-  const totalQuestions = COMPETENCY_FIELDS.reduce((sum, f) => sum + f.kompetensi.length, 0);
-  for (const u of TSV_USERS) {
-    const submissionId = `SUB-${u.idKaryawan}`;
-    await prisma.assessmentSubmission.upsert({
-      where: { idSubmission: submissionId },
-      update: {
-        tanggalSelesai: new Date(),
-      },
-      create: {
-        idSubmission: submissionId,
-        idKaryawan: u.idKaryawan,
-        idAssessment: 'ASM001',
-        tanggalSelesai: new Date(),
-      },
-    });
-    for (let i = 1; i <= totalQuestions; i++) {
-      const answerId = `ANS-${u.idKaryawan}-${String(i).padStart(3, '0')}`;
-      const questionId = `ASQ${String(i).padStart(3, '0')}`;
-      const idOpsi = `ASO-migrated-${questionId}-L3`;
-      await prisma.assessmentAnswer.upsert({
-        where: { idJawaban: answerId },
-        update: { pilihan: [idOpsi] },
-        create: {
-          idJawaban: answerId,
-          idSubmission: submissionId,
-          idPertanyaan: questionId,
-          pilihan: [idOpsi],
-        },
-      });
-    }
-  }
-
   console.log('Seeding selesai.');
 }
 
