@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { requireAuth } from '@/lib/dal';
 import { prisma } from '@/lib/prisma';
 import { ROLES } from '@/lib/roles';
+import { groupKaryawanHistory } from '@/lib/karyawanHistory';
 
 // GET /api/hr/talent-roster/[idKaryawan]/history — HR melihat histori jenjang karir karyawan
 // dari tabel KaryawanHistory. Format response sama dengan /api/me/career-history.
@@ -21,16 +22,7 @@ export async function GET(
       orderBy: { createdAt: 'desc' },
     });
 
-    return Response.json({
-      list: list.map((h) => ({
-        id: h.idHistory,
-        aktor: h.diubahOleh,
-        waktu: h.createdAt,
-        changes: [
-          { field: h.tipe ?? '-', from: h.nilaiLama ?? '-', to: h.nilaiBaru ?? '-' },
-        ],
-      })),
-    });
+    return Response.json({ list: groupKaryawanHistory(list) });
   } catch (e) {
     const status = (e as { status?: number }).status ?? 500;
     return Response.json({ error: 'Something went wrong' }, { status });

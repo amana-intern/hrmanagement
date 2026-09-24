@@ -7,7 +7,7 @@ import type { DataTableColumn } from '@/app/components/data-display/DataTable';
 import Button from '@/app/components/forms/Button';
 import Modal from '@/app/components/feedback/Modal';
 import StatusModal from '@/app/components/feedback/StatusModal';
-import TextField from '@/app/components/forms/TextField';
+import { SearchDateRangeCalendarField } from '@/app/components/forms/SearchFields';
 import { TableSkeleton } from '@/app/components/feedback/PageSkeleton';
 
 interface ServerContract {
@@ -59,6 +59,7 @@ export default function HRContractTrackingPage() {
             grade: c.grade ?? '-',
             daysLeft: c.daysLeft ?? 0,
             startDate: c.startDate ? c.startDate.slice(0, 10) : '',
+            endDate: c.endDate ? c.endDate.slice(0, 10) : '',
             needAction: c.needAction ?? null,
           };
         })
@@ -166,8 +167,13 @@ export default function HRContractTrackingPage() {
                 {extendTarget.name} · {extendTarget.department} · {extendTarget.grade}
               </span>
             </div>
-            <TextField label="Contract Start" type="date" value={extendStart} onChange={setExtendStart} />
-            <TextField label="Contract End" type="date" value={extendEnd} onChange={setExtendEnd} />
+            <SearchDateRangeCalendarField
+              label="Contract Period"
+              fromValue={extendStart}
+              toValue={extendEnd}
+              onFromChange={setExtendStart}
+              onToChange={setExtendEnd}
+            />
             <p className="text-[13px] text-amana-neutral-400">
               Leave carry-over is recalculated automatically using the latest n/2 rule.
             </p>

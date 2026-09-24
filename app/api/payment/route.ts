@@ -2,8 +2,8 @@ import { NextRequest } from 'next/server';
 import path from 'path';
 import { requireAuth } from '@/lib/dal';
 import { prisma } from '@/lib/prisma';
-import { ROLES, canUseEmployeeFeatures } from '@/lib/roles';
-import { sendEmail } from '@/lib/notify';
+import { canUseEmployeeFeatures } from '@/lib/roles';
+import { notifyAllOpsAdmins } from '@/lib/notify';
 import { saveFile } from '@/lib/storage';
 
 const MAX_BYTES = 5 * 1024 * 1024;
@@ -73,27 +73,13 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      const opsAdmin = await prisma.user.findFirst({
-        where: { idRole: ROLES.ADMIN_OPS },
-        include: { karyawan: true },
+      await notifyAllOpsAdmins({
+        tipe: 'PAY_INFO',
+        judul: 'Payment Request Submitted',
+        pesan: `${auth.nama ?? 'An employee'} has submitted a payment request (${payment.idRequest}) for review.`,
+        idReferensi: payment.idRequest,
+        todo: { teks: `Review payment ${payment.idRequest}`, modul: 'PAYMENT_REVIEW' },
       });
-      if (opsAdmin?.email && opsAdmin.karyawan?.idKaryawan) {
-        await prisma.notification.create({
-          data: {
-            idNotif: `NOTIF-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-            idKaryawan: opsAdmin.karyawan.idKaryawan,
-            tipe: 'PAY_INFO',
-            judul: 'Payment Request Submitted',
-            pesan: `${auth.nama} has submitted a payment request (${payment.idRequest}) for review.`,
-            idReferensi: payment.idRequest,
-          },
-        });
-        await sendEmail({
-          to: opsAdmin.email,
-          subject: 'Payment Request Submitted',
-          text: `${auth.nama} has submitted a payment request (${payment.idRequest}) for review.`,
-        });
-      }
 
       return Response.json({ ok: true, payment }, { status: 201 });
     }
@@ -119,27 +105,13 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    const opsAdmin = await prisma.user.findFirst({
-      where: { idRole: ROLES.ADMIN_OPS },
-      include: { karyawan: true },
+    await notifyAllOpsAdmins({
+      tipe: 'PAY_INFO',
+      judul: 'Payment Request Submitted',
+      pesan: `${auth.nama ?? 'An employee'} has submitted a payment request (${payment.idRequest}) for review.`,
+      idReferensi: payment.idRequest,
+      todo: { teks: `Review payment ${payment.idRequest}`, modul: 'PAYMENT_REVIEW' },
     });
-    if (opsAdmin?.email && opsAdmin.karyawan?.idKaryawan) {
-      await prisma.notification.create({
-        data: {
-          idNotif: `NOTIF-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-          idKaryawan: opsAdmin.karyawan.idKaryawan,
-          tipe: 'PAY_INFO',
-          judul: 'Payment Request Submitted',
-          pesan: `${auth.nama} has submitted a payment request (${payment.idRequest}) for review.`,
-          idReferensi: payment.idRequest,
-        },
-      });
-      await sendEmail({
-        to: opsAdmin.email,
-        subject: 'Payment Request Submitted',
-        text: `${auth.nama} has submitted a payment request (${payment.idRequest}) for review.`,
-      });
-    }
 
     return Response.json({ ok: true, payment }, { status: 201 });
   } catch (e) {

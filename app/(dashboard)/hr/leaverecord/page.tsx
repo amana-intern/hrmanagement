@@ -7,14 +7,14 @@ import SectionCard from '@/app/components/layout/SectionCard';
 import DataTable from '@/app/components/data-display/DataTable';
 import type { DataTableColumn } from '@/app/components/data-display/DataTable';
 import StatusPill from '@/app/components/data-display/StatusPill';
-import { SearchTextField, SearchSelectField } from '@/app/components/forms/SearchFields';
-import TextField from '@/app/components/forms/TextField';
+import { SearchTextField, SearchSelectField, SearchDateRangeCalendarField } from '@/app/components/forms/SearchFields';
 import Button from '@/app/components/forms/Button';
 import Modal from '@/app/components/feedback/Modal';
 import { statusColor } from '@/app/utils/statusColor';
 import { useFilters } from '@/app/utils/useFilters';
 import { DEPARTMENT_OPTIONS, getAllGradeOptions } from '@/app/utils/orgStructure';
-import { downloadTSV } from '@/lib/sheets';
+import StatusModal from '@/app/components/feedback/StatusModal';
+import { copyTSV } from '@/lib/sheets';
 import { formatDateWIB, formatDateTimeWIB } from '@/app/utils/formatDate';
 import { TableSkeleton } from '@/app/components/feedback/PageSkeleton';
 
@@ -89,6 +89,7 @@ export default function LeaveRecordPage() {
   const [rows, setRows] = useState<LeaveRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [detailsModal, setDetailsModal] = useState<LeaveRecord | null>(null);
+  const [status, setStatus] = useState<{ ok: boolean; text: string } | null>(null);
   const { draft, applied, setField, setFieldAndApply, handleSearch, handleReset } = useFilters<Filters>(emptyFilters);
   const gradeOptions = useMemo(() => getAllGradeOptions(), []);
 
@@ -148,7 +149,7 @@ export default function LeaveRecordPage() {
     });
   }, [rows, applied]);
 
-  const handleExportCsv = () => {
+  const handleCopySheets = async () => {
     const header = ['Name', 'Grade', 'Leave Type', 'Start Date', 'End Date', 'Duration (days)', 'Status'];
     const lines = filtered.map((r) => {
       const start = r.startDate ? new Date(r.startDate + 'T00:00:00') : null;
@@ -157,7 +158,11 @@ export default function LeaveRecordPage() {
         start && end ? Math.max(Math.round((end.getTime() - start.getTime()) / 86400000) + 1, 0) : '';
       return [r.name, r.grade, r.type, r.startDate, r.endDate, duration, STATUS_LABELS[r.status] ?? r.status];
     });
-    downloadTSV(`leave-record_${applied.from || 'all'}_${applied.to || 'all'}.tsv`, [header, ...lines]);
+    const ok = await copyTSV([header, ...lines]);
+    setStatus({
+      ok,
+      text: ok ? 'Copied to clipboard. Paste into Google Sheets (Ctrl+V).' : 'Failed to copy to clipboard.',
+    });
   };
 
   const columns: DataTableColumn<LeaveRecord>[] = [
@@ -215,14 +220,20 @@ export default function LeaveRecordPage() {
         <SearchSelectField label="Grade" value={draft.grade} onChange={(v) => setField('grade', v)} options={gradeOptions} />
         <SearchSelectField label="Leave Type" value={draft.type} onChange={(v) => setField('type', v)} options={leaveTypeOptions} />
         <SearchSelectField label="Duration" value={draft.duration} onChange={(v) => setField('duration', v)} options={durationOptions} />
-        <TextField label="From" type="date" value={draft.from} onChange={(v) => setField('from', v)} />
-        <TextField label="To" type="date" value={draft.to} onChange={(v) => setField('to', v)} />
+        <SearchDateRangeCalendarField
+          label="Start Date"
+          fromValue={draft.from}
+          toValue={draft.to}
+          onFromChange={(v) => setField('from', v)}
+          onToChange={(v) => setField('to', v)}
+        />
       </SearchPanel>
 
       <SectionCard
         title="Leave Record"
         subtitle={`${filtered.length} record(s)`}
         scroll
+        className="flex-1 min-h-[220px]"
         action={
           <div className="flex items-center gap-2">
             <input
@@ -238,8 +249,8 @@ export default function LeaveRecordPage() {
               onChange={(e) => setFieldAndApply('to', e.target.value)}
               className="px-2 py-1.5 border border-amana-neutral-300 rounded-lg text-[14px] outline-none focus:border-amana-primary-500 bg-amana-neutral-100"
             />
-            <Button variant="outline" size="md" disabled={filtered.length === 0} onClick={handleExportCsv}>
-              Export Records
+            <Button variant="outline" size="md" disabled={filtered.length === 0} onClick={handleCopySheets}>
+              Copy for Sheets
             </Button>
           </div>
         }
@@ -247,7 +258,7 @@ export default function LeaveRecordPage() {
         <DataTable
           columns={columns}
           rows={filtered}
-          defaultSortKey="submittedDate"
+          defaultSortKey="startDate"
           defaultSortDir="desc"
           emptyMessage="No leave records match your filters."
         />
@@ -285,6 +296,8 @@ export default function LeaveRecordPage() {
           </div>
         </Modal>
       )}
+
+      <StatusModal state={status} onClose={() => setStatus(null)} />
     </div>
   );
 }

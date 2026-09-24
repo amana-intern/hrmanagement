@@ -3,16 +3,25 @@
 import { useMemo, useState } from 'react';
 import PageTopBar from '../layout/PageTopBar';
 import SectionCard from '../layout/SectionCard';
+import SearchPanel from './SearchPanel';
+import { SearchTextField, SearchSelectField, SearchDateRangeCalendarField } from '../forms/SearchFields';
 import DataTable from './DataTable';
 import type { DataTableColumn } from './DataTable';
-import ToggleButton from '../forms/ToggleButton';
 import StatusPill from './StatusPill';
 import { formatDateWIB } from '@/app/utils/formatDate';
+import { useFilters } from '@/app/utils/useFilters';
 
 function durationColor(daysLeft: number) {
   if (daysLeft > 90) return 'bg-amana-primary-500';
   if (daysLeft > 30) return 'bg-amana-warning-500';
   return 'bg-amana-danger-500';
+}
+
+function formatDuration(daysLeft: number): string {
+  if (daysLeft <= 365) return `${daysLeft} Day(s)`;
+  const years = Math.floor(daysLeft / 365);
+  const months = Math.floor((daysLeft % 365) / 30);
+  return `${years}y ${months}m`;
 }
 
 export interface Contract {
@@ -22,6 +31,7 @@ export interface Contract {
   grade: string;
   daysLeft: number;
   startDate?: string;
+  endDate?: string;
   needAction?: string | null; // 'RENEWAL' | 'OFFBOARDING' | null
   needActionBy?: string | null;
 }
@@ -63,6 +73,24 @@ export default function ContractTrackingPage({
   needActionConfig,
 }: ContractTrackingPageProps) {
   const [activeFilter, setActiveFilter] = useState<FilterKey>('all');
+  const { draft, applied, setField, handleSearch, handleReset } = useFilters({
+    name: '',
+    department: '',
+    grade: '',
+    signFrom: '',
+    signTo: '',
+    endFrom: '',
+    endTo: '',
+  });
+
+  const departmentOptions = useMemo(
+    () => Array.from(new Set(contracts.map((c) => c.department).filter((d) => d && d !== '-'))).sort(),
+    [contracts]
+  );
+  const gradeOptions = useMemo(
+    () => Array.from(new Set(contracts.map((c) => c.grade).filter((g) => g && g !== '-'))).sort(),
+    [contracts]
+  );
 
   const filters = useMemo(
     () =>
@@ -73,11 +101,18 @@ export default function ContractTrackingPage({
   );
 
   const filtered = useMemo(() => {
-    if (activeFilter === 'needaction') {
-      return contracts.filter((c) => !!c.needAction);
-    }
-    return contracts.filter((c) => matchesFilter(c.daysLeft, activeFilter));
-  }, [contracts, activeFilter]);
+    return contracts.filter((c) => {
+      if (applied.name && !c.name.toLowerCase().includes(applied.name.toLowerCase())) return false;
+      if (applied.department && c.department !== applied.department) return false;
+      if (applied.grade && c.grade !== applied.grade) return false;
+      if (applied.signFrom && (!c.startDate || c.startDate < applied.signFrom)) return false;
+      if (applied.signTo && (!c.startDate || c.startDate > applied.signTo)) return false;
+      if (applied.endFrom && (!c.endDate || c.endDate < applied.endFrom)) return false;
+      if (applied.endTo && (!c.endDate || c.endDate > applied.endTo)) return false;
+      if (activeFilter === 'needaction') return !!c.needAction;
+      return matchesFilter(c.daysLeft, activeFilter);
+    });
+  }, [contracts, activeFilter, applied]);
 
   const needActionColumns: DataTableColumn<Contract>[] = [
     { key: 'name', label: 'Name' },
@@ -114,6 +149,13 @@ export default function ContractTrackingPage({
                   render: (c: Contract) =>
                     c.startDate ? formatDateWIB(c.startDate) : '-',
                 } as DataTableColumn<Contract>,
+                {
+                  key: 'endDate',
+                  label: 'End Date',
+                  sortValue: (c: Contract) => (c.endDate ? new Date(c.endDate).getTime() : 0),
+                  render: (c: Contract) =>
+                    c.endDate ? formatDateWIB(c.endDate) : '-',
+                } as DataTableColumn<Contract>,
               ]
             : []),
           {
@@ -124,7 +166,7 @@ export default function ContractTrackingPage({
               c.needAction ? (
                 <StatusPill color="bg-amana-warning-500">Need Action</StatusPill>
               ) : (
-                <StatusPill color={durationColor(c.daysLeft)}>{c.daysLeft} Day(s)</StatusPill>
+                <StatusPill color={durationColor(c.daysLeft)}>{formatDuration(c.daysLeft)}</StatusPill>
               ),
           },
           ...(actionsColumn ? [actionsColumn] : []),
@@ -134,24 +176,36 @@ export default function ContractTrackingPage({
     <div className="w-full h-full flex flex-col gap-3">
       <PageTopBar showGreeting />
 
-      <div className="flex-shrink-0 flex flex-col lg:flex-row lg:items-center gap-3 bg-amana-neutral-100 rounded-[5px] border border-amana-primary-500 shadow-sm px-5 py-2.5">
-        <div className="flex-1">
-          <h3 className="text-[20px] font-semibold text-amana-primary-500">Duration Filter</h3>
-          <p className="text-[13px] text-amana-neutral-400">Filter contracts based on remaining employment duration</p>
-        </div>
-        <div className="flex gap-2">
-          {filters.map((f) => (
-            <ToggleButton
-              key={f.key}
-              selected={activeFilter === f.key}
-              onClick={() => setActiveFilter(f.key)}
-              className="flex-1 min-w-0 whitespace-normal text-center px-2 py-1.5 text-[13px] leading-[1.15]"
-            >
-              {f.label}
-            </ToggleButton>
-          ))}
-        </div>
-      </div>
+      <SearchPanel
+        title="Filter Contracts"
+        subtitle="Filter employees based on name, department, grade, duration, sign date, or end date."
+        onReset={handleReset}
+        onSearch={handleSearch}
+      >
+        <SearchTextField label="Employee Name" value={draft.name} onChange={(v) => setField('name', v)} placeholder="Search by name..." />
+        <SearchSelectField label="Practice Group" value={draft.department} onChange={(v) => setField('department', v)} options={departmentOptions} />
+        <SearchSelectField label="Grade" value={draft.grade} onChange={(v) => setField('grade', v)} options={gradeOptions} />
+        <SearchSelectField
+          label="Remaining Duration"
+          value={filters.find((f) => f.key === activeFilter)?.label ?? ''}
+          onChange={(v) => setActiveFilter(filters.find((f) => f.label === v)?.key ?? 'all')}
+          options={filters.map((f) => f.label)}
+        />
+        <SearchDateRangeCalendarField
+          label="Contract Start Date"
+          fromValue={draft.signFrom}
+          toValue={draft.signTo}
+          onFromChange={(v) => setField('signFrom', v)}
+          onToChange={(v) => setField('signTo', v)}
+        />
+        <SearchDateRangeCalendarField
+          label="Contract End Date"
+          fromValue={draft.endFrom}
+          toValue={draft.endTo}
+          onFromChange={(v) => setField('endFrom', v)}
+          onToChange={(v) => setField('endTo', v)}
+        />
+      </SearchPanel>
 
       <SectionCard
         title={activeFilter === 'needaction' ? 'Contracts Needing Action' : 'All Active Contract'}

@@ -258,6 +258,7 @@ model AssessmentCategory {
   idKategoriAsm String               @id @db.VarChar
   idAssessment  String?              @db.VarChar
   namaKategori  String?              @db.VarChar
+  urutan        Int?
   assessment    Assessment?          @relation(fields: [idAssessment], references: [idAssessment])
   questions     AssessmentQuestion[]
 }

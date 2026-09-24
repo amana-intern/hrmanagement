@@ -22,9 +22,12 @@ export interface PaymentDetailRow {
   projectID?: string | null;
   detail?: string | null;
   createdAt?: string | null;
+  tanggalJadwalPembayaran?: string | null;
   attachments?: Attachment[];
   masterKategoriPayment?: { namaKategori?: string | null } | null;
   statusLabel?: string | null;
+  /** Only meaningful when statusLabel is "Rejected" — the same column holds submission notes otherwise. */
+  catatan?: string | null;
 }
 
 interface PaymentDetailModalProps {
@@ -130,7 +133,10 @@ export default function PaymentDetailModal({ row, open, onClose }: PaymentDetail
     <>
       {open && (
         <Modal title={`Submission Detail - ${row.idRequest}`} onClose={onClose} maxWidth="max-w-2xl" className="max-h-[92vh]">
-          <div className="px-5 py-2 max-h-[70vh] overflow-y-auto bg-amana-neutral-100">
+          <div className="px-5 py-2 flex-1 min-h-0 overflow-y-auto bg-amana-neutral-100">
+            <Field label="Project Manager" value={pax(detail.submittingAs)} />
+            <Field label="Chargecode" value={pax(detail.chargecode)} />
+            <Field label="Payment Under" value={pax(detail.paymentUnder)} />
             <Field label="To Whom" value={row.masterKategoriPayment?.namaKategori ?? row.idKategoriPayment} />
             <Field label="Event / Vendor Name" value={row.projectID} />
             {row.statusLabel && (
@@ -138,6 +144,10 @@ export default function PaymentDetailModal({ row, open, onClose }: PaymentDetail
                 <span className="text-[14px] font-semibold text-amana-neutral-400 flex-shrink-0">Status</span>
                 <StatusPill color={statusColor(row.statusLabel)}>{row.statusLabel}</StatusPill>
               </div>
+            )}
+            <Field label="Schedule Date" value={row.tanggalJadwalPembayaran ? formatDateWIB(row.tanggalJadwalPembayaran) : undefined} />
+            {row.statusLabel?.toLowerCase().includes('reject') && (
+              <Field label="Rejection Reason" value={row.catatan} />
             )}
             {body}
           </div>

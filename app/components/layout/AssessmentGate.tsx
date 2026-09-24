@@ -43,7 +43,7 @@ function SectionWarning({ onTake }: { onTake: () => void }) {
         <span className="w-16 h-16 rounded-full bg-amana-primary-100 flex items-center justify-center">
           <ClipboardList className="w-8 h-8 text-amana-primary-500" />
         </span>
-        <h2 className="text-[22px] font-semibold text-amana-primary-500">First Assessment Required</h2>
+        <h2 className="text-[22px] font-semibold text-amana-primary-500">Assessment Required</h2>
         <p className="text-[15px] text-amana-neutral-400 leading-relaxed">
           Please complete the competency assessment first before accessing other pages.
           Your submission unlocks the rest of the workspace automatically.

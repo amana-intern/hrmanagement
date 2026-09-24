@@ -4,42 +4,34 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronRight } from 'lucide-react';
 
-// Same look & portal-dropdown behavior as ComboboxField (Chargecode) — type-to-filter box +
-// floating option list. Unlike ComboboxField, `value` only ever changes when an option is
-// clicked (typing just filters), since this backs closed-set fields tied to real business logic
-// (Contract Type, Access, Grade, ...), not a quasi-free-text value like a chargecode.
-export default function SelectField({
+// Type-or-pick combobox: text input + filtered dropdown, styled like SearchDateRangeCalendarField's
+// portal'd panel (SearchFields.tsx) instead of the browser's native <datalist> popup.
+export default function ComboboxField({
   label,
   value,
   onChange,
   options,
-  disabled,
-  placeholder = 'Select...',
   labels,
+  placeholder,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   options: readonly string[];
-  disabled?: boolean;
-  placeholder?: string;
-  /** Optional display label per option value (e.g. for meta values like "__other__"). */
+  /** Optional display label per option value. */
   labels?: Record<string, string>;
+  placeholder?: string;
 }) {
   const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState('');
   const [pos, setPos] = useState<{ top: number; left: number; width: number } | null>(null);
   const triggerRef = useRef<HTMLInputElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
 
-  const display = (o: string) => labels?.[o] ?? o;
-
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
+    const q = value.trim().toLowerCase();
     if (!q) return options;
-    return options.filter((o) => display(o).toLowerCase().includes(q));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [options, labels, query]);
+    return options.filter((o) => o.toLowerCase().includes(q) || (labels?.[o] ?? '').toLowerCase().includes(q));
+  }, [options, labels, value]);
 
   useEffect(() => {
     if (!open) return;
@@ -61,40 +53,26 @@ export default function SelectField({
       const t = e.target as Node;
       if (triggerRef.current?.contains(t) || panelRef.current?.contains(t)) return;
       setOpen(false);
-      setQuery('');
     };
     document.addEventListener('mousedown', onClick);
     return () => document.removeEventListener('mousedown', onClick);
   }, []);
 
-  const openDropdown = () => {
-    if (disabled) return;
-    setQuery(value ? display(value) : '');
-    setOpen(true);
-  };
-
-  const pick = (o: string) => {
-    onChange(o);
-    setOpen(false);
-    setQuery('');
-  };
-
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className="flex flex-col gap-1.5 w-full">
       <label className="text-[16px] font-semibold text-amana-neutral-500">{label}</label>
       <div className="relative">
         <input
           ref={triggerRef}
           type="text"
-          value={open ? query : value ? display(value) : ''}
+          value={value}
           onChange={(e) => {
-            setQuery(e.target.value);
-            if (!open) setOpen(true);
+            onChange(e.target.value);
+            setOpen(true);
           }}
-          onFocus={openDropdown}
-          disabled={disabled}
+          onFocus={() => setOpen(true)}
           placeholder={placeholder}
-          className="w-full border border-amana-neutral-300 rounded-[8px] px-3 py-2.5 pr-9 text-[16px] text-amana-neutral-500 placeholder:text-amana-neutral-300 transition-colors duration-200 focus:outline-none focus:border-amana-primary-500 disabled:bg-amana-neutral-200 disabled:text-amana-neutral-400 disabled:cursor-not-allowed"
+          className="w-full border border-amana-neutral-300 rounded-[8px] px-3 py-2.5 pr-9 text-[16px] text-amana-neutral-500 placeholder:text-amana-neutral-300 transition-colors duration-200 focus:outline-none focus:border-amana-primary-500"
         />
         <ChevronRight
           className={`w-4 h-4 text-amana-neutral-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none transition-transform duration-200 ${open ? 'rotate-90' : ''}`}
@@ -114,12 +92,15 @@ export default function SelectField({
               <button
                 key={o}
                 type="button"
-                onClick={() => pick(o)}
+                onClick={() => {
+                  onChange(o);
+                  setOpen(false);
+                }}
                 className={`w-full text-left px-2 py-1.5 rounded text-[14px] transition-colors ${
                   o === value ? 'bg-amana-primary-500 text-white' : 'text-amana-neutral-500 hover:bg-amana-primary-100'
                 }`}
               >
-                {display(o)}
+                {labels?.[o] ?? o}
               </button>
             ))
           )}

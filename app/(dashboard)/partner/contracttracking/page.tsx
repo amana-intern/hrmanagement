@@ -8,7 +8,6 @@ import type { DataTableColumn } from '@/app/components/data-display/DataTable';
 import Button from '@/app/components/forms/Button';
 import ConfirmModal from '@/app/components/feedback/ConfirmModal';
 import StatusModal from '@/app/components/feedback/StatusModal';
-import StatusPill from '@/app/components/data-display/StatusPill';
 import { TableSkeleton } from '@/app/components/feedback/PageSkeleton';
 
 interface ServerContract {
@@ -16,6 +15,8 @@ interface ServerContract {
   nama: string | null;
   grade: string | null;
   department: string | null;
+  startDate: string | null;
+  endDate: string | null;
   daysLeft: number | null;
   needAction?: string | null;
 }
@@ -48,6 +49,8 @@ export default function PartnerContractTrackingPage() {
             name: c.nama ?? '-',
             department: dept,
             grade: c.grade ?? '-',
+            startDate: c.startDate ? c.startDate.slice(0, 10) : '',
+            endDate: c.endDate ? c.endDate.slice(0, 10) : '',
             daysLeft: c.daysLeft ?? 0,
             needAction: c.needAction ?? null,
           };
@@ -95,10 +98,15 @@ export default function PartnerContractTrackingPage() {
     label: 'Decision',
     width: '220px',
     render: (c) => {
-      // Decision sudah diinput -> tampilkan teks status, bukan tombol.
+      // Decision sudah diinput -> tampilkan teks status (bukan badge/tombol),
+      // bergaya sama seperti "View Only" pada kolom Action di Leave Approval.
       const badge = needActionBadge(c.needAction);
       if (badge) {
-        return <StatusPill color={badge.color}>{badge.label}</StatusPill>;
+        return (
+          <span className="text-[14px] text-amana-neutral-400 italic whitespace-nowrap">
+            {badge.label}
+          </span>
+        );
       }
       return (
         <div className="flex gap-2">
@@ -129,7 +137,7 @@ export default function PartnerContractTrackingPage() {
 
   return (
     <>
-      <ContractTrackingPage contracts={contracts} actionsColumn={actionsColumn} />
+      <ContractTrackingPage contracts={contracts} showStartDate actionsColumn={actionsColumn} />
 
       {confirmTarget && confirmAction && (
         <ConfirmModal

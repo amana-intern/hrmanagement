@@ -25,7 +25,7 @@ export async function GET() {
               orderBy: { urutan: 'asc' },
             },
           },
-          orderBy: { namaKategori: 'asc' },
+          orderBy: { urutan: 'asc' },
         },
         submissions: { include: { karyawan: true } },
       },
