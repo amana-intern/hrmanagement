@@ -59,7 +59,7 @@ export async function GET(request: Request) {
       include: { karyawan: { include: { user: true } } },
     });
 
-    const hrUser = await prisma.user.findFirst({
+    const hrUsers = await prisma.user.findMany({
       where: { idRole: ROLES.ADMIN_HR },
       include: { karyawan: true },
     });
@@ -91,8 +91,11 @@ export async function GET(request: Request) {
       const pesanKaryawan = `Your contract ends on ${tanggal} (${daysRemaining} days remaining).`;
 
       const partner = await getDeptPartner(karyawan.department);
+      const hrRecipients = hrUsers
+        .filter((u) => u.karyawan?.idKaryawan)
+        .map((u) => ({ idKaryawan: u.karyawan!.idKaryawan, email: u.email ?? null, pesan: pesanHR }));
       const recipients = [
-        { idKaryawan: hrUser?.karyawan?.idKaryawan ?? null, email: hrUser?.email ?? null, pesan: pesanHR },
+        ...hrRecipients,
         { idKaryawan: partner?.idKaryawan ?? null, email: partner?.email ?? null, pesan: pesanHR },
         { idKaryawan: karyawan.idKaryawan, email: karyawan.user?.email ?? null, pesan: pesanKaryawan },
       ];
