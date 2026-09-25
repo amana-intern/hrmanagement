@@ -7,6 +7,7 @@ import type { DataTableColumn } from '@/app/components/data-display/DataTable';
 import Button from '@/app/components/forms/Button';
 import Modal from '@/app/components/feedback/Modal';
 import StatusModal from '@/app/components/feedback/StatusModal';
+import Spinner from '@/app/components/feedback/Spinner';
 import { SearchDateRangeCalendarField } from '@/app/components/forms/SearchFields';
 import { TableSkeleton } from '@/app/components/feedback/PageSkeleton';
 
@@ -44,6 +45,7 @@ export default function HRContractTrackingPage() {
   // Modal Delete Talent
   const [deleteTarget, setDeleteTarget] = useState<Contract | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [busyId, setBusyId] = useState<string | null>(null);
 
   const load = async () => {
     const res = await fetch('/api/hr/contracts', { cache: 'no-store' });
@@ -87,6 +89,7 @@ export default function HRContractTrackingPage() {
       return;
     }
     setExtending(true);
+    setBusyId(String(extendTarget.id));
     try {
       const res = await fetch('/api/hr/contracts', {
         method: 'POST',
@@ -112,12 +115,14 @@ export default function HRContractTrackingPage() {
       setStatus({ ok: false, text: 'A network error occurred' });
     } finally {
       setExtending(false);
+      setBusyId(null);
     }
   };
 
   const handleDeleteTalent = async () => {
     if (!deleteTarget) return;
     setDeleting(true);
+    setBusyId(String(deleteTarget.id));
     try {
       const res = await fetch(`/api/hr/talent-roster/${deleteTarget.id}`, { method: 'DELETE' });
       const data = await res.json().catch(() => null);
@@ -133,6 +138,7 @@ export default function HRContractTrackingPage() {
       setStatus({ ok: false, text: 'A network error occurred' });
     } finally {
       setDeleting(false);
+      setBusyId(null);
     }
   };
 
@@ -141,7 +147,11 @@ export default function HRContractTrackingPage() {
     label: 'Action',
     width: '200px',
     render: (c) =>
-      c.needAction === 'RENEWAL' ? (
+      busyId === String(c.id) ? (
+        <div className="flex items-center justify-center h-9">
+          <Spinner className="h-6 w-6" />
+        </div>
+      ) : c.needAction === 'RENEWAL' ? (
         <Button variant="primary" size="sm" className="w-full whitespace-nowrap" onClick={() => openExtend(c)}>
           Extend Contract
         </Button>
