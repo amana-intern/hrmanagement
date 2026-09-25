@@ -4,6 +4,7 @@ import { requireAuth } from '@/lib/dal';
 import { prisma } from '@/lib/prisma';
 import { ROLES } from '@/lib/roles';
 import { saveFile } from '@/lib/storage';
+import { todayISOWIB } from '@/lib/constants';
 
 const MAX_BYTES = 5 * 1024 * 1024;
 const ALLOWED_EXT = ['.pdf', '.jpg', '.jpeg', '.png'];
@@ -24,6 +25,9 @@ export async function POST(request: NextRequest) {
 
     if (!tanggalMulai || !tanggalSelesai) {
       return Response.json({ error: 'Start & end date are required' }, { status: 400 });
+    }
+    if (tanggalMulai.slice(0, 10) < todayISOWIB()) {
+      return Response.json({ error: 'Sick leave start date cannot be in the past.' }, { status: 400 });
     }
 
     let buktiSakitURL: string | null = null;

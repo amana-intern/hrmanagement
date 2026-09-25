@@ -4,6 +4,7 @@ export interface PaymentDetailFields {
   chargecode?: string;
   submittingAs?: string;
   paymentUnder?: string;
+  vendorDueDate?: string;
 }
 
 export function parsePaymentDetail(raw: string | null): PaymentDetailFields {

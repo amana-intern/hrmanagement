@@ -91,3 +91,19 @@ export const DEPARTMENT_LABELS: Record<string, string> = {
   education: 'Education & HR',
   ops: 'Operations',
 };
+
+// Special Leave: batas hari per pengajuan diambil dari teks alasan, mis. "Marriage (Maximum of 3 days)" -> 3.
+// Alasan "depends on company policy" tidak punya batas (null). Dipakai form cuti & API supaya aturannya satu sumber.
+export function specialLeaveMaxDays(reason?: string | null): number | null {
+  const m = reason?.match(/maximum of (\d+) day/i);
+  return m ? Number(m[1]) : null;
+}
+
+export function specialLeaveName(reason: string): string {
+  return reason.replace(/\s*\(.*\)\s*$/, '');
+}
+
+// Tanggal hari ini (YYYY-MM-DD) di zona WIB — batas minimum pemilihan tanggal pengajuan (cuti, sakit, jadwal payment).
+export function todayISOWIB(): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta' }).format(new Date());
+}

@@ -12,8 +12,9 @@ import TextField from '@/app/components/forms/TextField';
 import { SearchDateRangeCalendarField } from '@/app/components/forms/SearchFields';
 import Button from '@/app/components/forms/Button';
 import Modal from '@/app/components/feedback/Modal';
+import DetailModal, { DetailRow } from '@/app/components/feedback/DetailModal';
 import StatusModal from '@/app/components/feedback/StatusModal';
-import { LEAVE_TYPES, LEAVE_STATUS } from '@/lib/constants';
+import { LEAVE_TYPES, LEAVE_STATUS, specialLeaveMaxDays, specialLeaveName, todayISOWIB } from '@/lib/constants';
 import { statusColor } from '@/app/utils/statusColor';
 import { formatDateWIB } from '@/app/utils/formatDate';
 
@@ -60,6 +61,8 @@ interface LeaveListItem {
   tanggalPengajuan: string | null;
   keterangan: string | null;
   catatan: string | null;
+  idStatus?: string | null;
+  idJenisCuti?: string | null;
   tanggalKerjaHariLibur: string | null;
   tanggalSelesaiKerjaLibur: string | null;
   masterJenisCuti?: { namaJenis: string } | null;
@@ -77,16 +80,6 @@ interface LeaveHistoryRow {
   note: string | null;
   holidayWork: string | null;
   details: null;
-}
-
-function HistoryField({ label, value }: { label: string; value?: string | null }) {
-  if (!value) return null;
-  return (
-    <div className="flex items-start justify-between gap-4 py-2 border-b border-amana-neutral-200 last:border-b-0">
-      <span className="text-[14px] font-semibold text-amana-neutral-400 flex-shrink-0">{label}</span>
-      <span className="text-[15px] text-amana-neutral-500 text-right break-words">{value}</span>
-    </div>
-  );
 }
 
 function makeLeaveHistoryColumns(onView: (row: LeaveHistoryRow) => void): DataTableColumn<LeaveHistoryRow>[] {
@@ -150,6 +143,9 @@ export default function LeaveRequestPage() {
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [leaveHistory, setLeaveHistory] = useState<LeaveHistoryRow[]>([]);
   const [historyDetail, setHistoryDetail] = useState<LeaveHistoryRow | null>(null);
+  const [pendingPaidDays, setPendingPaidDays] = useState(0);
+  const [menstrualUses, setMenstrualUses] = useState<{ start: string; days: number }[]>([]);
+  const [blockedDates, setBlockedDates] = useState<{ tanggal: string | null; tanggalAkhir: string | null; alasan: string | null }[]>([]);
 
   const loadBalance = async () => {
     try {
@@ -165,12 +161,35 @@ export default function LeaveRequestPage() {
     } catch {}
   };
 
+  const loadBlocked = async () => {
+    try {
+      const res = await fetch('/api/hr/blocked-dates', { cache: 'no-store' });
+      if (res.ok) setBlockedDates(((await res.json()).list ?? []) as typeof blockedDates);
+    } catch {}
+  };
+
   const loadHistory = async () => {
     try {
       const res = await fetch('/api/leave/list', { cache: 'no-store' });
       if (res.ok) {
         const data = await res.json();
         const rows: LeaveListItem[] = data.list ?? [];
+        setMenstrualUses(
+          rows
+            .filter(
+              (r) =>
+                r.idJenisCuti === LEAVE_TYPES.SPECIAL &&
+                (r.idStatus === LEAVE_STATUS.PENDING || r.idStatus === LEAVE_STATUS.APPROVED) &&
+                r.keterangan?.toLowerCase().includes('menstruation') &&
+                r.tanggalMulai
+            )
+            .map((r) => ({ start: r.tanggalMulai!.slice(0, 10), days: r.jumlahHari ?? 0 }))
+        );
+        setPendingPaidDays(
+          rows
+            .filter((r) => r.idJenisCuti === LEAVE_TYPES.PAID && r.idStatus === LEAVE_STATUS.PENDING)
+            .reduce((sum, r) => sum + (r.jumlahHari ?? 0), 0)
+        );
         setLeaveHistory(
           rows.map((r) => ({
             id: r.idCuti,
@@ -194,7 +213,7 @@ export default function LeaveRequestPage() {
 
   useEffect(() => {
     (async () => {
-      await Promise.all([loadBalance(), loadHistory()]);
+      await Promise.all([loadBalance(), loadHistory(), loadBlocked()]);
     })();
   }, []);
 
@@ -241,6 +260,44 @@ export default function LeaveRequestPage() {
     selectedLeave === 'Paid Leave' &&
     requestedDays != null &&
     ((leaveBalance ?? 0) <= 0 || requestedDays > (leaveBalance ?? 0));
+
+  // Special Leave: batas hari per alasan (mis. Marriage = 3), plus Menstruation maks 2 hari per bulan (sama dengan server).
+  const specialLeaveError = useMemo(() => {
+    if (selectedLeave !== 'Special Leave' || !selectedSpecialLeave || requestedDays == null) return null;
+    const maxDays = specialLeaveMaxDays(selectedSpecialLeave);
+    if (maxDays != null && requestedDays > maxDays) {
+      return `${specialLeaveName(selectedSpecialLeave)} leave is limited to ${maxDays} day(s) per request (you selected ${requestedDays}).`;
+    }
+    if (!selectedSpecialLeave.toLowerCase().includes('menstruation')) return null;
+    const month = startDate.slice(0, 7);
+    const used = menstrualUses.filter((u) => u.start.slice(0, 7) === month).reduce((sum, u) => sum + u.days, 0);
+    return used + requestedDays > 2 ? `Menstrual leave this month already ${used} day(s) (max 2 days/month).` : null;
+  }, [selectedLeave, selectedSpecialLeave, requestedDays, startDate, menstrualUses]);
+
+  // Tanggal yang diblokir HR (berlaku semua jenis cuti) — sama dengan pengecekan server.
+  const blockedError = useMemo(() => {
+    if (!startDate || !endDate || endDate < startDate) return null;
+    const hits = blockedDates.filter((b) => {
+      const bStart = b.tanggal?.slice(0, 10) ?? startDate;
+      const bEnd = b.tanggalAkhir?.slice(0, 10) ?? bStart;
+      return bStart <= endDate && startDate <= bEnd;
+    });
+    if (hits.length === 0) return null;
+    const label = (b: (typeof hits)[number]) =>
+      b.tanggalAkhir ? `${formatDateWIB(b.tanggal)} - ${formatDateWIB(b.tanggalAkhir)}` : formatDateWIB(b.tanggal);
+    return `Your leave period includes blocked date(s): ${hits.map(label).join(', ')}${hits[0].alasan ? ` (${hits[0].alasan})` : ''}. Please choose other dates.`;
+  }, [startDate, endDate, blockedDates]);
+
+  // Unpaid hanya boleh saat saldo Paid = 0 (aturan yang sama dengan server).
+  const unpaidBlocked = selectedLeave === 'Unpaid Leave' && (leaveBalance ?? 0) > 0;
+
+  // Saldo yang sedang "dicadangkan" pengajuan Paid Leave sebelumnya yang belum di-approve (sama dengan aturan server).
+  const availableAfterPending = (leaveBalance ?? 0) - pendingPaidDays;
+  const quotaInUse =
+    selectedLeave === 'Paid Leave' &&
+    !balanceExceeded &&
+    pendingPaidDays > 0 &&
+    (availableAfterPending <= 0 || (requestedDays != null && requestedDays > availableAfterPending));
 
   // Validasi: Half Day cuti kompensasi hanya boleh 1 hari kerja
   const halfDayMultiDayError =
@@ -400,6 +457,7 @@ export default function LeaveRequestPage() {
         <div className="mb-4">
           <SearchDateRangeCalendarField
             label={selectedLeave === 'Compensatory Leave' ? 'Compensatory Leave Period' : 'Leave Period'}
+            minDate={todayISOWIB()}
             fromValue={startDate}
             toValue={endDate}
             onFromChange={setStartDate}
@@ -408,7 +466,7 @@ export default function LeaveRequestPage() {
         </div>
 
         {selectedLeave === 'Unpaid Leave' && (
-          <div className={`mb-4 px-4 py-3 rounded-lg border text-[13px] font-medium ${(leaveBalance ?? 0) > 0 ? 'bg-amana-warning-100 border-amana-warning-300 text-amana-warning-500' : 'bg-amana-success-100 border-amana-success-300 text-amana-success-500'}`}>
+          <div className={`mb-4 px-4 py-3 rounded-lg border text-[13px] font-medium ${unpaidBlocked ? 'bg-amana-danger-100 border-amana-danger-500 text-amana-danger-500' : 'bg-amana-success-100 border-amana-success-300 text-amana-success-500'}`}>
             {(leaveBalance ?? 0) > 0
               ? `Unpaid leave can only be requested when your Paid balance = 0. Your remaining balance is ${leaveBalance} day(s).`
               : 'Your Paid balance is 0, you may proceed with Unpaid leave.'}
@@ -423,6 +481,27 @@ export default function LeaveRequestPage() {
           </div>
         )}
 
+        {specialLeaveError && (
+          <div className="mb-4 px-4 py-3 rounded-lg border text-[13px] font-medium bg-amana-danger-100 border-amana-danger-500 text-amana-danger-500">
+            {specialLeaveError}
+          </div>
+        )}
+
+        {blockedError && (
+          <div className="mb-4 px-4 py-3 rounded-lg border text-[13px] font-medium bg-amana-danger-100 border-amana-danger-500 text-amana-danger-500">
+            {blockedError}
+          </div>
+        )}
+
+        {quotaInUse && (
+          <div className="mb-4 px-4 py-3 rounded-lg border text-[13px] font-medium bg-amana-danger-100 border-amana-danger-500 text-amana-danger-500">
+            Your leave quota is currently in usage/waiting for approval from your previous leave request!{' '}
+            {availableAfterPending > 0
+              ? `Only ${availableAfterPending} day(s) of Paid Leave are still available (${pendingPaidDays} day(s) reserved by pending requests).`
+              : `${pendingPaidDays} day(s) of your remaining Paid Leave are reserved by pending requests.`}
+          </div>
+        )}
+
         {halfDayMultiDayError && (
           <div className="mb-4 px-4 py-3 rounded-lg border text-[13px] font-medium bg-amana-danger-100 border-amana-danger-500 text-amana-danger-500">
             Half Day compensatory leave requires exactly 1 holiday work day. Please adjust your holiday work date range.
@@ -431,7 +510,7 @@ export default function LeaveRequestPage() {
         </div>
 
         <div className="flex-shrink-0 flex justify-end pt-4 border-t border-amana-neutral-200">
-          <Button type="submit" variant="primary" size="lg" className="w-full max-w-[280px]" disabled={!isFormValid || submitting || !!halfDayMultiDayError || balanceExceeded}>
+          <Button type="submit" variant="primary" size="lg" className="w-full max-w-[280px]" disabled={!isFormValid || submitting || !!halfDayMultiDayError || balanceExceeded || quotaInUse || unpaidBlocked || !!specialLeaveError || !!blockedError} isLoading={submitting}>
             {submitting ? 'Submitting...' : 'Submit'}
           </Button>
         </div>
@@ -451,25 +530,20 @@ export default function LeaveRequestPage() {
       )}
 
       {historyDetail && (
-        <Modal title={`${historyDetail.type} Detail`} onClose={() => setHistoryDetail(null)} maxWidth="max-w-lg" showCloseButton={false} zIndex={60}>
-          <div className="px-5 py-2 flex flex-col">
-            <HistoryField label="Submitted" value={historyDetail.submitted} />
-            <HistoryField label="Period" value={historyDetail.period} />
-            <HistoryField label="Duration" value={historyDetail.duration} />
-            <HistoryField label="Holiday Work Period" value={historyDetail.holidayWork} />
-            <HistoryField label="Reason" value={historyDetail.reason} />
-            <HistoryField label="Approver Note" value={historyDetail.note} />
-            <div className="flex items-center justify-between gap-4 py-2">
-              <span className="text-[14px] font-semibold text-amana-neutral-400 flex-shrink-0">Status</span>
-              <StatusPill color={statusColor(historyDetail.status)} fullWidth={false}>
-                {historyDetail.status}
-              </StatusPill>
-            </div>
-          </div>
-          <div className="px-5 py-3 border-t border-amana-neutral-300 flex justify-end flex-shrink-0">
-            <Button variant="outline" onClick={() => setHistoryDetail(null)}>Close</Button>
-          </div>
-        </Modal>
+        <DetailModal
+          title={`${historyDetail.type} Detail`}
+          onClose={() => setHistoryDetail(null)}
+          maxWidth="max-w-lg"
+          zIndex={60}
+          status={{ label: historyDetail.status, color: statusColor(historyDetail.status) }}
+          topFields={[{ label: 'Approver Note', value: historyDetail.note }]}
+        >
+          <DetailRow label="Submitted" value={historyDetail.submitted} />
+          <DetailRow label="Period" value={historyDetail.period} />
+          <DetailRow label="Duration" value={historyDetail.duration} />
+          <DetailRow label="Holiday Work Period" value={historyDetail.holidayWork} />
+          <DetailRow label="Reason" value={historyDetail.reason} />
+        </DetailModal>
       )}
 
       {/* Compensatory Leave Details Modal */}

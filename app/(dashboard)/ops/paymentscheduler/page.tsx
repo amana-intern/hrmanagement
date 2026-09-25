@@ -19,6 +19,7 @@ import { formatDateWIB } from '@/app/utils/formatDate';
 import PaymentDetailModal, { PaymentDetailRow } from '@/app/components/PaymentDetailModal';
 import { parsePaymentDetail } from '@/lib/paymentDetail';
 import { CHARGECODE_OPTIONS } from '@/lib/chargecodes';
+import { todayISOWIB } from '@/lib/constants';
 import { TableSkeleton } from '@/app/components/feedback/PageSkeleton';
 
 interface PayReq {
@@ -58,6 +59,11 @@ const STATUS_MAP: Record<string, { label: string; color: string }> = {
 };
 
 const STATUS_OPTIONS = Object.values(STATUS_MAP).map((v) => v.label);
+
+const PAYMENT_TERMS: Record<string, string> = {
+  'PT Janji Cahaya Kembar': 'processed 10th–25th monthly',
+  'Yayasan Mitra Cahaya Amanah': 'processed every Wednesday',
+};
 
 function mapRows(rows: PaymentRaw[]): PayReq[] {
   return rows.map((c) => {
@@ -168,6 +174,8 @@ export default function PaymentSchedulerPage() {
     }
     setProcessingId(null);
   };
+
+  const dueDate = scheduleTarget ? parsePaymentDetail(scheduleTarget.detailRow.detail ?? null).vendorDueDate : undefined;
 
   const handleConfirmSchedule = async () => {
     if (!scheduleTarget || !scheduleDate) return;
@@ -301,18 +309,35 @@ export default function PaymentSchedulerPage() {
       </div>
 
       {scheduleTarget && (
-        <Modal title="Schedule Payment" onClose={() => { setScheduleTarget(null); setScheduleDate(''); }} maxWidth="max-w-md" showCloseButton={false}>
-          <div className="p-5 flex flex-col gap-4">
-            <p className="text-[15px] text-amana-neutral-500">
-              Select payment date for <span className="font-semibold">{scheduleTarget.idRequest}</span>.
-            </p>
-            <DateField label="Payment Date" value={scheduleDate} onChange={setScheduleDate} />
-            <div className="flex gap-3 pt-2">
+        <Modal title="Schedule Payment" onClose={() => { setScheduleTarget(null); setScheduleDate(''); }} maxWidth="max-w-2xl" showCloseButton={false}>
+          <div className="px-5 pt-3 pb-4 flex flex-col gap-3 min-h-[300px]">
+            <div className="flex flex-col text-[16px] font-semibold text-amana-neutral-500 whitespace-nowrap">
+              <p>
+                Payment Under : {scheduleTarget.paymentUnder}
+                {PAYMENT_TERMS[scheduleTarget.paymentUnder] ? ` - (${PAYMENT_TERMS[scheduleTarget.paymentUnder]})` : ''}
+              </p>
+              <p>
+                Payment Due Date: {dueDate ? formatDateWIB(`${dueDate}T00:00:00`) : '-'}
+              </p>
+            </div>
+            <DateField
+              label={
+                <>
+                  <span className="font-normal">Select payment date for </span>
+                  {scheduleTarget.idRequest}
+                </>
+              }
+              value={scheduleDate}
+              onChange={setScheduleDate}
+              minDate={todayISOWIB()}
+            />
+            <div className="flex gap-3 mt-auto">
               <Button
                 variant="primary"
                 size="lg"
                 className="flex-1"
-                disabled={!scheduleDate || processingId === scheduleTarget.id}
+                disabled={!scheduleDate}
+                isLoading={processingId === scheduleTarget.id}
                 onClick={handleConfirmSchedule}
               >
                 {processingId === scheduleTarget.id ? 'Processing...' : 'Schedule'}

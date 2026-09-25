@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { ReactNode, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronRight } from 'lucide-react';
 import { formatDateWIB } from '@/app/utils/formatDate';
@@ -14,11 +14,14 @@ export default function DateField({
   value,
   onChange,
   placeholder = 'Select date',
+  minDate,
 }: {
-  label: string;
+  label: ReactNode;
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
+  /** Tanggal sebelum ini (YYYY-MM-DD) tidak bisa dipilih. */
+  minDate?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
@@ -93,6 +96,7 @@ export default function DateField({
             month={month}
             fromValue={value}
             toValue={value}
+            minDate={minDate}
             onPick={(iso) => {
               onChange(iso);
               setOpen(false);

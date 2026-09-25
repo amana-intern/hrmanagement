@@ -69,34 +69,42 @@ export async function notifyUsers(
   recipients: { idKaryawan?: string | null; email?: string | null }[],
   opts: BroadcastNotif
 ): Promise<void> {
-  for (const r of recipients) {
-    if (r.idKaryawan) {
-      await prisma.notification.create({
-        data: {
-          idNotif: nota(),
-          idKaryawan: r.idKaryawan,
-          tipe: opts.tipe,
-          judul: opts.judul,
-          pesan: opts.pesan,
-          idReferensi: opts.idReferensi,
-        },
-      });
-      if (opts.todo) {
-        await prisma.hrTodo.create({
-          data: {
-            idTodo: `TODO-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-            idKaryawan: r.idKaryawan,
-            teks: opts.todo.teks,
-            modul: opts.todo.modul,
-            idReferensi: opts.idReferensi,
-          },
-        });
+  // Paralel: tiap penerima independen, jadi waktu total = penerima paling lambat, bukan jumlah semuanya
+  // (sebelumnya berurutan -> submit payment bisa menunggu beberapa detik untuk semua Admin OPS).
+  await Promise.all(
+    recipients.map(async (r) => {
+      const jobs: Promise<unknown>[] = [];
+      if (r.idKaryawan) {
+        jobs.push(
+          prisma.notification.create({
+            data: {
+              idNotif: nota(),
+              idKaryawan: r.idKaryawan,
+              tipe: opts.tipe,
+              judul: opts.judul,
+              pesan: opts.pesan,
+              idReferensi: opts.idReferensi,
+            },
+          })
+        );
+        if (opts.todo) {
+          jobs.push(
+            prisma.hrTodo.create({
+              data: {
+                idTodo: `TODO-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+                idKaryawan: r.idKaryawan,
+                teks: opts.todo.teks,
+                modul: opts.todo.modul,
+                idReferensi: opts.idReferensi,
+              },
+            })
+          );
+        }
       }
-    }
-    if (r.email) {
-      await sendEmail({ to: r.email, subject: opts.judul, text: opts.pesan });
-    }
-  }
+      if (r.email) jobs.push(sendEmail({ to: r.email, subject: opts.judul, text: opts.pesan }));
+      await Promise.all(jobs);
+    })
+  );
 }
 
 // Notifikasi ke SEMUA Admin OPS (bell in-app selalu dibuat walau email kosong;

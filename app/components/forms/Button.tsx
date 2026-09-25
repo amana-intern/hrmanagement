@@ -4,6 +4,7 @@ import { ReactNode } from 'react';
 import { cn } from '@/app/utils/cn';
 import { motion, HTMLMotionProps } from 'framer-motion';
 import { springSnappy } from '@/app/utils/motion';
+import Spinner from '../feedback/Spinner';
 
 interface ButtonProps extends Omit<HTMLMotionProps<"button">, "onAnimationStart" | "onDragStart" | "onDragEnd" | "onDrag" | "ref"> {
   children: ReactNode;
@@ -57,9 +58,7 @@ export default function Button({
       )}
       {...props}
     >
-      {isLoading ? (
-        <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-      ) : null}
+      {isLoading ? <Spinner className="h-5 w-5 flex-shrink-0" /> : null}
       {children}
     </motion.button>
   );

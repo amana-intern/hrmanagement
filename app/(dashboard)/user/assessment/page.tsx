@@ -360,7 +360,7 @@ export default function AssessmentPage() {
                   Next
                 </Button>
               ) : (
-                <Button variant="primary" size="lg" disabled={submitting} onClick={handleSubmit}>
+                <Button variant="primary" size="lg" disabled={submitting} isLoading={submitting} onClick={handleSubmit}>
                   {submitting ? 'Submitting...' : 'Submit'}
                 </Button>
               )}

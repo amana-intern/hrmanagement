@@ -30,15 +30,24 @@ const FIELD_LABELS_SHORT: Record<string, string> = {
   ROLE: 'Role',
 };
 
+export interface CareerCurrent {
+  department: string;
+  grade: string;
+  role: string;
+}
+
 export default function CareerHistoryModal({
   employeeName,
   history,
   loading,
+  current,
   onClose,
 }: {
   employeeName: string;
   history: CareerHistoryEntry[];
   loading: boolean;
+  /** Posisi saat ini — selalu ditampilkan di paling atas, terlepas sudah ada perubahan karir atau belum. */
+  current?: CareerCurrent;
   onClose: () => void;
 }) {
   const rows = history.map((entry) => {
@@ -56,11 +65,31 @@ export default function CareerHistoryModal({
   return (
     <Modal title={`Career History - ${employeeName}`} onClose={onClose} maxWidth="max-w-2xl" className="max-h-[90vh]">
       <div className="flex-1 min-h-0 overflow-y-auto scroll-smooth p-5 flex flex-col">
+        {current && (
+          <div className="flex items-stretch gap-2 py-3 border-b border-amana-primary-500">
+            <div className="flex flex-col items-center flex-shrink-0 w-[12px] pt-1">
+              <CircleDot className="w-[12px] h-[12px] text-amana-primary-500 flex-shrink-0" strokeWidth={1.5} />
+              <div className="flex-1 w-px bg-amana-primary-500 mt-1" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[12px] font-semibold text-amana-neutral-300">Current</p>
+              <p className="text-[24px] font-semibold italic text-amana-primary-500">PG, Grade, Role</p>
+              {[
+                ['Practice Group', current.department],
+                ['Grade', current.grade],
+                ['Role', current.role],
+              ].map(([label, value]) => (
+                <div key={label} className="flex items-center gap-1 text-[16px] text-amana-neutral-500">
+                  <span className="font-semibold">{label}:</span>
+                  <span>{value || '-'}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
         {loading ? (
-          <p className="text-[14px] text-amana-neutral-400">Loading...</p>
-        ) : rows.length === 0 ? (
-          <p className="text-[14px] text-amana-neutral-400">No history recorded yet.</p>
-        ) : (
+          <p className="text-[14px] text-amana-neutral-400 pt-3">Loading...</p>
+        ) : rows.length === 0 ? null : (
           rows.map((row) => (
             <div key={row.key} className="flex items-stretch gap-2 py-3 border-b border-amana-primary-500">
               <div className="flex flex-col items-center flex-shrink-0 w-[12px] pt-1">
