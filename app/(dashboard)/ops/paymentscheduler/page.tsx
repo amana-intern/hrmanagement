@@ -13,6 +13,7 @@ import DateField from '@/app/components/forms/DateField';
 import Button from '@/app/components/forms/Button';
 import Modal from '@/app/components/feedback/Modal';
 import StatusModal from '@/app/components/feedback/StatusModal';
+import Spinner from '@/app/components/feedback/Spinner';
 import { useFilters } from '@/app/utils/useFilters';
 import { formatDateWIB } from '@/app/utils/formatDate';
 import PaymentDetailModal, { PaymentDetailRow } from '@/app/components/PaymentDetailModal';
@@ -179,6 +180,13 @@ export default function PaymentSchedulerPage() {
     const actionText = (label: string) => (
       <span className="text-[14px] text-amana-neutral-400 italic whitespace-nowrap">{label}</span>
     );
+    if (processingId === r.id) {
+      return (
+        <div className="flex items-center justify-center h-9">
+          <Spinner className="h-6 w-6" />
+        </div>
+      );
+    }
     if (r.status === 'ST_PAY_APPROVED') {
       return (
         <Button variant="primary" size="sm" className="w-full" onClick={() => setScheduleTarget(r)}>

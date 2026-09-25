@@ -366,129 +366,6 @@ function requireDate(dateStr: string): Date {
   return d;
 }
 
-type SeedUser = {
-  email: string;
-  nama: string;
-  role: string;
-  idKaryawan: string;
-  idGrade: string | null;
-  department: string | null;
-  tanggalLahir: string;
-  tanggalMasuk: string;
-};
-
-const USERS: SeedUser[] = [
-  // Admin HR
-  {
-    email: 'hradmin@company',
-    nama: 'Citra Lestari',
-    role: ROLES.ADMIN_HR,
-    idKaryawan: 'KRY001',
-    idGrade: null,
-    department: 'education', // matriks approver cuti: Admin HR -> Partner Education & HR
-    tanggalLahir: '1990-05-15',
-    tanggalMasuk: '2020-01-10',
-  },
-
-  // Admin OPS
-  {
-    email: 'opsadmin@company',
-    nama: 'Dimas Prayoga',
-    role: ROLES.ADMIN_OPS,
-    idKaryawan: 'KRY002',
-    idGrade: 'GRD010',
-    department: 'ops',
-    tanggalLahir: '1991-03-22',
-    tanggalMasuk: '2020-06-01',
-  },
-
-  // Partners (4 pillars)
-  {
-    email: 'partnerhealth@company',
-    nama: 'Eka Pratiwi',
-    role: ROLES.PARTNER,
-    idKaryawan: 'KRY003',
-    idGrade: 'GRD008',
-    department: 'health',
-    tanggalLahir: '1980-07-09',
-    tanggalMasuk: '2015-02-15',
-  },
-  {
-    email: 'partnerdigital@company',
-    nama: 'Fitri Handayani',
-    role: ROLES.PARTNER,
-    idKaryawan: 'KRY004',
-    idGrade: 'GRD008',
-    department: 'digital',
-    tanggalLahir: '1979-11-30',
-    tanggalMasuk: '2014-08-01',
-  },
-  {
-    email: 'partnereducation@company',
-    nama: 'Gilang Ramadhan',
-    role: ROLES.PARTNER,
-    idKaryawan: 'KRY005',
-    idGrade: 'GRD008',
-    department: 'education',
-    tanggalLahir: '1982-05-18',
-    tanggalMasuk: '2013-04-20',
-  },
-  {
-    email: 'headops@company',
-    nama: 'Budi Santoso',
-    role: ROLES.PARTNER,
-    idKaryawan: 'KRY006',
-    idGrade: 'GRD013',
-    department: 'ops',
-    tanggalLahir: '1983-02-27',
-    tanggalMasuk: '2014-09-01',
-  },
-
-  // Employees (Practice Group)
-  {
-    email: 'ahmadfauzi@company',
-    nama: 'Ahmad Fauzi',
-    role: ROLES.EMPLOYEE,
-    idKaryawan: 'KRY007',
-    idGrade: 'GRD003',
-    department: 'health',
-    tanggalLahir: '1995-04-11',
-    tanggalMasuk: '2021-03-01',
-  },
-  {
-    email: 'saridewi@company',
-    nama: 'Sari Dewi',
-    role: ROLES.EMPLOYEE,
-    idKaryawan: 'KRY008',
-    idGrade: 'GRD002',
-    department: 'digital',
-    tanggalLahir: '1996-08-24',
-    tanggalMasuk: '2022-01-15',
-  },
-  {
-    email: 'budihartono@company',
-    nama: 'Budi Hartono',
-    role: ROLES.EMPLOYEE,
-    idKaryawan: 'KRY009',
-    idGrade: 'GRD004',
-    department: 'education',
-    tanggalLahir: '1993-12-05',
-    tanggalMasuk: '2021-07-01',
-  },
-
-  // One OPS employee (non-admin)
-  {
-    email: 'dewilestari@company',
-    nama: 'Dewi Lestari',
-    role: ROLES.EMPLOYEE,
-    idKaryawan: 'KRY010',
-    idGrade: 'GRD011',
-    department: 'ops',
-    tanggalLahir: '1994-06-14',
-    tanggalMasuk: '2022-03-01',
-  },
-];
-
 type TSVUser = {
   idKaryawan: string;
   nama: string;
@@ -698,6 +575,17 @@ async function main() {
     }
   }
 
+  // 0a. Legacy dummy accounts (@company) are no longer seeded — remove leftovers from older runs.
+  // Best-effort: rows that still have leave/payment history stay (FK), reset the DB to drop them fully.
+  const legacyUsers = await prisma.user.findMany({ where: { email: { endsWith: '@company' } } });
+  for (const lu of legacyUsers) {
+    await prisma.assessmentAnswer.deleteMany({ where: { idSubmission: { startsWith: 'SUB-' + lu.idUser } } }).catch(() => {});
+    await prisma.assessmentSubmission.deleteMany({ where: { idKaryawan: lu.idUser } }).catch(() => {});
+    await prisma.kontrakKaryawan.deleteMany({ where: { idKaryawan: lu.idUser } }).catch(() => {});
+    await prisma.karyawan.delete({ where: { idKaryawan: lu.idUser } }).catch(() => {});
+    await prisma.user.delete({ where: { idUser: lu.idUser } }).catch(() => {});
+  }
+
   // 0b. Clean up any partially-seeded TSV users (KRY011+) to avoid conflicts
   for (const u of TSV_USERS) {
     const existing = await prisma.user.findUnique({ where: { idUser: u.idKaryawan } });
@@ -806,32 +694,6 @@ async function main() {
     });
   }
 
-  // 9a. Karyawan for hardcoded USERS (KRY001-KRY010) — must exist before Users (step 10)
-  for (const u of USERS) {
-    await prisma.karyawan.upsert({
-      where: { idKaryawan: u.idKaryawan },
-      update: {
-        idUser: u.idKaryawan,
-        nama: u.nama,
-        idGrade: u.idGrade,
-        department: u.department,
-        tanggalLahir: u.tanggalLahir ? new Date(u.tanggalLahir) : null,
-        tanggalMasuk: u.tanggalMasuk ? new Date(u.tanggalMasuk) : null,
-      },
-      create: {
-        idKaryawan: u.idKaryawan,
-        idUser: u.idKaryawan,
-        nama: u.nama,
-        idGrade: u.idGrade,
-        department: u.department,
-        tanggalLahir: u.tanggalLahir ? new Date(u.tanggalLahir) : null,
-        tanggalMasuk: u.tanggalMasuk ? new Date(u.tanggalMasuk) : null,
-        sisaCutiTahunan: 12,
-        accrualRate: 1,
-      },
-    });
-  }
-
   // 9b. New Karyawan from TSV data
   for (const u of TSV_USERS) {
     await prisma.karyawan.upsert({
@@ -865,17 +727,6 @@ async function main() {
   }
 
   // 10. Users — login is by email only, no password.
-  for (const u of USERS) {
-    await prisma.user.upsert({
-      where: { idUser: u.idKaryawan },
-      update: { email: u.email, idRole: u.role },
-      create: {
-        idUser: u.idKaryawan,
-        email: u.email,
-        idRole: u.role,
-      },
-    });
-  }
   for (const u of TSV_USERS) {
     await prisma.user.upsert({
       where: { idUser: u.idKaryawan },

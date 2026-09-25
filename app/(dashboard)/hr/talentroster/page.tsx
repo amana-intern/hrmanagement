@@ -639,7 +639,7 @@ export default function TalentRosterPage() {
       {isAddUserOpen && (
         <Modal title="Add New Talent" onClose={() => { setIsAddUserOpen(false); setAddUserMsg(''); setCustomGrade(''); }} maxWidth="max-w-3xl" className="max-h-[90vh]" showCloseButton={false}>
           <div className="flex-1 min-h-0 overflow-y-auto scroll-smooth p-5 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-            <TextField label="Talent Email" value={newUser.email} onChange={(v) => setNewUser((p) => ({ ...p, email: v }))} placeholder="e.g.: name@company" />
+            <TextField label="Talent Email" value={newUser.email} onChange={(v) => setNewUser((p) => ({ ...p, email: v }))} placeholder="e.g.: name@amana.id" />
             <TextField label="Talent Name" value={newUser.nama} onChange={(v) => setNewUser((p) => ({ ...p, nama: v }))} placeholder="Full Name" />
             <DateField label="Birth Date" value={newUser.tanggalLahir} onChange={(v) => setNewUser((p) => ({ ...p, tanggalLahir: v }))} />
             <TextField label="Phone Number" value={newUser.noTelepon} onChange={(v) => setNewUser((p) => ({ ...p, noTelepon: v }))} placeholder="e.g.: 0812-3456-7890" />

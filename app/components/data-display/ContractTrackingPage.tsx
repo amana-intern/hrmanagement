@@ -187,9 +187,9 @@ export default function ContractTrackingPage({
         <SearchSelectField label="Grade" value={draft.grade} onChange={(v) => setField('grade', v)} options={gradeOptions} />
         <SearchSelectField
           label="Remaining Duration"
-          value={filters.find((f) => f.key === activeFilter)?.label ?? ''}
+          value={activeFilter === 'all' ? '' : filters.find((f) => f.key === activeFilter)?.label ?? ''}
           onChange={(v) => setActiveFilter(filters.find((f) => f.label === v)?.key ?? 'all')}
-          options={filters.map((f) => f.label)}
+          options={filters.filter((f) => f.key !== 'all').map((f) => f.label)}
         />
         <SearchDateRangeCalendarField
           label="Contract Start Date"

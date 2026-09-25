@@ -8,6 +8,7 @@ import type { DataTableColumn } from '@/app/components/data-display/DataTable';
 import Button from '@/app/components/forms/Button';
 import ConfirmModal from '@/app/components/feedback/ConfirmModal';
 import StatusModal from '@/app/components/feedback/StatusModal';
+import Spinner from '@/app/components/feedback/Spinner';
 import { TableSkeleton } from '@/app/components/feedback/PageSkeleton';
 
 interface ServerContract {
@@ -78,11 +79,13 @@ export default function PartnerContractTrackingPage() {
       body: JSON.stringify({ action }),
     });
     const data = await res.json().catch(() => null);
-    setProcessingId(null);
     if (!res.ok) {
+      setProcessingId(null);
       setMessage({ ok: false, text: data?.error || 'Failed to process action' });
       return;
     }
+    await load(); // spinner tetap sampai data terbaru masuk, lalu berganti teks status
+    setProcessingId(null);
     setMessage({
       ok: true,
       text:
@@ -90,7 +93,6 @@ export default function PartnerContractTrackingPage() {
           ? 'Renewal request sent to HR & Employee.'
           : 'Offboarding request sent to HR & Employee.',
     });
-    await load(); // tombol langsung berganti jadi teks status
   };
 
   const actionsColumn: DataTableColumn<Contract> = {
@@ -98,6 +100,13 @@ export default function PartnerContractTrackingPage() {
     label: 'Decision',
     width: '220px',
     render: (c) => {
+      if (processingId === String(c.id)) {
+        return (
+          <div className="flex items-center justify-center h-9">
+            <Spinner className="h-6 w-6" />
+          </div>
+        );
+      }
       // Decision sudah diinput -> tampilkan teks status (bukan badge/tombol),
       // bergaya sama seperti "View Only" pada kolom Action di Leave Approval.
       const badge = needActionBadge(c.needAction);

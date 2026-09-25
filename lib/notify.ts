@@ -38,7 +38,7 @@ export async function sendEmail(input: { to: string; subject: string; text: stri
 }
 
 // Partner pilar untuk sebuah department (dipakai reminder kontrak).
-// Contoh: department 'health' -> partnerhealth@company.
+// Contoh: department 'health' -> the partner's own @amana.id email.
 export async function getDeptPartner(
   department: string | null
 ): Promise<{ idKaryawan: string; email: string } | null> {
