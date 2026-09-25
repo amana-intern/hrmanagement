@@ -404,6 +404,13 @@ export default function ProfileOverview({
           employeeName={bio.name}
           history={careerHistory}
           loading={loadingHistory}
+          current={
+            bioDetails && {
+              department: bioDetails.department,
+              grade: bioDetails.grade,
+              role: bioDetails.position,
+            }
+          }
           onClose={() => setCareerHistoryOpen(false)}
         />
       )}

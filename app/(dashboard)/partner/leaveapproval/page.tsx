@@ -10,7 +10,7 @@ import StatusPill from '@/app/components/data-display/StatusPill';
 import ApprovalActions from '@/app/components/data-display/ApprovalActions';
 import { SearchTextField, SearchSelectField } from '@/app/components/forms/SearchFields';
 import Button from '@/app/components/forms/Button';
-import Modal from '@/app/components/feedback/Modal';
+import DetailModal, { DetailRow } from '@/app/components/feedback/DetailModal';
 import StatusModal from '@/app/components/feedback/StatusModal';
 import RejectReasonModal from '@/app/components/feedback/RejectReasonModal';
 import { statusColor } from '@/app/utils/statusColor';
@@ -284,13 +284,6 @@ export default function PartnerLeaveApprovalPage() {
     { key: 'action', label: 'Action', width: '22%', minPx: 240, render: renderAction },
   ];
 
-  const DetailField = ({ label, value }: { label: string; value: React.ReactNode }) => (
-    <div className="flex items-start justify-between gap-4 py-2 border-b border-amana-neutral-200 last:border-b-0">
-      <span className="text-[14px] font-semibold text-amana-neutral-400 flex-shrink-0">{label}</span>
-      <span className="text-[15px] text-amana-neutral-500 text-right break-words">{value}</span>
-    </div>
-  );
-
   if (loading) return <TableSkeleton columns={6} />;
 
   return (
@@ -336,54 +329,44 @@ export default function PartnerLeaveApprovalPage() {
       )}
 
       {detailRow && (
-        <Modal
+        <DetailModal
           title={`Leave Details - ${detailRow.name || ''}`}
           onClose={() => setDetailRow(null)}
           maxWidth="max-w-lg"
+          status={{
+            label: STATUS_MAP[detailRow.status]?.label ?? detailRow.status,
+            color: statusColor(STATUS_MAP[detailRow.status]?.label ?? detailRow.status),
+          }}
+          topFields={[{ label: 'Approver Note', value: detailRow.approverNote }]}
         >
-          <div className="p-5 flex flex-col">
-            <DetailField label="Submitted On" value={formatDateTimeWIB(detailRow.submittedAt)} />
-            <DetailField label="Employee" value={detailRow.name} />
-            <DetailField label="Practice Group" value={detailRow.department} />
-            <DetailField label="Grade" value={detailRow.grade} />
-            <div className="flex items-start justify-between gap-4 py-2 border-b border-amana-neutral-200">
-              <span className="text-[14px] font-semibold text-amana-neutral-400 flex-shrink-0">Status</span>
-              <StatusPill color={statusColor(STATUS_MAP[detailRow.status]?.label ?? detailRow.status)}>
-                {STATUS_MAP[detailRow.status]?.label ?? detailRow.status}
-              </StatusPill>
-            </div>
-            <DetailField label="Start Date" value={formatDateWIB(detailRow.startDate)} />
-            <DetailField label="End Date" value={formatDateWIB(detailRow.endDate)} />
-            {detailRow.totalDays != null && (
-              <DetailField label="Total Days" value={`${detailRow.totalDays} day(s)`} />
-            )}
-            {detailRow.tanggalKerjaHariLibur && (
-              <DetailField label="Holiday Work Date" value={`${formatDateWIB(detailRow.tanggalKerjaHariLibur)}${detailRow.tanggalSelesaiKerjaLibur ? ` - ${formatDateWIB(detailRow.tanggalSelesaiKerjaLibur)}` : ''}`} />
-            )}
-            {detailRow.tipeCutiKompensasi && (
-              <DetailField label="Day Type" value={detailRow.tipeCutiKompensasi === 'FULL' ? 'Full Day (1 day)' : 'Half Day (0.5 day)'} />
-            )}
-            {detailRow.jumlahHariKompensasi != null && (
-              <DetailField label="Compensatory Days" value={`${detailRow.jumlahHariKompensasi} day(s)`} />
-            )}
-            <DetailField label={detailRow.jenis === 'sakit' ? 'Symptoms' : 'Reason'} value={detailRow.reason ?? '-'} />
-            {detailRow.approverNote && <DetailField label="Approver Note" value={detailRow.approverNote} />}
-            {detailRow.documentURL && (
-              <DetailField
-                label="Medical Document"
-                value={
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => window.open(detailRow.documentURL!, '_blank', 'noopener,noreferrer')}
-                  >
-                    View Document
-                  </Button>
-                }
-              />
-            )}
-          </div>
-        </Modal>
+          <DetailRow label="Submitted On" value={formatDateTimeWIB(detailRow.submittedAt)} />
+          <DetailRow label="Employee" value={detailRow.name} />
+          <DetailRow label="Practice Group" value={detailRow.department} />
+          <DetailRow label="Grade" value={detailRow.grade} />
+          <DetailRow label="Start Date" value={formatDateWIB(detailRow.startDate)} />
+          <DetailRow label="End Date" value={formatDateWIB(detailRow.endDate)} />
+          {detailRow.totalDays != null && <DetailRow label="Total Days" value={`${detailRow.totalDays} day(s)`} />}
+          {detailRow.tanggalKerjaHariLibur && (
+            <DetailRow
+              label="Holiday Work Date"
+              value={`${formatDateWIB(detailRow.tanggalKerjaHariLibur)}${detailRow.tanggalSelesaiKerjaLibur ? ` - ${formatDateWIB(detailRow.tanggalSelesaiKerjaLibur)}` : ''}`}
+            />
+          )}
+          {detailRow.tipeCutiKompensasi && (
+            <DetailRow label="Day Type" value={detailRow.tipeCutiKompensasi === 'FULL' ? 'Full Day (1 day)' : 'Half Day (0.5 day)'} />
+          )}
+          {detailRow.jumlahHariKompensasi != null && (
+            <DetailRow label="Compensatory Days" value={`${detailRow.jumlahHariKompensasi} day(s)`} />
+          )}
+          <DetailRow label={detailRow.jenis === 'sakit' ? 'Symptoms' : 'Reason'} value={detailRow.reason ?? '-'} />
+          {detailRow.documentURL && (
+            <DetailRow label="Medical Document">
+              <Button variant="outline" size="sm" onClick={() => window.open(detailRow.documentURL!, '_blank', 'noopener,noreferrer')}>
+                View
+              </Button>
+            </DetailRow>
+          )}
+        </DetailModal>
       )}
 
       <StatusModal state={message} onClose={() => setMessage(null)} />

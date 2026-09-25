@@ -16,6 +16,16 @@ import Button from './Button';
  * "selected" state with a View action, so people can actually confirm what they
  * just uploaded instead of just trusting a filename string.
  */
+const MAX_MB = 5; // sama dengan batas server (app/api/*)
+
+// Ekstensi yang boleh, diturunkan dari `accept` (sama dengan yang dicek server).
+function allowedExtensions(accept: string): string[] {
+  return accept
+    .split(',')
+    .map((t) => t.trim().toLowerCase())
+    .flatMap((t) => (t.startsWith('.') ? [t] : t === 'application/pdf' ? ['.pdf'] : t === 'image/*' ? ['.jpg', '.jpeg', '.png'] : []));
+}
+
 export default function UploadBox({
   file,
   placeholder,
@@ -30,6 +40,29 @@ export default function UploadBox({
   className?: string;
 }) {
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const picked = e.target.files?.[0] || null;
+    if (!picked) {
+      setError('');
+      onFileSelect(null);
+      return;
+    }
+    const exts = allowedExtensions(accept);
+    const ext = picked.name.slice(picked.name.lastIndexOf('.')).toLowerCase();
+    if (exts.length && !exts.includes(ext)) {
+      setError(`Unsupported file type. Allowed: ${exts.filter((x) => x !== '.jpeg').map((x) => x.slice(1).toUpperCase()).join(', ')}.`);
+    } else if (picked.size > MAX_MB * 1024 * 1024) {
+      setError(`File is too large (${(picked.size / 1024 / 1024).toFixed(1)} MB). Maximum is ${MAX_MB} MB.`);
+    } else {
+      setError('');
+      onFileSelect(picked);
+      return;
+    }
+    e.target.value = '';
+    onFileSelect(null);
+  };
 
   const previewUrl = useMemo(() => (file ? URL.createObjectURL(file) : null), [file]);
   useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl); }, [previewUrl]);
@@ -45,7 +78,7 @@ export default function UploadBox({
         <input
           type="file"
           accept={accept}
-          onChange={(e) => onFileSelect(e.target.files?.[0] || null)}
+          onChange={handleChange}
           className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
         />
         {file ? (
@@ -78,6 +111,7 @@ export default function UploadBox({
           </>
         )}
       </div>
+      {error && <p className="mt-1.5 text-[13px] font-medium text-amana-danger-500">{error}</p>}
 
       <AnimatePresence>
         {previewOpen && file && previewUrl && (

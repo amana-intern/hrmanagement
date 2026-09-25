@@ -10,6 +10,7 @@ import Button from '@/app/components/forms/Button';
 import StatusModal from '@/app/components/feedback/StatusModal';
 import UploadProgressModal from '@/app/components/feedback/UploadProgressModal';
 import { uploadWithProgress } from '@/app/utils/uploadWithProgress';
+import { todayISOWIB } from '@/lib/constants';
 
 export default function SickLeavePage() {
   const [startDate, setStartDate] = useState('');
@@ -64,6 +65,7 @@ export default function SickLeavePage() {
         <SectionCard title="Sick Leave Schedule">
           <SearchDateRangeCalendarField
             label="Sick Leave Period"
+            minDate={todayISOWIB()}
             fromValue={startDate}
             toValue={endDate}
             onFromChange={setStartDate}
@@ -84,10 +86,10 @@ export default function SickLeavePage() {
             file={medicalFile}
             placeholder="Drag Images/PDF or Click to Browse"
             onFileSelect={setMedicalFile}
-            accept="application/pdf, image/*"
+            accept=".pdf,.jpg,.jpeg,.png"
           />
           <div className="flex justify-end pt-4 mt-4 border-t border-amana-neutral-200">
-            <Button type="submit" variant="primary" size="lg" disabled={!isFormValid || submitting}>
+            <Button type="submit" variant="primary" size="lg" disabled={!isFormValid} isLoading={submitting}>
               {submitting ? 'Submitting...' : 'Submit'}
             </Button>
           </div>

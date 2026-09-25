@@ -53,6 +53,7 @@ export default function JobListingsPage() {
   const [status, setStatus] = useState<{ ok: boolean; text: string } | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
   const [busy, setBusy] = useState(false);
+  const [busyKind, setBusyKind] = useState<'draft' | 'publish' | null>(null);
 
   const load = async () => {
     const res = await fetch('/api/joblistings?all=1', { cache: 'no-store' });
@@ -94,6 +95,7 @@ export default function JobListingsPage() {
   const handleAddJob = async (asDraft: boolean) => {
     if (!newJob.title || !newJob.description) return;
     setBusy(true);
+    setBusyKind(asDraft ? 'draft' : 'publish');
     setErrorMsg('');
     try {
       const res = await fetch('/api/joblistings', {
@@ -122,6 +124,7 @@ export default function JobListingsPage() {
   const handleSaveEdit = async (asDraft: boolean) => {
     if (!editJob) return;
     setBusy(true);
+    setBusyKind(asDraft ? 'draft' : 'publish');
     setErrorMsg('');
     try {
       const nextStatus = asDraft ? 'DRAFT' : 'OPEN';
@@ -142,31 +145,43 @@ export default function JobListingsPage() {
   };
 
   const handleTakedown = async (job: Job) => {
-    const res = await fetch(`/api/joblistings/${job.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ idStatus: 'CLOSED' }),
-    });
-    if (!res.ok) {
-      setStatus({ ok: false, text: 'Failed to close job listing' });
-      return;
+    if (busy) return;
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/joblistings/${job.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idStatus: 'CLOSED' }),
+      });
+      if (!res.ok) {
+        setStatus({ ok: false, text: 'Failed to close job listing' });
+        return;
+      }
+      setShowTakedownModal(null);
+      setEditJob(null);
+      await load();
+      setStatus({ ok: true, text: `Job listing "${job.title}" successfully closed` });
+    } finally {
+      setBusy(false);
     }
-    setShowTakedownModal(null);
-    setEditJob(null);
-    await load();
-    setStatus({ ok: true, text: `Job listing "${job.title}" successfully closed` });
   };
 
   const handleDelete = async (job: Job) => {
-    const res = await fetch(`/api/joblistings/${job.id}`, { method: 'DELETE' });
-    if (!res.ok) {
-      setStatus({ ok: false, text: 'Failed to delete job listing' });
-      return;
+    if (busy) return;
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/joblistings/${job.id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        setStatus({ ok: false, text: 'Failed to delete job listing' });
+        return;
+      }
+      setShowDeleteModal(null);
+      setEditJob(null);
+      await load();
+      setStatus({ ok: true, text: `Job listing "${job.title}" successfully deleted` });
+    } finally {
+      setBusy(false);
     }
-    setShowDeleteModal(null);
-    setEditJob(null);
-    await load();
-    setStatus({ ok: true, text: `Job listing "${job.title}" successfully deleted` });
   };
 
   const openEdit = (job: Job) => {
@@ -261,11 +276,11 @@ export default function JobListingsPage() {
           )}
 
           <div className="flex-shrink-0 flex justify-end gap-3 px-5 py-4 border-t border-amana-neutral-200">
-            <Button variant="outline" size="lg" disabled={!newJob.title || !newJob.description || busy} onClick={() => handleAddJob(true)}>
+            <Button variant="outline" size="lg" disabled={!newJob.title || !newJob.description || busy} isLoading={busy && busyKind === 'draft'} onClick={() => handleAddJob(true)}>
               Save Draft
             </Button>
-            <Button variant="primary" size="lg" disabled={!newJob.title || !newJob.description || busy} onClick={() => handleAddJob(false)}>
-              {busy ? 'Publishing...' : 'Publish Job'}
+            <Button variant="primary" size="lg" disabled={!newJob.title || !newJob.description || busy} isLoading={busy && busyKind === 'publish'} onClick={() => handleAddJob(false)}>
+              {busy && busyKind === 'publish' ? 'Publishing...' : 'Publish Job'}
             </Button>
           </div>
         </Modal>
@@ -309,16 +324,16 @@ export default function JobListingsPage() {
             <div className="flex gap-3">
               {editIsDraft ? (
                 <>
-                  <Button variant="outline" size="lg" disabled={!editFields.title || !editFields.description || busy} onClick={() => handleSaveEdit(true)}>
+                  <Button variant="outline" size="lg" disabled={!editFields.title || !editFields.description || busy} isLoading={busy && busyKind === 'draft'} onClick={() => handleSaveEdit(true)}>
                     Save Draft
                   </Button>
-                  <Button variant="primary" size="lg" disabled={!editFields.title || !editFields.description || busy} onClick={() => handleSaveEdit(false)}>
-                    {busy ? 'Publishing...' : 'Publish'}
+                  <Button variant="primary" size="lg" disabled={!editFields.title || !editFields.description || busy} isLoading={busy && busyKind === 'publish'} onClick={() => handleSaveEdit(false)}>
+                    {busy && busyKind === 'publish' ? 'Publishing...' : 'Publish'}
                   </Button>
                 </>
               ) : (
-                <Button variant="primary" size="lg" disabled={!editFields.title || !editFields.description || busy} onClick={() => handleSaveEdit(false)}>
-                  {busy ? 'Updating...' : 'Update Listing'}
+                <Button variant="primary" size="lg" disabled={!editFields.title || !editFields.description || busy} isLoading={busy && busyKind === 'publish'} onClick={() => handleSaveEdit(false)}>
+                  {busy && busyKind === 'publish' ? 'Updating...' : 'Update Listing'}
                 </Button>
               )}
             </div>
@@ -334,10 +349,10 @@ export default function JobListingsPage() {
               This will close the listing and remove it from active job boards.
             </p>
             <div className="flex justify-end gap-3 pt-2">
-              <Button variant="danger" size="lg" onClick={() => handleTakedown(showTakedownModal)}>
+              <Button variant="danger" size="lg" isLoading={busy} onClick={() => handleTakedown(showTakedownModal)}>
                 Yes, Takedown
               </Button>
-              <Button variant="outline" size="lg" onClick={() => setShowTakedownModal(null)}>
+              <Button variant="outline" size="lg" disabled={busy} onClick={() => setShowTakedownModal(null)}>
                 Cancel
               </Button>
             </div>
@@ -353,10 +368,10 @@ export default function JobListingsPage() {
               This will permanently remove the listing.
             </p>
             <div className="flex justify-end gap-3 pt-2">
-              <Button variant="danger" size="lg" onClick={() => handleDelete(showDeleteModal)}>
+              <Button variant="danger" size="lg" isLoading={busy} onClick={() => handleDelete(showDeleteModal)}>
                 Delete
               </Button>
-              <Button variant="outline" size="lg" onClick={() => setShowDeleteModal(null)}>
+              <Button variant="outline" size="lg" disabled={busy} onClick={() => setShowDeleteModal(null)}>
                 Cancel
               </Button>
             </div>

@@ -11,6 +11,7 @@ import { SearchDateRangeCalendarField } from '@/app/components/forms/SearchField
 import SelectField from '@/app/components/forms/SelectField';
 import Modal from '@/app/components/feedback/Modal';
 import ConfirmModal from '@/app/components/feedback/ConfirmModal';
+import Spinner from '@/app/components/feedback/Spinner';
 import StatusModal from '@/app/components/feedback/StatusModal';
 import SectionCard from '@/app/components/layout/SectionCard';
 import DataTable from '@/app/components/data-display/DataTable';
@@ -123,6 +124,7 @@ export default function ManageAssessmentPage() {
   const [assessments, setAssessments] = useState<Assessment[]>([]);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
   const [status, setStatus] = useState<{ ok: boolean; text: string } | null>(null);
 
   const [createOpen, setCreateOpen] = useState(false);
@@ -183,7 +185,7 @@ export default function ManageAssessmentPage() {
   };
 
   const handleToggle = async (a: Assessment) => {
-    setProcessing(true);
+    setTogglingId(a.idAssessment);
     const open = a.idStatus !== ASSESSMENT_STATUS.OPEN;
     const res = await fetch(`/api/hr/assessments/${a.idAssessment}`, {
       method: 'PATCH',
@@ -197,7 +199,7 @@ export default function ManageAssessmentPage() {
       const d = await res.json().catch(() => null);
       setStatus({ ok: false, text: d?.error || 'Failed to update status' });
     }
-    setProcessing(false);
+    setTogglingId(null);
   };
 
   const handleSave = async () => {
@@ -456,22 +458,26 @@ export default function ManageAssessmentPage() {
       label: 'Action',
       width: '25%',
       minPx: 240,
-      render: (a) => (
-        <div className="flex gap-2">
-          <Button
-            variant={a.idStatus === ASSESSMENT_STATUS.OPEN ? 'outline' : 'primary'}
-            size="sm"
-            className="flex-1"
-            disabled={processing}
-            onClick={() => setConfirmTarget(a)}
-          >
-            {a.idStatus === ASSESSMENT_STATUS.OPEN ? 'Close' : 'Open'}
-          </Button>
-          <Button variant="outline" size="sm" className="flex-1" onClick={() => setViewAssessment(a)}>
-            View
-          </Button>
-        </div>
-      ),
+      render: (a) =>
+        togglingId === a.idAssessment ? (
+          <div className="flex items-center justify-center h-9">
+            <Spinner className="h-6 w-6" />
+          </div>
+        ) : (
+          <div className="flex gap-2">
+            <Button
+              variant={a.idStatus === ASSESSMENT_STATUS.OPEN ? 'outline' : 'primary'}
+              size="sm"
+              className="flex-1"
+              onClick={() => setConfirmTarget(a)}
+            >
+              {a.idStatus === ASSESSMENT_STATUS.OPEN ? 'Close' : 'Open'}
+            </Button>
+            <Button variant="outline" size="sm" className="flex-1" onClick={() => setViewAssessment(a)}>
+              View
+            </Button>
+          </div>
+        ),
     },
   ];
 
@@ -704,7 +710,7 @@ export default function ManageAssessmentPage() {
             >
               Cancel
             </Button>
-            <Button variant="primary" size="lg" disabled={processing} onClick={handleSave}>
+            <Button variant="primary" size="lg" isLoading={processing} onClick={handleSave}>
               {processing ? 'Saving...' : 'Save'}
             </Button>
           </div>
@@ -776,7 +782,6 @@ export default function ManageAssessmentPage() {
           }
           confirmLabel={confirmTarget.idStatus === ASSESSMENT_STATUS.OPEN ? 'Close' : 'Open'}
           loadingLabel="Saving..."
-          loading={processing}
           onConfirm={() => { handleToggle(confirmTarget); setConfirmTarget(null); }}
           onCancel={() => setConfirmTarget(null)}
         />

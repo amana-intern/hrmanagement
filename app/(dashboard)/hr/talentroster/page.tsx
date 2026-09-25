@@ -599,7 +599,7 @@ export default function TalentRosterPage() {
                       <Button variant="outline" size="lg" onClick={() => { setModalMode('view'); setEditMsg(''); setCustomEditGrade(''); }}>
                         Cancel
                       </Button>
-                      <Button variant="primary" size="lg" disabled={savingEdit} onClick={handleSaveEdit}>
+                      <Button variant="primary" size="lg" isLoading={savingEdit} onClick={handleSaveEdit}>
                         {savingEdit ? 'Saving...' : 'Save Changes'}
                       </Button>
                     </div>
@@ -616,6 +616,11 @@ export default function TalentRosterPage() {
           employeeName={careerHistoryModal.nama}
           history={careerHistory}
           loading={loadingHistory}
+          current={{
+            department: departmentLabel(careerHistoryModal.department),
+            grade: careerHistoryModal.grade,
+            role: careerHistoryModal.roleLabel,
+          }}
           onClose={() => setCareerHistoryModal(null)}
         />
       )}
@@ -720,7 +725,7 @@ export default function TalentRosterPage() {
           )}
 
           <div className="flex-shrink-0 flex justify-end gap-3 px-5 py-4 border-t border-amana-neutral-200">
-            <Button variant="primary" size="lg" disabled={addingUser} onClick={handleAddUser}>
+            <Button variant="primary" size="lg" isLoading={addingUser} onClick={handleAddUser}>
               {addingUser ? 'Saving...' : 'Add Talent'}
             </Button>
             <Button variant="outline" size="lg" onClick={() => { setIsAddUserOpen(false); setAddUserMsg(''); setCustomGrade(''); }}>
@@ -738,7 +743,7 @@ export default function TalentRosterPage() {
               Employee data along with all their records will be permanently deleted and cannot be recovered.
             </p>
             <div className="flex justify-end gap-3 pt-2">
-              <Button variant="danger-outline" size="lg" disabled={deletingUser} onClick={handleDeleteUser}>
+              <Button variant="danger-outline" size="lg" isLoading={deletingUser} onClick={handleDeleteUser}>
                 {deletingUser ? 'Processing...' : 'Remove'}
               </Button>
               <Button variant="primary" size="lg" onClick={() => setDeleteModal(null)}>Cancel</Button>

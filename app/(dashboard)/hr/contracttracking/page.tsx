@@ -189,7 +189,7 @@ export default function HRContractTrackingPage() {
             </p>
           </div>
           <div className="flex-shrink-0 flex justify-end gap-3 px-5 py-4 border-t border-amana-neutral-200">
-            <Button variant="primary" size="lg" disabled={extending} onClick={handleExtend}>
+            <Button variant="primary" size="lg" isLoading={extending} onClick={handleExtend}>
               {extending ? 'Saving...' : 'Extend Contract'}
             </Button>
             <Button variant="outline" size="lg" onClick={() => setExtendTarget(null)}>
@@ -207,7 +207,7 @@ export default function HRContractTrackingPage() {
               Employee data along with all their records will be permanently deleted and cannot be recovered.
             </p>
             <div className="flex justify-end gap-3 pt-2">
-              <Button variant="danger" size="lg" disabled={deleting} onClick={handleDeleteTalent}>
+              <Button variant="danger" size="lg" isLoading={deleting} onClick={handleDeleteTalent}>
                 {deleting ? 'Processing...' : 'Delete'}
               </Button>
               <Button variant="outline" size="lg" onClick={() => setDeleteTarget(null)}>Cancel</Button>

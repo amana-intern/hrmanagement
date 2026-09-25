@@ -34,7 +34,7 @@ export default function ConfirmModal({
         </div>
         <p className="text-[16px] text-amana-neutral-500">{message}</p>
         <div className="flex gap-3 w-full pt-2">
-          <Button variant={tone === 'primary' ? 'primary' : 'danger'} size="lg" className="flex-1" disabled={loading} onClick={onConfirm}>
+          <Button variant={tone === 'primary' ? 'primary' : 'danger'} size="lg" className="flex-1" isLoading={loading} onClick={onConfirm}>
             {loading ? (loadingLabel ?? confirmLabel) : confirmLabel}
           </Button>
           <Button variant="outline" size="lg" className="flex-1" onClick={onCancel} disabled={loading}>

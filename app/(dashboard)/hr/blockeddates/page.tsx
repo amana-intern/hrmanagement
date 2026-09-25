@@ -9,6 +9,7 @@ import Button from '@/app/components/forms/Button';
 import TextField from '@/app/components/forms/TextField';
 import { SearchDateRangeCalendarField } from '@/app/components/forms/SearchFields';
 import ConfirmModal from '@/app/components/feedback/ConfirmModal';
+import Spinner from '@/app/components/feedback/Spinner';
 import StatusModal from '@/app/components/feedback/StatusModal';
 import { TableSkeleton } from '@/app/components/feedback/PageSkeleton';
 import { formatDateWIB } from '@/app/utils/formatDate';
@@ -33,7 +34,7 @@ export default function BlockedDatesPage() {
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<{ ok: boolean; text: string } | null>(null);
   const [rowToDelete, setRowToDelete] = useState<BlockedDate | null>(null);
-  const [deleting, setDeleting] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [rowToBlock, setRowToBlock] = useState<{ tanggal: string; tanggalAkhir: string | null; alasan: string } | null>(null);
 
   const load = async () => {
@@ -86,28 +87,29 @@ export default function BlockedDatesPage() {
       body: JSON.stringify({ tanggal: rowToBlock.tanggal, tanggalAkhir: rowToBlock.tanggalAkhir, alasan: rowToBlock.alasan }),
     });
     const data = await res.json().catch(() => null);
-    setSaving(false);
     if (!res.ok) {
+      setSaving(false);
       setStatus({ ok: false, text: data?.error || 'Failed to block date' });
       return;
     }
+    await load();
+    setSaving(false);
     setRowToBlock(null);
     setNewDate('');
     setNewEndDate('');
     setNewReason('');
-    await load();
   };
 
   const handleDelete = async (row: BlockedDate) => {
-    setDeleting(true);
+    setRowToDelete(null);
+    setDeletingId(row.id);
     const res = await fetch(`/api/hr/blocked-dates/${row.id}`, { method: 'DELETE' });
-    setDeleting(false);
     if (!res.ok) {
       setStatus({ ok: false, text: 'Failed to delete' });
-      return;
+    } else {
+      await load();
     }
-    setRowToDelete(null);
-    await load();
+    setDeletingId(null);
   };
 
   const columns: DataTableColumn<BlockedDate>[] = [
@@ -140,11 +142,16 @@ export default function BlockedDatesPage() {
       label: 'Action',
       width: '20%',
       minPx: 170,
-      render: (r) => (
-        <Button variant="danger" size="sm" className="w-full" onClick={() => setRowToDelete(r)}>
-          Remove
-        </Button>
-      ),
+      render: (r) =>
+        deletingId === r.id ? (
+          <div className="flex items-center justify-center h-9">
+            <Spinner className="h-6 w-6" />
+          </div>
+        ) : (
+          <Button variant="danger" size="sm" className="w-full" onClick={() => setRowToDelete(r)}>
+            Remove
+          </Button>
+        ),
     },
   ];
 
@@ -169,8 +176,8 @@ export default function BlockedDatesPage() {
           <TextField label="Reason (optional)" value={newReason} onChange={setNewReason} placeholder="e.g., National holiday" />
         </div>
         <div className="flex justify-end pt-4">
-          <Button variant="primary" size="md" disabled={saving || !newDate} onClick={handleAdd}>
-            {saving ? 'Saving...' : 'Block'}
+          <Button variant="primary" size="md" disabled={!newDate} onClick={handleAdd}>
+            Block
           </Button>
         </div>
       </SectionCard>
@@ -199,8 +206,6 @@ export default function BlockedDatesPage() {
             </>
           }
           confirmLabel="Remove"
-          loadingLabel="Removing..."
-          loading={deleting}
           onConfirm={() => handleDelete(rowToDelete)}
           onCancel={() => setRowToDelete(null)}
         />

@@ -2,12 +2,13 @@
 
 import Modal from './Modal';
 import { cn } from '@/app/utils/cn';
+import { UPLOAD_PHASE_END } from '@/app/utils/uploadWithProgress';
 
 /** Figma node 956:2605 — bar stays light blue while transferring, switches to full amana blue once actually done. */
 export default function UploadProgressModal({
   open,
   percent,
-  label = 'Uploading Document...',
+  label,
 }: {
   open: boolean;
   percent: number;
@@ -22,7 +23,7 @@ export default function UploadProgressModal({
       <div className="p-5">
         <div className="flex flex-col items-center gap-5 rounded-[5px] border border-amana-primary-500 px-4 py-6">
           <p className="text-[16px] text-amana-primary-500 text-center">
-            {done ? 'Upload Complete' : label}
+            {done ? 'Upload Complete' : label ?? (pct < UPLOAD_PHASE_END ? 'Uploading Document...' : 'Saving to server...')}
           </p>
           <div className="w-full flex items-center gap-3">
             <div className="flex-1 h-[10px] rounded-full bg-amana-neutral-100 overflow-hidden">

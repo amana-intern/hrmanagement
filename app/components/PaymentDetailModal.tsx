@@ -1,10 +1,9 @@
 'use client';
 
 import { ReactNode, useState } from 'react';
-import Modal from './feedback/Modal';
+import DetailModal, { DetailRow } from './feedback/DetailModal';
 import PdfPreviewModal, { PdfPreviewTarget } from './feedback/PdfPreviewModal';
 import Button from './forms/Button';
-import StatusPill from './data-display/StatusPill';
 import { formatDateWIB } from '@/app/utils/formatDate';
 import { statusColor } from '@/app/utils/statusColor';
 import { PAYMENT_KATEGORI } from '@/lib/constants';
@@ -37,27 +36,20 @@ interface PaymentDetailModalProps {
 }
 
 function Field({ label, value }: { label: string; value?: string | number | null }) {
-  if (value === null || value === undefined || value === '') return null;
-  return (
-    <div className="flex items-start justify-between gap-4 py-2 border-b border-amana-neutral-200 last:border-b-0">
-      <span className="text-[14px] font-semibold text-amana-neutral-400 flex-shrink-0">{label}</span>
-      <span className="text-[15px] text-amana-neutral-500 text-right break-words">{value}</span>
-    </div>
-  );
+  return <DetailRow label={label} value={value} />;
 }
 
 function AttachmentLink({ file, label, onPreview }: { file?: Attachment | null; label: string; onPreview: (f: Attachment) => void }) {
   return (
-    <div className="flex items-center justify-between gap-4 py-2 border-b border-amana-neutral-200 last:border-b-0">
-      <span className="text-[14px] font-semibold text-amana-neutral-400 flex-shrink-0">{label}</span>
+    <DetailRow label={label}>
       {file?.fileURL ? (
         <Button variant="outline" size="sm" onClick={() => onPreview(file)}>
           View {file.fileName || label}
         </Button>
       ) : (
-        <span className="text-[15px] text-amana-neutral-400 italic">No attachment</span>
+        <span className="italic text-amana-neutral-400">No attachment</span>
       )}
-    </div>
+    </DetailRow>
   );
 }
 
@@ -132,26 +124,24 @@ export default function PaymentDetailModal({ row, open, onClose }: PaymentDetail
   return (
     <>
       {open && (
-        <Modal title={`Submission Detail - ${row.idRequest}`} onClose={onClose} maxWidth="max-w-2xl" className="max-h-[92vh]">
-          <div className="px-5 py-2 flex-1 min-h-0 overflow-y-auto bg-amana-neutral-100">
-            <Field label="Project Manager" value={pax(detail.submittingAs)} />
-            <Field label="Chargecode" value={pax(detail.chargecode)} />
-            <Field label="Payment Under" value={pax(detail.paymentUnder)} />
-            <Field label="To Whom" value={row.masterKategoriPayment?.namaKategori ?? row.idKategoriPayment} />
-            <Field label="Event / Vendor Name" value={row.projectID} />
-            {row.statusLabel && (
-              <div className="flex items-start justify-between gap-4 py-2 border-b border-amana-neutral-200">
-                <span className="text-[14px] font-semibold text-amana-neutral-400 flex-shrink-0">Status</span>
-                <StatusPill color={statusColor(row.statusLabel)}>{row.statusLabel}</StatusPill>
-              </div>
-            )}
-            <Field label="Schedule Date" value={row.tanggalJadwalPembayaran ? formatDateWIB(row.tanggalJadwalPembayaran) : undefined} />
-            {row.statusLabel?.toLowerCase().includes('reject') && (
-              <Field label="Rejection Reason" value={row.catatan} />
-            )}
-            {body}
-          </div>
-        </Modal>
+        <DetailModal
+          title={`Submission Detail - ${row.idRequest}`}
+          onClose={onClose}
+          status={row.statusLabel ? { label: row.statusLabel, color: statusColor(row.statusLabel) } : null}
+          topFields={
+            row.statusLabel?.toLowerCase().includes('reject')
+              ? [{ label: 'Rejection Reason', value: row.catatan }]
+              : []
+          }
+        >
+          <Field label="Project Manager" value={pax(detail.submittingAs)} />
+          <Field label="Chargecode" value={pax(detail.chargecode)} />
+          <Field label="Payment Under" value={pax(detail.paymentUnder)} />
+          <Field label="To Whom" value={row.masterKategoriPayment?.namaKategori ?? row.idKategoriPayment} />
+          <Field label="Event / Vendor Name" value={row.projectID} />
+          <Field label="Schedule Date" value={row.tanggalJadwalPembayaran ? formatDateWIB(row.tanggalJadwalPembayaran) : undefined} />
+          {body}
+        </DetailModal>
       )}
 
       <PdfPreviewModal target={preview} onClose={() => setPreview(null)} />

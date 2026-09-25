@@ -9,7 +9,7 @@ import type { DataTableColumn } from '@/app/components/data-display/DataTable';
 import StatusPill from '@/app/components/data-display/StatusPill';
 import { SearchTextField, SearchSelectField, SearchDateRangeCalendarField } from '@/app/components/forms/SearchFields';
 import Button from '@/app/components/forms/Button';
-import Modal from '@/app/components/feedback/Modal';
+import DetailModal, { DetailRow } from '@/app/components/feedback/DetailModal';
 import { statusColor } from '@/app/utils/statusColor';
 import { useFilters } from '@/app/utils/useFilters';
 import { DEPARTMENT_OPTIONS, getAllGradeOptions } from '@/app/utils/orgStructure';
@@ -93,12 +93,6 @@ export default function LeaveRecordPage() {
   const { draft, applied, setField, setFieldAndApply, handleSearch, handleReset } = useFilters<Filters>(emptyFilters);
   const gradeOptions = useMemo(() => getAllGradeOptions(), []);
 
-  const DetailField = ({ label, value }: { label: string; value: React.ReactNode }) => (
-    <div className="flex items-start justify-between gap-4 py-2 border-b border-amana-neutral-200 last:border-b-0">
-      <span className="text-[14px] font-semibold text-amana-neutral-400 flex-shrink-0">{label}</span>
-      <span className="text-[15px] text-amana-neutral-500 text-right break-words">{value}</span>
-    </div>
-  );
 
   useEffect(() => {
     (async () => {
@@ -265,36 +259,37 @@ export default function LeaveRecordPage() {
       </SectionCard>
 
       {detailsModal && (
-        <Modal title={`Leave Details - ${detailsModal.name || ''}`} onClose={() => setDetailsModal(null)} maxWidth="max-w-lg">
-          <div className="p-5 flex flex-col">
-            <DetailField label="Submitted On" value={detailsModal.submittedDate ? formatDateTimeWIB(detailsModal.submittedDate) : '-'} />
-            <DetailField label="Employee" value={detailsModal.name} />
-            <DetailField label="Practice Group" value={detailsModal.department} />
-            <DetailField label="Grade" value={detailsModal.grade} />
-            <div className="flex items-start justify-between gap-4 py-2 border-b border-amana-neutral-200">
-              <span className="text-[14px] font-semibold text-amana-neutral-400 flex-shrink-0">Status</span>
-              <StatusPill color={statusColor(STATUS_LABELS[detailsModal.status] ?? detailsModal.status)}>
-                {STATUS_LABELS[detailsModal.status] ?? detailsModal.status}
-              </StatusPill>
-            </div>
-            <DetailField label="Start Date" value={detailsModal.startDate ? formatDateWIB(detailsModal.startDate) : '-'} />
-            <DetailField label="End Date" value={detailsModal.endDate ? formatDateWIB(detailsModal.endDate) : '-'} />
-            {detailsModal.totalDays != null && (
-              <DetailField label="Total Days" value={`${detailsModal.totalDays} day(s)`} />
-            )}
-            {detailsModal.tanggalKerjaHariLibur && (
-              <DetailField label="Holiday Work Date" value={`${formatDateWIB(detailsModal.tanggalKerjaHariLibur)}${detailsModal.tanggalSelesaiKerjaLibur ? ` - ${formatDateWIB(detailsModal.tanggalSelesaiKerjaLibur)}` : ''}`} />
-            )}
-            {detailsModal.tipeCutiKompensasi && (
-              <DetailField label="Day Type" value={detailsModal.tipeCutiKompensasi === 'FULL' ? 'Full Day (1 day)' : 'Half Day (0.5 day)'} />
-            )}
-            {detailsModal.jumlahHariKompensasi != null && (
-              <DetailField label="Compensatory Days" value={`${detailsModal.jumlahHariKompensasi} day(s)`} />
-            )}
-            <DetailField label={detailsModal.jenis === 'sakit' ? 'Symptoms' : 'Reason'} value={detailsModal.reason ?? '-'} />
-            {detailsModal.note && <DetailField label="Approver Note" value={detailsModal.note} />}
-          </div>
-        </Modal>
+        <DetailModal
+          title={`Leave Details - ${detailsModal.name || ''}`}
+          onClose={() => setDetailsModal(null)}
+          maxWidth="max-w-lg"
+          status={{
+            label: STATUS_LABELS[detailsModal.status] ?? detailsModal.status,
+            color: statusColor(STATUS_LABELS[detailsModal.status] ?? detailsModal.status),
+          }}
+          topFields={[{ label: 'Approver Note', value: detailsModal.note }]}
+        >
+          <DetailRow label="Submitted On" value={detailsModal.submittedDate ? formatDateTimeWIB(detailsModal.submittedDate) : '-'} />
+          <DetailRow label="Employee" value={detailsModal.name} />
+          <DetailRow label="Practice Group" value={detailsModal.department} />
+          <DetailRow label="Grade" value={detailsModal.grade} />
+          <DetailRow label="Start Date" value={detailsModal.startDate ? formatDateWIB(detailsModal.startDate) : '-'} />
+          <DetailRow label="End Date" value={detailsModal.endDate ? formatDateWIB(detailsModal.endDate) : '-'} />
+          {detailsModal.totalDays != null && <DetailRow label="Total Days" value={`${detailsModal.totalDays} day(s)`} />}
+          {detailsModal.tanggalKerjaHariLibur && (
+            <DetailRow
+              label="Holiday Work Date"
+              value={`${formatDateWIB(detailsModal.tanggalKerjaHariLibur)}${detailsModal.tanggalSelesaiKerjaLibur ? ` - ${formatDateWIB(detailsModal.tanggalSelesaiKerjaLibur)}` : ''}`}
+            />
+          )}
+          {detailsModal.tipeCutiKompensasi && (
+            <DetailRow label="Day Type" value={detailsModal.tipeCutiKompensasi === 'FULL' ? 'Full Day (1 day)' : 'Half Day (0.5 day)'} />
+          )}
+          {detailsModal.jumlahHariKompensasi != null && (
+            <DetailRow label="Compensatory Days" value={`${detailsModal.jumlahHariKompensasi} day(s)`} />
+          )}
+          <DetailRow label={detailsModal.jenis === 'sakit' ? 'Symptoms' : 'Reason'} value={detailsModal.reason ?? '-'} />
+        </DetailModal>
       )}
 
       <StatusModal state={status} onClose={() => setStatus(null)} />

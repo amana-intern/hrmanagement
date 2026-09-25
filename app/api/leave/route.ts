@@ -1,7 +1,7 @@
 import { requireAuth, partnerForDepartment } from '@/lib/dal';
 import { prisma } from '@/lib/prisma';
 import { ROLES, DEPARTMENT_LABEL } from '@/lib/roles';
-import { LEAVE_TYPES } from '@/lib/constants';
+import { LEAVE_TYPES, specialLeaveMaxDays, specialLeaveName, todayISOWIB } from '@/lib/constants';
 import { computeLeaveBalance, parseDateOnly } from '@/lib/leave';
 import { sendEmail } from '@/lib/notify';
 
@@ -33,6 +33,9 @@ export async function POST(request: Request) {
     }
     if (end < start) {
       return Response.json({ error: 'End date cannot be earlier than start date' }, { status: 400 });
+    }
+    if (String(tanggalMulai).slice(0, 10) < todayISOWIB()) {
+      return Response.json({ error: 'Leave start date cannot be in the past.' }, { status: 400 });
     }
     const jumlahHari = Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
 
@@ -93,14 +96,22 @@ export async function POST(request: Request) {
       }
     }
 
+    // Special Leave: batas hari per pengajuan sesuai alasan (mis. Marriage = 3 hari)
+    if (idJenisCuti === LEAVE_TYPES.SPECIAL) {
+      const maxDays = specialLeaveMaxDays(keterangan);
+      if (maxDays != null && jumlahHari > maxDays) {
+        return Response.json(
+          { error: `${specialLeaveName(keterangan ?? '')} leave is limited to ${maxDays} day(s) per request (you requested ${jumlahHari}).` },
+          { status: 400 }
+        );
+      }
+    }
+
     // Fitur 10: Special menstruasi maksimal 2 hari per bulan
     if (
       idJenisCuti === LEAVE_TYPES.SPECIAL &&
       keterangan?.toLowerCase().includes('menstruation')
     ) {
-      if (jumlahHari > 2) {
-        return Response.json({ error: 'Menstrual leave maximum 2 days.' }, { status: 400 });
-      }
       const monthUsage = await prisma.pengajuanCuti.findMany({
         where: {
           idKaryawan: auth.idKaryawan,

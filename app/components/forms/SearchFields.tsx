@@ -165,10 +165,13 @@ export function CalendarMonth({
   onPrev,
   onNext,
   onSetMonth,
+  minDate,
 }: {
   month: Date;
   fromValue: string;
   toValue: string;
+  /** Tanggal sebelum ini (YYYY-MM-DD) tidak bisa dipilih. */
+  minDate?: string;
   onPick: (iso: string) => void;
   onPrev?: () => void;
   onNext?: () => void;
@@ -181,7 +184,7 @@ export function CalendarMonth({
         <button
           type="button"
           onClick={onPrev}
-          className={`p-1 rounded text-amana-neutral-400 hover:bg-white flex-shrink-0 ${onPrev ? '' : 'invisible'}`}
+          className={`p-1 rounded text-amana-neutral-400 hover:bg-amana-primary-100 flex-shrink-0 ${onPrev ? '' : 'invisible'}`}
         >
           <ChevronLeft className="w-4 h-4" />
         </button>
@@ -189,7 +192,7 @@ export function CalendarMonth({
         <button
           type="button"
           onClick={onNext}
-          className={`p-1 rounded text-amana-neutral-400 hover:bg-white flex-shrink-0 ${onNext ? '' : 'invisible'}`}
+          className={`p-1 rounded text-amana-neutral-400 hover:bg-amana-primary-100 flex-shrink-0 ${onNext ? '' : 'invisible'}`}
         >
           <ChevronRight className="w-4 h-4" />
         </button>
@@ -206,20 +209,24 @@ export function CalendarMonth({
           const isFrom = !!fromValue && fromValue === iso;
           const isTo = !!toValue && toValue === iso;
           const inRange = !!fromValue && !!toValue && iso > fromValue && iso < toValue;
+          const disabled = !!minDate && iso < minDate;
           return (
             <button
               key={iso}
               type="button"
+              disabled={disabled}
               onClick={() => onPick(iso)}
               className={[
                 'text-[13px] h-8 w-full rounded-full flex items-center justify-center transition-colors',
-                isFrom || isTo
+                disabled
+                  ? 'text-amana-neutral-200 cursor-not-allowed line-through'
+                  : isFrom || isTo
                   ? 'bg-amana-primary-500 text-white font-semibold'
                   : inRange
                     ? 'bg-amana-primary-200/30 text-amana-neutral-500'
                     : inMonth
-                      ? 'text-amana-neutral-500 hover:bg-white'
-                      : 'text-amana-neutral-300 hover:bg-white',
+                      ? 'text-amana-neutral-500 hover:bg-amana-primary-100'
+                      : 'text-amana-neutral-300 hover:bg-amana-primary-100',
               ].join(' ')}
             >
               {date.getDate()}
@@ -238,12 +245,15 @@ export function SearchDateRangeCalendarField({
   toValue,
   onFromChange,
   onToChange,
+  minDate,
 }: {
   label: string;
   fromValue: string;
   toValue: string;
   onFromChange: (v: string) => void;
   onToChange: (v: string) => void;
+  /** Tanggal sebelum ini (YYYY-MM-DD) tidak bisa dipilih, mis. hari ini untuk pengajuan baru. */
+  minDate?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
@@ -302,7 +312,6 @@ export function SearchDateRangeCalendarField({
       onFromChange(iso);
     } else {
       onToChange(iso);
-      setOpen(false);
     }
   };
 
@@ -342,6 +351,7 @@ export function SearchDateRangeCalendarField({
               month={leftMonth}
               fromValue={fromValue}
               toValue={toValue}
+              minDate={minDate}
               onPick={handlePick}
               onPrev={() => setLeftMonth((m) => addMonths(m, -1))}
               onSetMonth={(m) => setLeftMonth(m)}
@@ -351,6 +361,7 @@ export function SearchDateRangeCalendarField({
               month={addMonths(leftMonth, 1)}
               fromValue={fromValue}
               toValue={toValue}
+              minDate={minDate}
               onPick={handlePick}
               onNext={() => setLeftMonth((m) => addMonths(m, 1))}
               onSetMonth={(m) => setLeftMonth(addMonths(m, -1))}

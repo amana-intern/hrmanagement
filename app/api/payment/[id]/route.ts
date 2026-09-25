@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { ROLES } from '@/lib/roles';
 import { sendEmail, notifyAllOpsAdmins, notifyUsers } from '@/lib/notify';
 import { completeTodo } from '@/lib/todos';
+import { todayISOWIB } from '@/lib/constants';
 
 const nota = () => `NOTIF-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 const hist = () => `HIST-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -108,6 +109,9 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
       if (action === 'schedule') {
         if (payment.idStatus !== 'ST_PAY_APPROVED') {
           return Response.json({ error: 'Invalid status' }, { status: 409 });
+        }
+        if (tanggalPembayaran && String(tanggalPembayaran).slice(0, 10) < todayISOWIB()) {
+          return Response.json({ error: 'Payment schedule date cannot be in the past.' }, { status: 400 });
         }
         const tanggal = tanggalPembayaran ? new Date(tanggalPembayaran) : new Date();
         const updated = await prisma.$transaction(async (tx) => {

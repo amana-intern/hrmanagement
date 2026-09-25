@@ -6,10 +6,7 @@ import { parseDateOnly } from '@/lib/leave';
 // GET /api/hr/blocked-dates - daftar tanggal diblokir (Admin HR, view-only utk lainnya)
 export async function GET() {
   try {
-    const auth = await requireAuth();
-    if (auth.idRole !== ROLES.ADMIN_HR) {
-      return Response.json({ error: 'Forbidden' }, { status: 403 });
-    }
+    await requireAuth(); // semua user login boleh membaca (dipakai form cuti untuk pre-check); tulis tetap Admin HR
     const list = await prisma.tanggalBlokir.findMany({
       orderBy: { tanggal: 'asc' },
     });
