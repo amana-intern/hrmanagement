@@ -20,6 +20,7 @@ interface DashboardData {
     pendingApproval: number;
     certificates: number;
     assessment: number;
+    assessmentTotal: number;
     updates: { text: string }[];
   };
 }
@@ -57,6 +58,13 @@ export default function HRProfilePage() {
 
   const stat = (value: number, label: string, caption: string): Stat => ({ value, label, caption });
 
+  // Warna card "Assessment": % karyawan eligible yang sudah isi assessment.
+  // <=50% merah (danger), 51-75% kuning (warning), >75% hijau (success).
+  const assessed = data?.career.assessment ?? 0;
+  const assessmentTotal = data?.career.assessmentTotal ?? 0;
+  const assessmentPct = assessmentTotal > 0 ? Math.round((assessed / assessmentTotal) * 100) : 0;
+  const assessmentTone = assessmentPct <= 50 ? 'danger' : assessmentPct <= 75 ? 'warning' : 'success';
+
   const attendancePanel: SummaryPanelConfig = {
     title: 'Attendance Summary',
     stats: [
@@ -72,7 +80,7 @@ export default function HRProfilePage() {
     stats: [
       stat(data?.career.pendingApproval ?? 0, 'Assessment Pending', 'Not yet assessed'),
       stat(data?.career.certificates ?? 0, 'Certificates', 'Total certificates'),
-      stat(data?.career.assessment ?? 0, 'Assessment', 'Completed'),
+      { ...stat(data?.career.assessment ?? 0, 'Assessment', 'Completed'), tone: assessmentTone },
     ],
     updates: (data?.career.updates ?? []).map((u) => u.text),
   };

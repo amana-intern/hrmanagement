@@ -63,19 +63,22 @@ export async function GET() {
       orderBy: { tanggalBuka: 'desc' },
     });
 
-    const [certCount, assessedCount, pendingAssessmentCount] = await Promise.all([
+    const eligibleRoleFilter = { user: { idRole: { notIn: [ROLES.ADMIN_HR, ROLES.ADMIN_OPS, ROLES.PARTNER] } } };
+
+    const [certCount, assessedCount, pendingAssessmentCount, assessmentTotal] = await Promise.all([
       prisma.sertifikatKaryawan.count(),
       open
         ? prisma.assessmentSubmission.count({ where: { idAssessment: open.idAssessment } })
         : Promise.resolve(0),
       prisma.karyawan.count({
         where: {
-          user: { idRole: { notIn: [ROLES.ADMIN_HR, ROLES.ADMIN_OPS, ROLES.PARTNER] } },
+          ...eligibleRoleFilter,
           assessmentSubmissions: open
             ? { none: { idAssessment: open.idAssessment } }
             : { none: {} },
         },
       }),
+      prisma.karyawan.count({ where: eligibleRoleFilter }),
     ]);
 
     const [recentSubmissions, recentCerts] = await Promise.all([
@@ -138,6 +141,7 @@ export async function GET() {
         pendingApproval: pendingAssessmentCount,
         certificates: certCount,
         assessment: assessedCount,
+        assessmentTotal,
         updates: careerUpdates,
       },
       todos,

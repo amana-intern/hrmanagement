@@ -1,7 +1,7 @@
 import { requireAuth, partnerForDepartment } from '@/lib/dal';
 import { prisma } from '@/lib/prisma';
 import { ROLES, DEPARTMENT_LABEL } from '@/lib/roles';
-import { LEAVE_TYPES, specialLeaveMaxDays, specialLeaveName, todayISOWIB } from '@/lib/constants';
+import { LEAVE_TYPES, specialLeaveMaxDays, specialLeaveName, todayISOWIB, isLeaveContractRestricted, LEAVE_RESTRICTED_CONTRACT_MESSAGE } from '@/lib/constants';
 import { computeLeaveBalance, parseDateOnly } from '@/lib/leave';
 import { sendEmail } from '@/lib/notify';
 
@@ -24,6 +24,15 @@ export async function POST(request: Request) {
 
     if (!tanggalMulai || !tanggalSelesai || !idJenisCuti) {
       return Response.json({ error: 'All fields are required' }, { status: 400 });
+    }
+
+    // Kontrak INTERNSHIP: hanya boleh Special Leave (JC02) & Sick Leave (halaman terpisah /api/sick).
+    // Paid/Unpaid/Compensatory ditolak — sama dengan warning di form.
+    if (
+      isLeaveContractRestricted(auth.tipeKontrak) &&
+      idJenisCuti !== LEAVE_TYPES.SPECIAL
+    ) {
+      return Response.json({ error: LEAVE_RESTRICTED_CONTRACT_MESSAGE }, { status: 400 });
     }
 
     const start = parseDateOnly(tanggalMulai);

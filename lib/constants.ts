@@ -19,6 +19,20 @@ export const LEAVE_TYPES = {
   COMPENSATORY: 'JC04',
 } as const;
 
+// Tipe kontrak Karyawan.tipeKontrak yang hanya boleh mengajukan Special Leave & Sick Leave.
+// Paid/Unpaid/Compensatory tetap tampil di form tapi diblokir (warning + ditolak server).
+export const LEAVE_RESTRICTED_CONTRACTS = ['INTERNSHIP'] as const;
+
+// Pesan error/warning yang sama untuk client & server.
+export const LEAVE_RESTRICTED_CONTRACT_MESSAGE =
+  'Internship contract can only request Special Leave and Sick Leave. Please select a different leave option.';
+
+// True bila tipe kontrak karyawan dibatasi hanya boleh Special Leave & Sick Leave.
+export function isLeaveContractRestricted(tipeKontrak?: string | null): boolean {
+  const t = (tipeKontrak ?? '').trim().toUpperCase();
+  return (LEAVE_RESTRICTED_CONTRACTS as readonly string[]).includes(t);
+}
+
 // MasterKategoriPayment
 export const PAYMENT_KATEGORI = {
   VENDOR: 'KPY01',

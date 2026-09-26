@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { CalendarCheck } from 'lucide-react';
+import { CalendarCheck, AlertTriangle } from 'lucide-react';
 import PageTopBar from '@/app/components/layout/PageTopBar';
 import SectionCard from '@/app/components/layout/SectionCard';
 import StatBox from '@/app/components/data-display/StatBox';
@@ -14,7 +14,7 @@ import Button from '@/app/components/forms/Button';
 import Modal from '@/app/components/feedback/Modal';
 import DetailModal, { DetailRow } from '@/app/components/feedback/DetailModal';
 import StatusModal from '@/app/components/feedback/StatusModal';
-import { LEAVE_TYPES, LEAVE_STATUS, specialLeaveMaxDays, specialLeaveName, todayISOWIB } from '@/lib/constants';
+import { LEAVE_TYPES, LEAVE_STATUS, specialLeaveMaxDays, specialLeaveName, todayISOWIB, isLeaveContractRestricted, LEAVE_RESTRICTED_CONTRACT_MESSAGE } from '@/lib/constants';
 import { statusColor } from '@/app/utils/statusColor';
 import { formatDateWIB } from '@/app/utils/formatDate';
 
@@ -146,6 +146,7 @@ export default function LeaveRequestPage() {
   const [pendingPaidDays, setPendingPaidDays] = useState(0);
   const [menstrualUses, setMenstrualUses] = useState<{ start: string; days: number }[]>([]);
   const [blockedDates, setBlockedDates] = useState<{ tanggal: string | null; tanggalAkhir: string | null; alasan: string | null }[]>([]);
+  const [tipeKontrak, setTipeKontrak] = useState<string | null>(null);
 
   const loadBalance = async () => {
     try {
@@ -157,6 +158,7 @@ export default function LeaveRequestPage() {
         setUnpaidLeaveUsed(data.user?.leave?.unpaidLeaveUsed ?? 0);
         setCompensatoryLeaveUsed(data.user?.leave?.compensatoryLeaveUsed ?? 0);
         setCompDetails(data.user?.leave?.compensatoryLeaveDetails ?? []);
+        setTipeKontrak(data.user?.tipeKontrak ?? null);
       }
     } catch {}
   };
@@ -291,6 +293,13 @@ export default function LeaveRequestPage() {
   // Unpaid hanya boleh saat saldo Paid = 0 (aturan yang sama dengan server).
   const unpaidBlocked = selectedLeave === 'Unpaid Leave' && (leaveBalance ?? 0) > 0;
 
+  // Kontrak INTERNSHIP: hanya boleh Special Leave & Sick Leave.
+  // Paid/Unpaid/Compensatory tetap tampil di dropdown, tapi dipilih → warning + submit diblokir.
+  const contractLeaveBlocked =
+    isLeaveContractRestricted(tipeKontrak) &&
+    selectedLeave !== '' &&
+    selectedLeave !== 'Special Leave';
+
   // Saldo yang sedang "dicadangkan" pengajuan Paid Leave sebelumnya yang belum di-approve (sama dengan aturan server).
   const availableAfterPending = (leaveBalance ?? 0) - pendingPaidDays;
   const quotaInUse =
@@ -308,7 +317,7 @@ export default function LeaveRequestPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isFormValid) return;
+    if (!isFormValid || contractLeaveBlocked) return;
 
     const idJenisCuti = leaveOptions.includes(selectedLeave) ? LEAVE_TYPE_MAP[selectedLeave] : '';
     const keterangan = selectedLeave === 'Special Leave' ? selectedSpecialLeave : reason;
@@ -465,6 +474,13 @@ export default function LeaveRequestPage() {
           />
         </div>
 
+        {contractLeaveBlocked && (
+          <div className="mb-4 flex items-center gap-2 px-4 py-3 rounded-lg border text-[13px] font-medium bg-amana-warning-100 border-amana-warning-500 text-amana-warning-500">
+            <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+            {LEAVE_RESTRICTED_CONTRACT_MESSAGE}
+          </div>
+        )}
+
         {selectedLeave === 'Unpaid Leave' && (
           <div className={`mb-4 px-4 py-3 rounded-lg border text-[13px] font-medium ${unpaidBlocked ? 'bg-amana-danger-100 border-amana-danger-500 text-amana-danger-500' : 'bg-amana-success-100 border-amana-success-300 text-amana-success-500'}`}>
             {(leaveBalance ?? 0) > 0
@@ -510,7 +526,7 @@ export default function LeaveRequestPage() {
         </div>
 
         <div className="flex-shrink-0 flex justify-end pt-4 border-t border-amana-neutral-200">
-          <Button type="submit" variant="primary" size="lg" className="w-full max-w-[280px]" disabled={!isFormValid || submitting || !!halfDayMultiDayError || balanceExceeded || quotaInUse || unpaidBlocked || !!specialLeaveError || !!blockedError} isLoading={submitting}>
+          <Button type="submit" variant="primary" size="lg" className="w-full max-w-[280px]" disabled={!isFormValid || submitting || !!halfDayMultiDayError || balanceExceeded || quotaInUse || unpaidBlocked || contractLeaveBlocked || !!specialLeaveError || !!blockedError} isLoading={submitting}>
             {submitting ? 'Submitting...' : 'Submit'}
           </Button>
         </div>
