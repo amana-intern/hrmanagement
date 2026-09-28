@@ -3,12 +3,12 @@ import { requireAuth } from '@/lib/dal';
 import { prisma } from '@/lib/prisma';
 import { ROLES } from '@/lib/roles';
 
-// PATCH /api/hr/talent-roster/[idKaryawan] — HR mengedit department, grade, dan/atau role karyawan.
-// Body: { department?, namaGrade?, namaRole?, akses? }. Logika grade/role mengikuti POST talent-roster:
+// PATCH /api/hr/talent-roster/[idKaryawan] — HR mengedit nama, email, department, grade, dan/atau role karyawan.
+// Body: { nama?, email?, department?, namaGrade?, namaRole?, akses? }. Logika grade/role mengikuti POST talent-roster:
 // grade Head/Partner = leader -> role selalu Partner (tidak boleh diberi akses admin).
 // Akses admin (Admin HR/OPS) HANYA lewat field `akses` ('admin_hr' | 'admin_ops' | kosong);
 // tanpa `akses` = tanpa akses admin, dan nama Partner/Admin HR/Admin OPS di `namaRole` ditolak.
-// Role custom -> salin permission Employee.
+// Role custom -> salin permission Employee. Email dipakai login & wajib unik (409 bila bentrok).
 export async function PATCH(
   request: NextRequest,
   ctx: { params: Promise<{ idKaryawan: string }> }
@@ -20,7 +20,7 @@ export async function PATCH(
     }
     const { idKaryawan } = await ctx.params;
     const body = await request.json();
-    const { department, namaGrade, namaRole, akses, noTelepon, tanggalLahir, kontrakTanggalMulai, kontrakTanggalBerakhir } = body || {};
+    const { nama, email, department, namaGrade, namaRole, akses, noTelepon, tanggalLahir, kontrakTanggalMulai, kontrakTanggalBerakhir } = body || {};
 
     const isSelf = auth.idKaryawan === idKaryawan;
 
@@ -34,6 +34,31 @@ export async function PATCH(
     });
     if (!karyawan) {
       return Response.json({ error: 'Employee not found' }, { status: 404 });
+    }
+
+    // Validasi nama & email (email = identitas login, wajib unik).
+    const cleanNamaEdit = nama !== undefined ? String(nama ?? '').trim() : null;
+    if (cleanNamaEdit !== null && !cleanNamaEdit) {
+      return Response.json({ error: 'Name is required' }, { status: 400 });
+    }
+    const cleanEmailEdit = email !== undefined ? String(email ?? '').trim().toLowerCase() : null;
+    const currentEmail = (karyawan.user?.email ?? '').toLowerCase();
+    if (cleanEmailEdit !== null) {
+      if (!cleanEmailEdit) {
+        return Response.json({ error: 'Email is required' }, { status: 400 });
+      }
+      if (cleanEmailEdit !== currentEmail) {
+        if (!karyawan.user) {
+          return Response.json({ error: 'This employee has no login account' }, { status: 400 });
+        }
+        const existingEmail = await prisma.user.findFirst({
+          where: { email: { equals: cleanEmailEdit, mode: 'insensitive' }, idUser: { not: karyawan.user.idUser } },
+          select: { idUser: true },
+        });
+        if (existingEmail) {
+          return Response.json({ error: 'Email already registered' }, { status: 409 });
+        }
+      }
     }
 
     // Koreksi tanggal kontrak aktif (mis. salah input saat Extend Contract).
@@ -75,7 +100,12 @@ export async function PATCH(
     const oldRole = karyawan.user?.role?.namaRole ?? null;
     let newGradeName: string | null = oldGrade;
 
-    const data: { idGrade?: string | null; department?: string | null; departments?: string[]; noTelepon?: string | null; tanggalLahir?: Date | null } = {};
+    const data: { idGrade?: string | null; department?: string | null; departments?: string[]; noTelepon?: string | null; tanggalLahir?: Date | null; nama?: string | null } = {};
+
+    // Update nama karyawan (bila berubah).
+    if (cleanNamaEdit !== null && cleanNamaEdit !== karyawan.nama) {
+      data.nama = cleanNamaEdit;
+    }
 
     // Update nomor telepon & tanggal lahir (boleh untuk diri sendiri maupun orang lain).
     if (noTelepon !== undefined) {
@@ -248,8 +278,16 @@ export async function PATCH(
       if (Object.keys(data).length > 0) {
         await tx.karyawan.update({ where: { idKaryawan }, data });
       }
-      if (karyawan.user && idRole) {
-        await tx.user.update({ where: { idUser: karyawan.user.idUser }, data: { idRole } });
+      const emailChanged =
+        cleanEmailEdit !== null && !!karyawan.user && cleanEmailEdit !== currentEmail;
+      if (karyawan.user && (idRole || emailChanged)) {
+        await tx.user.update({
+          where: { idUser: karyawan.user.idUser },
+          data: {
+            ...(idRole ? { idRole } : {}),
+            ...(emailChanged ? { email: cleanEmailEdit } : {}),
+          },
+        });
       }
       if (kontrakUpdate) {
         const sorted = [...karyawan.kontrakKaryawan].sort((a, b) => {

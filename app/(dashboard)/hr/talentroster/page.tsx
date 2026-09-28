@@ -134,7 +134,7 @@ export default function TalentRosterPage() {
   const [deletingUser, setDeletingUser] = useState(false);
 
   const [modalMode, setModalMode] = useState<'view' | 'edit'>('view');
-  const [editForm, setEditForm] = useState({ department: '', grade: '', roleLabel: '', akses: 'employee', contractStartDate: '', contractEndDate: '', noTelepon: '', tanggalLahir: '' });
+  const [editForm, setEditForm] = useState({ nama: '', email: '', department: '', grade: '', roleLabel: '', akses: 'employee', contractStartDate: '', contractEndDate: '', noTelepon: '', tanggalLahir: '' });
   const [customEditGrade, setCustomEditGrade] = useState('');
   const [savingEdit, setSavingEdit] = useState(false);
   const [editMsg, setEditMsg] = useState('');
@@ -252,6 +252,8 @@ export default function TalentRosterPage() {
 
   const handleOpenEdit = (e: Employee) => {
     setEditForm({
+      nama: e.nama || '',
+      email: e.email || '',
       department: e.department && e.department !== '-' ? e.department : '',
       grade: e.grade && e.grade !== '-' ? e.grade : '',
       roleLabel: e.roleLabel && e.roleLabel !== '-' ? e.roleLabel : '',
@@ -269,6 +271,15 @@ export default function TalentRosterPage() {
 
   const handleSaveEdit = async () => {
     if (!detailsModal) return;
+    if (!editForm.nama.trim()) {
+      setEditMsg('Talent Name is required');
+      return;
+    }
+    const cleanEditEmail = editForm.email.trim().toLowerCase();
+    if (!cleanEditEmail) {
+      setEditMsg('Talent Email is required');
+      return;
+    }
     if (!editForm.department) {
       setEditMsg('Practice Group is required');
       return;
@@ -300,6 +311,9 @@ export default function TalentRosterPage() {
       const contactChanged =
         editForm.noTelepon !== (detailsModal.noTelepon || '') ||
         editForm.tanggalLahir !== (detailsModal.tanggalLahir ? detailsModal.tanggalLahir.slice(0, 10) : '');
+      const identityChanged =
+        editForm.nama.trim() !== detailsModal.nama ||
+        cleanEditEmail !== (detailsModal.email || '').toLowerCase();
       const res = await fetch(`/api/hr/talent-roster/${detailsModal.idKaryawan}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -309,6 +323,7 @@ export default function TalentRosterPage() {
           namaRole: roleVal,
           // 'employee' = tanpa akses admin -> jangan kirim field akses.
           ...(editForm.akses && editForm.akses !== 'employee' ? { akses: editForm.akses } : {}),
+          ...(identityChanged ? { nama: editForm.nama.trim(), email: cleanEditEmail } : {}),
           ...(contactChanged
             ? { noTelepon: editForm.noTelepon, tanggalLahir: editForm.tanggalLahir || null }
             : {}),
@@ -486,15 +501,27 @@ export default function TalentRosterPage() {
                   )}
                   <div className="flex-1 min-h-0 overflow-y-auto scroll-smooth p-5 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
                     <TextField
-                      label="Phone Number"
-                      value={editForm.noTelepon}
-                      onChange={(v) => setEditForm((p) => ({ ...p, noTelepon: v }))}
-                      placeholder="e.g.: 0812-3456-7890"
+                      label="Talent Email"
+                      value={editForm.email}
+                      onChange={(v) => setEditForm((p) => ({ ...p, email: v }))}
+                      placeholder="e.g.: name@amana.id"
+                    />
+                    <TextField
+                      label="Talent Name"
+                      value={editForm.nama}
+                      onChange={(v) => setEditForm((p) => ({ ...p, nama: v }))}
+                      placeholder="Full Name"
                     />
                     <DateField
                       label="Birth Date"
                       value={editForm.tanggalLahir}
                       onChange={(v) => setEditForm((p) => ({ ...p, tanggalLahir: v }))}
+                    />
+                    <TextField
+                      label="Phone Number"
+                      value={editForm.noTelepon}
+                      onChange={(v) => setEditForm((p) => ({ ...p, noTelepon: v }))}
+                      placeholder="e.g.: 0812-3456-7890"
                     />
 
                     <SelectField
@@ -514,7 +541,7 @@ export default function TalentRosterPage() {
                         options={[...(editForm.department === 'ops' ? OPS_GRADES : editForm.department ? NON_OPS_GRADES : []), '__other__']}
                         labels={{ __other__: 'Other / Custom' }}
                         disabled={!editForm.department}
-                        placeholder={editForm.department ? 'Choose Grade' : 'Select department first'}
+                        placeholder={editForm.department ? 'Choose Grade' : 'Select Practice Group First'}
                       />
                       {editForm.grade === '__other__' && (
                         <div className="pt-2">
@@ -666,7 +693,7 @@ export default function TalentRosterPage() {
                 options={[...gradeOptions, '__other__']}
                 labels={{ __other__: 'Other / Custom' }}
                 disabled={!newUser.department}
-                placeholder={newUser.department ? 'Choose Grade' : 'Select department first'}
+                placeholder={newUser.department ? 'Choose Grade' : 'Select Practice Group First'}
               />
               {newUser.grade === '__other__' && (
                 <div className="pt-2">
