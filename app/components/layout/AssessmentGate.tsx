@@ -45,7 +45,7 @@ function SectionWarning({ onTake }: { onTake: () => void }) {
         </span>
         <h2 className="text-[22px] font-semibold text-amana-primary-500">Assessment Required</h2>
         <p className="text-[15px] text-amana-neutral-400 leading-relaxed">
-          Please complete the competency assessment first before accessing other pages.
+          Please complete the assessment first before accessing other pages.
           Your submission unlocks the rest of the workspace automatically.
         </p>
         <Button variant="primary" size="lg" onClick={onTake}>
