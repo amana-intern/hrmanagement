@@ -215,7 +215,7 @@ export async function POST(request: Request) {
       }
     } else {
       const cleanRole = String(namaRole ?? '').trim();
-      if (!cleanRole) return Response.json({ error: 'Role is required' }, { status: 400 });
+      if (!cleanRole) return Response.json({ error: 'Position is required' }, { status: 400 });
 
       // Resolusi role: cari by nama (case-insensitive), jika belum ada buat baru (ROLE_<SLUG>).
       role = await prisma.role.findFirst({
@@ -236,7 +236,7 @@ export async function POST(request: Request) {
         role = await prisma.role.create({ data: { idRole: newId, namaRole: cleanRole } });
       }
       if (!role) {
-        return Response.json({ error: 'Role not found' }, { status: 500 });
+        return Response.json({ error: 'Position not found' }, { status: 500 });
       }
 
       // Grade biasa = karyawan -> role Partner/Admin HR/Admin OPS tidak boleh.
@@ -246,7 +246,7 @@ export async function POST(request: Request) {
         role.idRole === ROLES.ADMIN_OPS
       ) {
         return Response.json(
-          { error: 'Partner/Admin HR/Admin OPS roles are only allowed for grade Head/Partner' },
+          { error: 'Partner/Admin HR/Admin OPS positions are only allowed for grade Head/Partner' },
           { status: 400 }
         );
       }

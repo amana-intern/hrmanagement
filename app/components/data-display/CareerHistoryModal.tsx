@@ -20,14 +20,14 @@ export interface CareerHistoryEntry {
 const FIELD_LABELS: Record<string, string> = {
   DEPARTMENT: 'Practice Group',
   GRADE: 'Grade',
-  ROLE: 'Role',
+  ROLE: 'Position',
 };
 
-// Versi singkat dipakai saat beberapa field berubah sekaligus (judul digabung jadi "PG, Grade, Role").
+// Versi singkat dipakai saat beberapa field berubah sekaligus (judul digabung jadi "PG, Grade, Position").
 const FIELD_LABELS_SHORT: Record<string, string> = {
   DEPARTMENT: 'PG',
   GRADE: 'Grade',
-  ROLE: 'Role',
+  ROLE: 'Position',
 };
 
 export interface CareerCurrent {
@@ -73,11 +73,11 @@ export default function CareerHistoryModal({
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-[12px] font-semibold text-amana-neutral-300">Current</p>
-              <p className="text-[24px] font-semibold italic text-amana-primary-500">PG, Grade, Role</p>
+              <p className="text-[24px] font-semibold italic text-amana-primary-500">PG, Grade, Position</p>
               {[
                 ['Practice Group', current.department],
                 ['Grade', current.grade],
-                ['Role', current.role],
+                ['Position', current.role],
               ].map(([label, value]) => (
                 <div key={label} className="flex items-center gap-1 text-[16px] text-amana-neutral-500">
                   <span className="font-semibold">{label}:</span>

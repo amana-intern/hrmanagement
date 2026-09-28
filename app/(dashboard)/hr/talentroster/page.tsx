@@ -197,11 +197,11 @@ export default function TalentRosterPage() {
     }
     const roleName = isLeaderGrade ? 'Partner' : isPromotedAccess ? ACCESS_LABELS[newUser.akses] : newUser.namaRole.trim();
     if (!roleName) {
-      setAddUserMsg('Role is required');
+      setAddUserMsg('Position is required');
       return;
     }
     if (!isLeaderGrade && !isPromotedAccess && BASE_NON_EMPLOYEE_ROLES.includes(roleName.toLowerCase())) {
-      setAddUserMsg('Role Partner/Admin HR/Admin OPS is only for grade Head/Partner');
+      setAddUserMsg('Position Partner/Admin HR/Admin OPS is only for grade Head/Partner');
       return;
     }
     if (!newUser.tipeKontrak) {
@@ -293,7 +293,7 @@ export default function TalentRosterPage() {
     const isPromotedEditAccess = editForm.akses === 'admin_hr' || editForm.akses === 'admin_ops';
     const roleVal = isLeader ? 'Partner' : isPromotedEditAccess ? ACCESS_LABELS[editForm.akses] : editForm.roleLabel.trim();
     if (!roleVal) {
-      setEditMsg('Role is required');
+      setEditMsg('Position is required');
       return;
     }
     setSavingEdit(true);
@@ -552,7 +552,7 @@ export default function TalentRosterPage() {
 
                     <div>
                       <TextField
-                        label="Role"
+                        label="Position"
                         value={
                           LEADER_GRADES.includes((editForm.grade === '__other__' ? customEditGrade : editForm.grade).toLowerCase())
                             ? 'Partner'
@@ -570,7 +570,7 @@ export default function TalentRosterPage() {
                         placeholder="e.g.: Software Engineer, Data Analyst"
                       />
                       {LEADER_GRADES.includes((editForm.grade === '__other__' ? customEditGrade : editForm.grade).toLowerCase()) && (
-                        <p className="pt-1.5 text-[12px] text-amana-neutral-400">Grade Head/Partner automatically becomes role Partner.</p>
+                        <p className="pt-1.5 text-[12px] text-amana-neutral-400">Grade Head/Partner automatically becomes position Partner.</p>
                       )}
                     </div>
 
@@ -704,13 +704,13 @@ export default function TalentRosterPage() {
 
             <div>
               <TextField
-                label="Role"
+                label="Position"
                 value={isLeaderGrade ? 'Partner' : isPromotedAccess ? ACCESS_LABELS[newUser.akses] : newUser.namaRole}
                 onChange={(v) => setNewUser((p) => ({ ...p, namaRole: v }))}
                 disabled={isLeaderGrade || isPromotedAccess}
                 placeholder="e.g.: Software Engineer, Data Analyst"
               />
-              {isLeaderGrade && <p className="pt-1.5 text-[12px] text-amana-neutral-400">Grade Head/Partner automatically becomes role Partner.</p>}
+              {isLeaderGrade && <p className="pt-1.5 text-[12px] text-amana-neutral-400">Grade Head/Partner automatically becomes position Partner.</p>}
             </div>
 
             <div>

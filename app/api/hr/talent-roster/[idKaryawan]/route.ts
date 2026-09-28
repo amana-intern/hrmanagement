@@ -168,7 +168,7 @@ export async function PATCH(
     if (isLeader) {
       if (cleanAkses) {
         return Response.json(
-          { error: 'Grade Head/Partner automatically becomes role Partner and cannot be given admin access.' },
+          { error: 'Grade Head/Partner automatically becomes position Partner and cannot be given admin access.' },
           { status: 400 }
         );
       }
@@ -187,7 +187,7 @@ export async function PATCH(
       if (namaRole !== undefined) {
         const cleanRole = String(namaRole ?? '').trim();
         if (!cleanRole) {
-          return Response.json({ error: 'Role is required' }, { status: 400 });
+          return Response.json({ error: 'Position is required' }, { status: 400 });
         }
         let role = await prisma.role.findFirst({
           where: { namaRole: { equals: cleanRole, mode: 'insensitive' } },
