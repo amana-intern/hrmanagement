@@ -79,10 +79,15 @@ interface AiMatch {
   name: string;
   position_title: string | null;
   grading: string | null;
+  practice_group: string | null;
   email: string | null;
+  phone?: string | null;
   years_of_experience: number | null;
-  matched_skills: string[];
+  top_technical_skills?: string[];
+  capabilities?: string[] | null;
+  education?: { degree?: string; major?: string; university?: string; graduation_year?: number }[] | null;
   match_reason: string;
+  matched_skills: string[];
   confidence: string | null;
 }
 
@@ -105,6 +110,10 @@ export default function TalentRosterPage() {
   const [appliedQuery, setAppliedQuery] = useState('');
   const [aiState, setAiState] = useState<'idle' | 'loading' | 'ai' | 'fallback'>('idle');
   const [aiResult, setAiResult] = useState<AiSearchResult | null>(null);
+  // Detail modal untuk match AI yang bukan karyawan roster (tombol View).
+  const [aiTalentModal, setAiTalentModal] = useState<AiMatch | null>(null);
+  // Sekali user search, animasi entrance tabel dimatikan agar tidak jalan lagi saat baris berubah.
+  const [hasSearched, setHasSearched] = useState(false);
   const aiRequestId = useRef(0);
 
   const [assessmentModal, setAssessmentModal] = useState<Employee | null>(null);
@@ -207,6 +216,7 @@ export default function TalentRosterPage() {
   const searchAi = async (raw: string) => {
     const q = raw.trim();
     setAppliedQuery(q);
+    setHasSearched(true);
     const requestId = ++aiRequestId.current;
     if (q.length < 3) {
       setAiState('idle');
@@ -252,9 +262,6 @@ export default function TalentRosterPage() {
       setAiState('fallback');
     }
   };
-
-  const inRoster = (email: string | null) =>
-    !!email && employees.some((e) => e.email.toLowerCase() === email.toLowerCase());
 
   const handleAddUser = async () => {
     if (!newUser.nama.trim() || !newUser.email.trim()) {
@@ -464,6 +471,17 @@ export default function TalentRosterPage() {
     return map[t ?? ''] ?? t ?? '-';
   };
 
+  const badgeBase = 'rounded-full border px-4 py-1 text-xs font-bold uppercase tracking-wider';
+  const confidenceClass = (c: string | null) =>
+    c === 'high'
+      ? 'border-amana-success-500 bg-amana-success-200 text-amana-success-500'
+      : c === 'medium'
+        ? 'border-amana-warning-500 bg-amana-warning-200 text-amana-warning-500'
+        : 'border-amana-neutral-400 bg-amana-neutral-200 text-amana-neutral-400';
+  // "strategy_transformation" -> "Strategy Transformation" (underscore jadi spasi, tiap kata huruf kapital).
+  const prettyPracticeGroup = (pg: string | null | undefined) =>
+    pg ? pg.replace(/_/g, ' ').replace(/\b\w/g, (ch) => ch.toUpperCase()) : null;
+
   const rosterColumns: DataTableColumn<RosterRow>[] = [
     { key: 'nama', label: 'Name' },
     { key: 'department', label: 'Practice Group', render: (e) => departmentLabel(e.department) },
@@ -504,83 +522,84 @@ export default function TalentRosterPage() {
           query={query}
           onQueryChange={setQuery}
           onSearch={() => searchAi(query)}
-          placeholder="Search talent (name or skill)..."
+          placeholder="Search talent..."
           open={searchOpen}
           onToggle={() => setSearchOpen((v) => !v)}
-        />
+        >
+          {aiState === 'loading' && (
+            <p className="mt-3 text-[14px] font-medium text-amana-neutral-400">Searching with AMANA AI...</p>
+          )}
 
-        {aiState !== 'idle' && (
-          <SectionCard
-            title="AMANA AI Search"
-            subtitle={
-              aiState === 'loading'
-                ? 'Searching with AMANA AI...'
-                : aiState === 'fallback'
-                  ? 'AI search unavailable - showing name match'
-                  : aiResult
-                    ? `${aiResult.matches.length} match(es)${aiResult.rosterSize ? ` of ${aiResult.rosterSize} roster` : ''}`
-                    : undefined
-            }
-          >
-            {aiState === 'loading' && (
-              <p className="py-2 text-[14px] text-amana-neutral-400 font-medium">Searching with AMANA AI...</p>
-            )}
+          {aiState === 'fallback' && (
+            <span className="mt-3 inline-flex items-center gap-1.5 rounded-[8px] border border-amana-warning-500 bg-amana-warning-500/10 px-2.5 py-1 text-[12px] font-semibold text-amana-warning-500">
+              AI search unavailable — showing name match
+            </span>
+          )}
 
-            {aiState === 'fallback' && (
-              <span className="inline-flex items-center gap-1.5 rounded-[8px] border border-amana-warning-500 bg-amana-warning-500/10 px-2.5 py-1 text-[12px] font-semibold text-amana-warning-500">
-                AI search unavailable — showing name match
-              </span>
-            )}
-
-            {aiState === 'ai' && aiResult && (
-              <div className="flex flex-col gap-1.5 max-h-[220px] overflow-y-auto pr-1">
-                {aiResult.answer && (
-                  <p className="text-[13px] leading-snug text-amana-neutral-500">{aiResult.answer}</p>
-                )}
-                {aiResult.matches.length === 0 && (
-                  <p className="py-1 text-[13px] text-amana-neutral-400 font-medium">No matching talent found.</p>
-                )}
-                {aiResult.matches.map((m) => (
-                  <div
-                    key={m.id}
-                    className="border border-amana-neutral-300 rounded-[8px] px-2.5 py-1.5 bg-amana-neutral-100"
-                  >
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="text-[14px] font-semibold text-amana-primary-500">{m.name}</span>
-                      <span className="text-[12px] text-amana-neutral-500">
-                        {m.position_title || '-'}
-                        {m.grading ? ` · ${m.grading}` : ''}
-                        {typeof m.years_of_experience === 'number' ? ` · ${m.years_of_experience} yr exp` : ''}
-                      </span>
-                      {m.confidence && (
+          {aiState === 'ai' && aiResult && (
+            <div className="mt-3 flex flex-col gap-2 max-h-[260px] overflow-y-auto pr-1">
+              {aiResult.answer && (
+                <p className="text-[14px] font-bold leading-snug text-amana-primary-500 text-justify">{aiResult.answer}</p>
+              )}
+              {aiResult.matches.length === 0 && (
+                <p className="py-1 text-[13px] font-medium text-amana-neutral-400">No matching talent found.</p>
+              )}
+              {aiResult.matches.map((m) => {
+                const emp = m.email
+                  ? employees.find((e) => (e.email || '').toLowerCase() === m.email!.toLowerCase())
+                  : undefined;
+                const inRosterMatch = !!emp;
+                const meta = [
+                  prettyPracticeGroup(m.practice_group),
+                  m.position_title,
+                  m.grading,
+                  typeof m.years_of_experience === 'number' ? `${m.years_of_experience} yr exp.` : null,
+                ]
+                  .filter(Boolean)
+                  .join(' · ');
+                return (
+                  <div key={m.id} className="rounded-[8px] border border-amana-neutral-300 bg-white px-4 py-3">
+                    <div className="flex items-center gap-4 border-b border-amana-primary-500 pb-1.5">
+                      <div className="flex-1 min-w-0 flex items-center gap-2 flex-wrap">
+                        <span className="text-[24px] font-light leading-none text-amana-primary-500">{m.name}</span>
+                        {m.confidence && (
+                          <span className={`${badgeBase} ${confidenceClass(m.confidence)}`}>{m.confidence}</span>
+                        )}
                         <span
-                          className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
-                            m.confidence === 'high'
-                              ? 'bg-amana-success-500/15 text-amana-success-500'
-                              : 'bg-amana-neutral-200 text-amana-neutral-500'
+                          className={`${badgeBase} ${
+                            inRosterMatch
+                              ? 'border-amana-primary-500 bg-amana-primary-100 text-amana-primary-500'
+                              : 'border-amana-danger-500 bg-amana-danger-200 text-amana-danger-500'
                           }`}
                         >
-                          {m.confidence}
+                          {inRosterMatch ? 'in roster' : 'not in roster'}
                         </span>
-                      )}
-                      {inRoster(m.email) && (
-                        <span className="rounded-full bg-amana-primary-500/10 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amana-primary-500">
-                          in roster
-                        </span>
-                      )}
+                      </div>
+                      <Button
+                        variant="primary"
+                        className="w-[306px] max-w-[45%] h-[25px] flex-shrink-0 rounded-[5px] px-2.5 text-xs gap-2.5 whitespace-nowrap"
+                        onClick={() => {
+                          if (emp) {
+                            setDetailsModal(emp);
+                            setModalMode('view');
+                          } else {
+                            setAiTalentModal(m);
+                          }
+                        }}
+                      >
+                        View
+                      </Button>
                     </div>
-                    {m.matched_skills?.length > 0 && (
-                      <p className="mt-0.5 text-[11px] text-amana-neutral-400">{m.matched_skills.join(' · ')}</p>
-                    )}
+                    <p className="mt-1.5 text-[16px] font-semibold italic leading-none text-amana-neutral-400">{meta}</p>
                     {m.match_reason && (
-                      <p className="mt-0.5 text-[12px] text-amana-neutral-500">{m.match_reason}</p>
+                      <p className="mt-1 text-[13px] text-amana-neutral-500">{m.match_reason}</p>
                     )}
                   </div>
-                ))}
-              </div>
-            )}
-          </SectionCard>
-        )}
+                );
+              })}
+            </div>
+          )}
+        </QuickSearchBox>
 
         <SectionCard
           title="Talent Management"
@@ -592,7 +611,7 @@ export default function TalentRosterPage() {
             </Button>
           }
         >
-          <DataTable key="roster" columns={rosterColumns} rows={rosterRows} defaultSortKey="tipeKontrak" emptyMessage="No employees found." compact animate={false} />
+          <DataTable key="roster" columns={rosterColumns} rows={rosterRows} defaultSortKey="tipeKontrak" emptyMessage="No employees found." compact animate={!hasSearched} />
         </SectionCard>
       </div>
 
@@ -787,6 +806,111 @@ export default function TalentRosterPage() {
               </motion.div>
             )}
           </AnimatePresence>
+        </Modal>
+      )}
+
+      {aiTalentModal && (
+        <Modal title="Talent Details" onClose={() => setAiTalentModal(null)} maxWidth="max-w-2xl" className="max-h-[90vh]">
+          <div className="flex-1 min-h-0 overflow-y-auto scroll-smooth p-5 flex flex-col gap-4">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-[20px] font-bold text-amana-primary-500">{aiTalentModal.name}</span>
+              <span className={`${badgeBase} ${confidenceClass(aiTalentModal.confidence)}`}>
+                {aiTalentModal.confidence ?? 'unknown'}
+              </span>
+              <span className={`${badgeBase} border-amana-danger-500 bg-amana-danger-200 text-amana-danger-500`}>
+                not in roster
+              </span>
+            </div>
+
+            <section>
+              <h4 className="border-b border-amana-primary-500 pb-1 text-[16px] font-bold text-amana-primary-500">
+                Details
+              </h4>
+              <dl className="mt-1">
+                {[
+                  ['Position', aiTalentModal.position_title],
+                  ['Grading', aiTalentModal.grading],
+                  ['Practice Group', prettyPracticeGroup(aiTalentModal.practice_group)],
+                  ['Email', aiTalentModal.email],
+                  ['Phone', aiTalentModal.phone],
+                  [
+                    'Experience',
+                    typeof aiTalentModal.years_of_experience === 'number'
+                      ? `${aiTalentModal.years_of_experience} year(s)`
+                      : null,
+                  ],
+                ].map(([label, value]) => (
+                  <div
+                    key={label}
+                    className="flex items-baseline justify-between gap-4 border-b border-amana-neutral-200 py-1.5 text-[14px]"
+                  >
+                    <dt className="flex-shrink-0 text-amana-neutral-400">{label}:</dt>
+                    <dd className="font-semibold text-right text-amana-neutral-500 break-words">{value || '-'}</dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
+
+            {Array.isArray(aiTalentModal.top_technical_skills) && aiTalentModal.top_technical_skills.length > 0 && (
+              <section>
+                <h4 className="border-b border-amana-primary-500 pb-1 text-[16px] font-bold text-amana-primary-500">
+                  Technical Skills
+                </h4>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {aiTalentModal.top_technical_skills.map((s, i) => (
+                    <span
+                      key={`${s}-${i}`}
+                      className="rounded-full border border-amana-primary-500/40 bg-amana-primary-500/10 px-2 py-0.5 text-[12px] font-medium text-amana-primary-500"
+                    >
+                      {s}
+                    </span>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {Array.isArray(aiTalentModal.education) && aiTalentModal.education.length > 0 && (
+              <section>
+                <h4 className="border-b border-amana-primary-500 pb-1 text-[16px] font-bold text-amana-primary-500">
+                  Education
+                </h4>
+                <ul className="mt-1">
+                  {aiTalentModal.education.map((e, i) => (
+                    <li
+                      key={`${e.university ?? ''}-${i}`}
+                      className="border-b border-amana-neutral-200 py-1.5 text-[14px] text-amana-neutral-500"
+                    >
+                      {[e.degree, e.major, e.university, e.graduation_year].filter(Boolean).join(' · ')}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+
+            {Array.isArray(aiTalentModal.capabilities) && aiTalentModal.capabilities.length > 0 && (
+              <section>
+                <h4 className="border-b border-amana-primary-500 pb-1 text-[16px] font-bold text-amana-primary-500">
+                  Capabilities
+                </h4>
+                <ul className="mt-1 list-disc pl-5">
+                  {aiTalentModal.capabilities.map((c, i) => (
+                    <li key={`${c}-${i}`} className="py-0.5 text-[14px] text-amana-neutral-500">
+                      {c}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+
+            {aiTalentModal.match_reason && (
+              <section>
+                <h4 className="border-b border-amana-primary-500 pb-1 text-[16px] font-bold text-amana-primary-500">
+                  Why This Match
+                </h4>
+                <p className="mt-1.5 text-[14px] leading-relaxed text-amana-neutral-500">{aiTalentModal.match_reason}</p>
+              </section>
+            )}
+          </div>
         </Modal>
       )}
 
