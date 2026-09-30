@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { AlertTriangle } from 'lucide-react';
 import { durationFast, easeOut } from '@/app/utils/motion';
@@ -74,6 +74,24 @@ interface Category {
 
 type RosterRow = Employee & { id: string };
 
+interface AiMatch {
+  id: string;
+  name: string;
+  position_title: string | null;
+  grading: string | null;
+  email: string | null;
+  years_of_experience: number | null;
+  matched_skills: string[];
+  match_reason: string;
+  confidence: string | null;
+}
+
+interface AiSearchResult {
+  answer: string;
+  matches: AiMatch[];
+  rosterSize: number | null;
+}
+
 const DEPARTMENT_OPTION_LIST = Object.keys(DEPARTMENT_LABELS);
 
 export default function TalentRosterPage() {
@@ -85,6 +103,9 @@ export default function TalentRosterPage() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [appliedQuery, setAppliedQuery] = useState('');
+  const [aiState, setAiState] = useState<'idle' | 'loading' | 'ai' | 'fallback'>('idle');
+  const [aiResult, setAiResult] = useState<AiSearchResult | null>(null);
+  const aiRequestId = useRef(0);
 
   const [assessmentModal, setAssessmentModal] = useState<Employee | null>(null);
   const [detailsModal, setDetailsModal] = useState<Employee | null>(null);
@@ -170,12 +191,70 @@ export default function TalentRosterPage() {
   const isLeaderGrade = LEADER_GRADES.includes(newUser.grade.toLowerCase());
   const isPromotedAccess = newUser.akses === 'admin_hr' || newUser.akses === 'admin_ops';
 
+  // Mode pencarian AI aktif (loading/sukses) -> tabel menampilkan seluruh roster.
+  // Fallback (AI gagal) tetap memakai filter nama, begitu juga saat idle.
+  const aiMode = aiState === 'loading' || aiState === 'ai';
   const filtered = useMemo(
-    () => employees.filter((e) => e.nama.toLowerCase().includes(appliedQuery.toLowerCase())),
-    [employees, appliedQuery]
+    () =>
+      aiMode
+        ? employees
+        : employees.filter((e) => e.nama.toLowerCase().includes(appliedQuery.toLowerCase())),
+    [employees, appliedQuery, aiMode]
   );
 
   const rosterRows: RosterRow[] = useMemo(() => filtered.map((e) => ({ ...e, id: e.idKaryawan })), [filtered]);
+
+  const searchAi = async (raw: string) => {
+    const q = raw.trim();
+    setAppliedQuery(q);
+    const requestId = ++aiRequestId.current;
+    if (q.length < 3) {
+      setAiState('idle');
+      setAiResult(null);
+      return;
+    }
+
+    setAiState('loading');
+    setAiResult(null);
+
+    let lastStatus = 0;
+    const attempt = async (): Promise<AiSearchResult | null> => {
+      try {
+        const res = await fetch('/api/hr/talent-search', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query: q }),
+        });
+        lastStatus = res.status;
+        if (!res.ok) return null;
+        const data = await res.json();
+        return {
+          answer: String(data.answer ?? ''),
+          matches: (Array.isArray(data.matches) ? data.matches : []) as AiMatch[],
+          rosterSize: typeof data.rosterSize === 'number' ? data.rosterSize : null,
+        };
+      } catch {
+        lastStatus = 0;
+        return null;
+      }
+    };
+
+    const first = await attempt();
+    // Timeout (504) tidak di-retry: upstream memang lambat sehingga percobaan ulang hanya
+    // menambah waktu tunggu. Kegagalan jaringan/5xx tetap di-retry satu kali.
+    const result = first ?? (lastStatus === 504 ? null : await attempt());
+    if (requestId !== aiRequestId.current) return;
+    if (result) {
+      setAiResult(result);
+      setAiState('ai');
+    } else {
+      setAiResult(null);
+      setAiState('fallback');
+    }
+  };
+
+  const inRoster = (email: string | null) =>
+    !!email && employees.some((e) => e.email.toLowerCase() === email.toLowerCase());
 
   const handleAddUser = async () => {
     if (!newUser.nama.trim() || !newUser.email.trim()) {
@@ -424,11 +503,84 @@ export default function TalentRosterPage() {
           subtitle="Search talent using integrated AMANA AI"
           query={query}
           onQueryChange={setQuery}
-          onSearch={() => setAppliedQuery(query)}
-          placeholder="Search by employee name..."
+          onSearch={() => searchAi(query)}
+          placeholder="Search talent (name or skill)..."
           open={searchOpen}
           onToggle={() => setSearchOpen((v) => !v)}
         />
+
+        {aiState !== 'idle' && (
+          <SectionCard
+            title="AMANA AI Search"
+            subtitle={
+              aiState === 'loading'
+                ? 'Searching with AMANA AI...'
+                : aiState === 'fallback'
+                  ? 'AI search unavailable - showing name match'
+                  : aiResult
+                    ? `${aiResult.matches.length} match(es)${aiResult.rosterSize ? ` of ${aiResult.rosterSize} roster` : ''}`
+                    : undefined
+            }
+          >
+            {aiState === 'loading' && (
+              <p className="py-2 text-[14px] text-amana-neutral-400 font-medium">Searching with AMANA AI...</p>
+            )}
+
+            {aiState === 'fallback' && (
+              <span className="inline-flex items-center gap-1.5 rounded-[8px] border border-amana-warning-500 bg-amana-warning-500/10 px-2.5 py-1 text-[12px] font-semibold text-amana-warning-500">
+                AI search unavailable — showing name match
+              </span>
+            )}
+
+            {aiState === 'ai' && aiResult && (
+              <div className="flex flex-col gap-1.5 max-h-[220px] overflow-y-auto pr-1">
+                {aiResult.answer && (
+                  <p className="text-[13px] leading-snug text-amana-neutral-500">{aiResult.answer}</p>
+                )}
+                {aiResult.matches.length === 0 && (
+                  <p className="py-1 text-[13px] text-amana-neutral-400 font-medium">No matching talent found.</p>
+                )}
+                {aiResult.matches.map((m) => (
+                  <div
+                    key={m.id}
+                    className="border border-amana-neutral-300 rounded-[8px] px-2.5 py-1.5 bg-amana-neutral-100"
+                  >
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-[14px] font-semibold text-amana-primary-500">{m.name}</span>
+                      <span className="text-[12px] text-amana-neutral-500">
+                        {m.position_title || '-'}
+                        {m.grading ? ` · ${m.grading}` : ''}
+                        {typeof m.years_of_experience === 'number' ? ` · ${m.years_of_experience} yr exp` : ''}
+                      </span>
+                      {m.confidence && (
+                        <span
+                          className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+                            m.confidence === 'high'
+                              ? 'bg-amana-success-500/15 text-amana-success-500'
+                              : 'bg-amana-neutral-200 text-amana-neutral-500'
+                          }`}
+                        >
+                          {m.confidence}
+                        </span>
+                      )}
+                      {inRoster(m.email) && (
+                        <span className="rounded-full bg-amana-primary-500/10 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amana-primary-500">
+                          in roster
+                        </span>
+                      )}
+                    </div>
+                    {m.matched_skills?.length > 0 && (
+                      <p className="mt-0.5 text-[11px] text-amana-neutral-400">{m.matched_skills.join(' · ')}</p>
+                    )}
+                    {m.match_reason && (
+                      <p className="mt-0.5 text-[12px] text-amana-neutral-500">{m.match_reason}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </SectionCard>
+        )}
 
         <SectionCard
           title="Talent Management"
@@ -440,7 +592,7 @@ export default function TalentRosterPage() {
             </Button>
           }
         >
-          <DataTable key="roster" columns={rosterColumns} rows={rosterRows} defaultSortKey="tipeKontrak" emptyMessage="No employees found." compact />
+          <DataTable key="roster" columns={rosterColumns} rows={rosterRows} defaultSortKey="tipeKontrak" emptyMessage="No employees found." compact animate={false} />
         </SectionCard>
       </div>
 

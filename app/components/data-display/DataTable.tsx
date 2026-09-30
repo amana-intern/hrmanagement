@@ -25,6 +25,8 @@ interface DataTableProps<T extends { id: number | string }> {
   defaultSortDir?: 'asc' | 'desc';
   /** Tighter cell padding, for tables squeezed into a narrower column. */
   compact?: boolean;
+  /** Play row entrance + layout animation. Set false for tables that must stay static (e.g. during search). */
+  animate?: boolean;
 }
 
 export default function DataTable<T extends { id: number | string }>({
@@ -34,6 +36,7 @@ export default function DataTable<T extends { id: number | string }>({
   defaultSortKey,
   defaultSortDir = 'asc',
   compact = false,
+  animate = true,
 }: DataTableProps<T>) {
   const [sortKey, setSortKey] = useState<keyof T | null>(defaultSortKey ?? null);
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>(defaultSortDir);
@@ -118,10 +121,14 @@ export default function DataTable<T extends { id: number | string }>({
           {sorted.map((r, idx) => (
             <motion.tr
               key={r.id}
-              layout
-              initial={{ opacity: 0, y: 6 }}
+              layout={animate}
+              initial={animate ? { opacity: 0, y: 6 } : false}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: durationFast, ease: easeOut, delay: Math.min(idx, 15) * 0.02 }}
+              transition={{
+                duration: durationFast,
+                ease: easeOut,
+                delay: animate ? Math.min(idx, 15) * 0.02 : 0,
+              }}
               className="hover:bg-amana-primary-100 transition-colors duration-150"
             >
               {columns.map((c, i) => (
