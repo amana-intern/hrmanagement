@@ -215,7 +215,7 @@ export default function LeaveRecordPage() {
         <SearchSelectField label="Leave Type" value={draft.type} onChange={(v) => setField('type', v)} options={leaveTypeOptions} />
         <SearchSelectField label="Duration" value={draft.duration} onChange={(v) => setField('duration', v)} options={durationOptions} />
         <SearchDateRangeCalendarField
-          label="Start Date"
+          label="Leave Period"
           fromValue={draft.from}
           toValue={draft.to}
           onFromChange={(v) => setField('from', v)}
@@ -230,19 +230,14 @@ export default function LeaveRecordPage() {
         className="flex-1 min-h-[220px]"
         action={
           <div className="flex items-center gap-2">
-            <input
-              type="date"
-              value={draft.from}
-              onChange={(e) => setFieldAndApply('from', e.target.value)}
-              className="px-2 py-1.5 border border-amana-neutral-300 rounded-lg text-[14px] outline-none focus:border-amana-primary-500 bg-amana-neutral-100"
-            />
-            <span className="text-amana-neutral-400 text-[14px]">to</span>
-            <input
-              type="date"
-              value={draft.to}
-              onChange={(e) => setFieldAndApply('to', e.target.value)}
-              className="px-2 py-1.5 border border-amana-neutral-300 rounded-lg text-[14px] outline-none focus:border-amana-primary-500 bg-amana-neutral-100"
-            />
+            <div className="w-64">
+              <SearchDateRangeCalendarField
+                fromValue={draft.from}
+                toValue={draft.to}
+                onFromChange={(v) => setFieldAndApply('from', v)}
+                onToChange={(v) => setFieldAndApply('to', v)}
+              />
+            </div>
             <Button variant="outline" size="md" disabled={filtered.length === 0} onClick={handleCopySheets}>
               Copy for Sheets
             </Button>

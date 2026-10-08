@@ -101,7 +101,7 @@ function makePaymentColumns(onView: (row: PaymentDetailRow) => void): DataTableC
   return [
     { key: 'idRequest', label: 'ID', width: '13%', minPx: 120 },
     { key: 'chargecode', label: 'Chargecode', width: '13%', minPx: 130 },
-    { key: 'pm', label: 'PM', width: '12%', minPx: 110 },
+    { key: 'pm', label: 'Project Manager', width: '12%', minPx: 110 },
     { key: 'paymentUnder', label: 'Payment Under', width: '15%', minPx: 140 },
     {
       key: 'timeSubmission',

@@ -30,45 +30,6 @@ export function SearchTextField({
   );
 }
 
-// Grouped "From"/"To" date range under one label, e.g. "Contract Sign Date" (Figma node 970:2100).
-export function SearchDateRangeField({
-  label,
-  fromValue,
-  toValue,
-  onFromChange,
-  onToChange,
-}: {
-  label: string;
-  fromValue: string;
-  toValue: string;
-  onFromChange: (v: string) => void;
-  onToChange: (v: string) => void;
-}) {
-  return (
-    <div className="flex flex-col gap-0.5 w-full">
-      <label className="text-[16px] font-semibold text-amana-neutral-500">{label}</label>
-      <div className="flex items-center gap-3">
-        <span className="flex-1 min-w-0 text-[12px] text-amana-neutral-400">From</span>
-        <span className="flex-1 min-w-0 text-[12px] text-amana-neutral-400">To</span>
-      </div>
-      <div className="flex items-center gap-3">
-        <input
-          type="date"
-          value={fromValue}
-          onChange={(e) => onFromChange(e.target.value)}
-          className="flex-1 min-w-0 border border-amana-neutral-300 rounded-[8px] px-3 py-2.5 text-[16px] text-amana-neutral-500 transition-colors duration-200 focus:outline-none focus:border-amana-primary-500"
-        />
-        <input
-          type="date"
-          value={toValue}
-          onChange={(e) => onToChange(e.target.value)}
-          className="flex-1 min-w-0 border border-amana-neutral-300 rounded-[8px] px-3 py-2.5 text-[16px] text-amana-neutral-500 transition-colors duration-200 focus:outline-none focus:border-amana-primary-500"
-        />
-      </div>
-    </div>
-  );
-}
-
 const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December',
@@ -247,7 +208,7 @@ export function SearchDateRangeCalendarField({
   onToChange,
   minDate,
 }: {
-  label: string;
+  label?: string;
   fromValue: string;
   toValue: string;
   onFromChange: (v: string) => void;
@@ -321,7 +282,7 @@ export function SearchDateRangeCalendarField({
 
   return (
     <div className="flex flex-col gap-1.5 w-full">
-      <label className="text-[16px] font-semibold text-amana-neutral-500">{label}</label>
+      {label && <label className="text-[16px] font-semibold text-amana-neutral-500">{label}</label>}
       <button
         ref={triggerRef}
         type="button"

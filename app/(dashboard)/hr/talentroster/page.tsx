@@ -45,6 +45,7 @@ interface Employee {
   grade: string;
   department: string;
   roleLabel: string;
+  accessLabel: string;
   tipeKontrak?: string;
   noTelepon: string;
   tanggalLahir: string | null;
@@ -431,6 +432,7 @@ export default function TalentRosterPage() {
         const d2 = await res2.json();
         setEmployees((d2.list ?? []) as Employee[]);
       }
+      setStatus({ ok: true, text: `Talent "${editForm.nama.trim()}" successfully updated.` });
       setDetailsModal(null);
       setEditMsg('');
     } catch {
@@ -486,7 +488,7 @@ export default function TalentRosterPage() {
     { key: 'nama', label: 'Name' },
     { key: 'department', label: 'Practice Group', render: (e) => departmentLabel(e.department) },
     { key: 'grade', label: 'Grade' },
-    { key: 'roleLabel', label: 'Access' },
+    { key: 'accessLabel', label: 'Web App Access' },
     { key: 'tipeKontrak', label: 'Contract Type', sortValue: (e) => {
       const order: Record<string, number> = { PKWTT: 1, PKWT: 2, KKI: 3, INTERNSHIP: 4, KONTRAK: 5 };
       return order[e.tipeKontrak ?? ''] ?? 9;
@@ -747,7 +749,7 @@ export default function TalentRosterPage() {
 
                     <div>
                       <SelectField
-                        label="Access"
+                        label="Web App Access"
                         value={editForm.akses}
                         onChange={(v) => setEditForm((p) => ({ ...p, akses: v }))}
                         options={ACCESS_OPTIONS}
@@ -991,7 +993,7 @@ export default function TalentRosterPage() {
 
             <div>
               <SelectField
-                label="Access"
+                label="Web App Access"
                 value={newUser.akses}
                 onChange={(v) => setNewUser((p) => ({ ...p, akses: v }))}
                 options={ACCESS_OPTIONS}

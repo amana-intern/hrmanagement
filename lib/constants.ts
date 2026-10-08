@@ -106,11 +106,18 @@ export const DEPARTMENT_LABELS: Record<string, string> = {
   ops: 'Operations',
 };
 
-// Special Leave: batas hari per pengajuan diambil dari teks alasan, mis. "Marriage (Maximum of 3 days)" -> 3.
-// Alasan "depends on company policy" tidak punya batas (null). Dipakai form cuti & API supaya aturannya satu sumber.
+// Special Leave: batas hari per pengajuan diambil dari teks alasan, mis. "Marriage Leave (Maximum of 3 days)" -> 3.
+// Alasan "depends on company policy" punya batas (null). Dipakai form cuti & API supaya aturannya satu sumber.
 export function specialLeaveMaxDays(reason?: string | null): number | null {
   const m = reason?.match(/maximum of (\d+) day/i);
   return m ? Number(m[1]) : null;
+}
+
+// Pengecekan Special Leave menstruasi (maks 2 hari/bulan): cocok nama lama
+// ("Menstruation pain ...") maupun nama baru ("Period Leave ...") supaya data historis tetap terhitung.
+export function isPeriodLeave(reason?: string | null): boolean {
+  const r = reason?.toLowerCase() ?? '';
+  return r.includes('menstruation') || r.includes('period leave');
 }
 
 export function specialLeaveName(reason: string): string {

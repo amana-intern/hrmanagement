@@ -7,7 +7,6 @@ import ProfileOverview, {
   type ProfileBio,
   type ProfileBioDetails,
 } from '@/app/components/data-display/ProfileOverview';
-import { useTodos } from '@/lib/useTodos';
 
 interface DashboardData {
   attendance: {
@@ -40,7 +39,6 @@ interface Me {
 export default function HRProfilePage() {
   const [me, setMe] = useState<Me | null>(null);
   const [data, setData] = useState<DashboardData | null>(null);
-  const { todos, loadTodos, addTodo, toggleTodo, deleteTodo } = useTodos();
 
   useEffect(() => {
     (async () => {
@@ -52,9 +50,8 @@ export default function HRProfilePage() {
         const res = await fetch('/api/hr/dashboard', { cache: 'no-store' });
         if (res.ok) setData((await res.json()) as DashboardData);
       } catch {}
-      await loadTodos();
     })();
-  }, [loadTodos]);
+  }, []);
 
   const stat = (value: number, label: string, caption: string): Stat => ({ value, label, caption });
 
@@ -107,9 +104,6 @@ export default function HRProfilePage() {
       panels={[attendancePanel, careerPanel]}
       bio={bio}
       bioDetails={bioDetails}
-      todos={todos}
-      onAddTodo={addTodo}
-      onToggleTodo={toggleTodo}
-      onDeleteTodo={deleteTodo}    />
+    />
   );
 }

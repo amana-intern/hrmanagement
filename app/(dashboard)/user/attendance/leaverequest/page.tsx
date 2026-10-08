@@ -14,28 +14,22 @@ import Button from '@/app/components/forms/Button';
 import Modal from '@/app/components/feedback/Modal';
 import DetailModal, { DetailRow } from '@/app/components/feedback/DetailModal';
 import StatusModal from '@/app/components/feedback/StatusModal';
-import { LEAVE_TYPES, LEAVE_STATUS, specialLeaveMaxDays, specialLeaveName, todayISOWIB, isLeaveContractRestricted, LEAVE_RESTRICTED_CONTRACT_MESSAGE } from '@/lib/constants';
+import { LEAVE_TYPES, LEAVE_STATUS, specialLeaveMaxDays, specialLeaveName, todayISOWIB, isLeaveContractRestricted, LEAVE_RESTRICTED_CONTRACT_MESSAGE, isPeriodLeave } from '@/lib/constants';
 import { statusColor } from '@/app/utils/statusColor';
 import { formatDateWIB } from '@/app/utils/formatDate';
 
-const COMP_STATUS_MAP: Record<string, string> = {
-  ST_LEAVE_APPROVED: 'Approved',
-  ST_LEAVE_PENDING: 'Pending',
-  ST_LEAVE_REJECTED: 'Rejected',
-};
-
 const specialLeaveList = [
-  'Menstruation pain (Maximum of 2 days)',
-  'Marriage (Maximum of 3 days)',
-  'Child marriage (Maximum of 2 days)',
-  'Circumcision (Maximum of 2 days)',
-  'Child baptism (Maximum of 2 days)',
-  'Wife giving birth (Maximum of 2 days)',
-  'Immediate family member passed away (Maximum of 2 days)',
-  'Household family member passed away (Maximum of 1 day)',
-  'State obligation (depends on company policy)',
-  'Performing Hajj pilgrimage (depends on company policy)',
-  'Emergency accident (depends on company policy)',
+  'Period Leave (Maximum of 2 days)',
+  'Marriage Leave (Maximum of 3 days)',
+  "Child's Wedding Leave (Maximum of 2 days)",
+  "Child's Circumcision Leave (Maximum of 2 days)",
+  "Child's baptism Leave (Maximum of 2 days)",
+  'Paternity Leave (Maximum of 2 days)',
+  'Condolance Leave - Immediate Family (Maximum of 2 days)',
+  'Condolance Leave - Household Member (Maximum of 1 day)',
+  'Civic Duty Leave (depends on company policy)',
+  'Pilgrimage leave (depends on company policy)',
+  'Emergency Leave (depends on company policy)',
 ];
 
 const LEAVE_TYPE_MAP: Record<string, string> = {
@@ -138,8 +132,6 @@ export default function LeaveRequestPage() {
   const [specialLeaveUsed, setSpecialLeaveUsed] = useState<number | null>(null);
   const [unpaidLeaveUsed, setUnpaidLeaveUsed] = useState<number | null>(null);
   const [compensatoryLeaveUsed, setCompensatoryLeaveUsed] = useState<number | null>(null);
-  const [compDetails, setCompDetails] = useState<{ tanggalPengajuan: string; tanggalMulai: string; tanggalSelesai: string; jumlahHari: number; status: string }[]>([]);
-  const [showCompModal, setShowCompModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [leaveHistory, setLeaveHistory] = useState<LeaveHistoryRow[]>([]);
   const [historyDetail, setHistoryDetail] = useState<LeaveHistoryRow | null>(null);
@@ -157,7 +149,6 @@ export default function LeaveRequestPage() {
         setSpecialLeaveUsed(data.user?.leave?.specialLeaveUsed ?? 0);
         setUnpaidLeaveUsed(data.user?.leave?.unpaidLeaveUsed ?? 0);
         setCompensatoryLeaveUsed(data.user?.leave?.compensatoryLeaveUsed ?? 0);
-        setCompDetails(data.user?.leave?.compensatoryLeaveDetails ?? []);
         setTipeKontrak(data.user?.tipeKontrak ?? null);
       }
     } catch {}
@@ -182,7 +173,7 @@ export default function LeaveRequestPage() {
               (r) =>
                 r.idJenisCuti === LEAVE_TYPES.SPECIAL &&
                 (r.idStatus === LEAVE_STATUS.PENDING || r.idStatus === LEAVE_STATUS.APPROVED) &&
-                r.keterangan?.toLowerCase().includes('menstruation') &&
+                isPeriodLeave(r.keterangan) &&
                 r.tanggalMulai
             )
             .map((r) => ({ start: r.tanggalMulai!.slice(0, 10), days: r.jumlahHari ?? 0 }))
@@ -263,14 +254,14 @@ export default function LeaveRequestPage() {
     requestedDays != null &&
     ((leaveBalance ?? 0) <= 0 || requestedDays > (leaveBalance ?? 0));
 
-  // Special Leave: batas hari per alasan (mis. Marriage = 3), plus Menstruation maks 2 hari per bulan (sama dengan server).
+  // Special Leave: batas hari per alasan (mis. Marriage Leave = 3), plus Period Leave maks 2 hari per bulan (sama dengan server).
   const specialLeaveError = useMemo(() => {
     if (selectedLeave !== 'Special Leave' || !selectedSpecialLeave || requestedDays == null) return null;
     const maxDays = specialLeaveMaxDays(selectedSpecialLeave);
     if (maxDays != null && requestedDays > maxDays) {
-      return `${specialLeaveName(selectedSpecialLeave)} leave is limited to ${maxDays} day(s) per request (you selected ${requestedDays}).`;
+      return `${specialLeaveName(selectedSpecialLeave)} is limited to ${maxDays} day(s) per request (you selected ${requestedDays}).`;
     }
-    if (!selectedSpecialLeave.toLowerCase().includes('menstruation')) return null;
+    if (!isPeriodLeave(selectedSpecialLeave)) return null;
     const month = startDate.slice(0, 7);
     const used = menstrualUses.filter((u) => u.start.slice(0, 7) === month).reduce((sum, u) => sum + u.days, 0);
     return used + requestedDays > 2 ? `Menstrual leave this month already ${used} day(s) (max 2 days/month).` : null;
@@ -371,7 +362,6 @@ export default function LeaveRequestPage() {
             value={compensatoryLeaveUsed != null ? String(compensatoryLeaveUsed) : '...'}
             label="Compensatory"
             caption="Compensatory Leave earned (approved)"
-            onClick={() => setShowCompModal(true)}
           />
         </div>
       </SectionCard>
@@ -560,62 +550,6 @@ export default function LeaveRequestPage() {
           <DetailRow label="Holiday Work Period" value={historyDetail.holidayWork} />
           <DetailRow label="Reason" value={historyDetail.reason} />
         </DetailModal>
-      )}
-
-      {/* Compensatory Leave Details Modal */}
-      {showCompModal && (
-        <Modal title="Your Compensatory Leave" onClose={() => setShowCompModal(false)} maxWidth="max-w-2xl" className="max-h-[80vh]" showCloseButton={false}>
-          <div className="flex-1 overflow-y-auto px-5 pt-3 pb-2">
-            {compDetails.length === 0 ? (
-              <p className="text-sm text-amana-neutral-400 text-center py-8">No compensatory leave records found.</p>
-            ) : (
-              <table className="w-full table-fixed text-center border-collapse">
-                <colgroup>
-                  <col className="w-[22%]" />
-                  <col className="w-[22%]" />
-                  <col className="w-[22%]" />
-                  <col className="w-[10%]" />
-                  <col className="w-[24%]" />
-                </colgroup>
-                <thead>
-                  <tr>
-                    <th className="px-3 pb-2 border-b border-amana-neutral-300 bg-amana-neutral-100 text-center font-semibold text-amana-primary-500 text-[16px] border-r border-amana-neutral-300">Submitted On</th>
-                    <th className="px-3 pb-2 border-b border-amana-neutral-300 bg-amana-neutral-100 text-center font-semibold text-amana-primary-500 text-[16px] border-r border-amana-neutral-300">Start Date</th>
-                    <th className="px-3 pb-2 border-b border-amana-neutral-300 bg-amana-neutral-100 text-center font-semibold text-amana-primary-500 text-[16px] border-r border-amana-neutral-300">End Date</th>
-                    <th className="px-3 pb-2 border-b border-amana-neutral-300 bg-amana-neutral-100 text-center font-semibold text-amana-primary-500 text-[16px] border-r border-amana-neutral-300">Days</th>
-                    <th className="px-3 pb-2 border-b border-amana-neutral-300 bg-amana-neutral-100 text-center font-semibold text-amana-primary-500 text-[16px]">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {compDetails.map((item, idx) => (
-                    <tr key={idx} className="hover:bg-amana-primary-100 transition-colors duration-150">
-                      <td className={`text-amana-neutral-500 text-center truncate px-3 py-2.5 text-[16px] border-r border-amana-neutral-300 ${idx < compDetails.length - 1 ? 'border-b' : ''}`}>
-                        {formatDateWIB(item.tanggalPengajuan)}
-                      </td>
-                      <td className={`text-amana-neutral-500 text-center truncate px-3 py-2.5 text-[16px] border-r border-amana-neutral-300 ${idx < compDetails.length - 1 ? 'border-b' : ''}`}>
-                        {formatDateWIB(item.tanggalMulai)}
-                      </td>
-                      <td className={`text-amana-neutral-500 text-center truncate px-3 py-2.5 text-[16px] border-r border-amana-neutral-300 ${idx < compDetails.length - 1 ? 'border-b' : ''}`}>
-                        {formatDateWIB(item.tanggalSelesai)}
-                      </td>
-                      <td className={`text-amana-neutral-500 text-center truncate px-3 py-2.5 text-[16px] border-r border-amana-neutral-300 ${idx < compDetails.length - 1 ? 'border-b' : ''}`}>{item.jumlahHari}</td>
-                      <td className={`text-center px-3 py-2.5 text-[16px] overflow-visible ${idx < compDetails.length - 1 ? 'border-b border-amana-neutral-300' : ''}`}>
-                        <div className="flex justify-center">
-                          <StatusPill color={statusColor(COMP_STATUS_MAP[item.status] ?? item.status)} fullWidth={false}>
-                            {COMP_STATUS_MAP[item.status] ?? item.status}
-                          </StatusPill>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
-          <div className="px-5 py-3 border-t border-amana-neutral-300 flex justify-end">
-            <Button variant="outline" onClick={() => setShowCompModal(false)}>Close</Button>
-          </div>
-        </Modal>
       )}
     </div>
   );

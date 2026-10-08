@@ -53,6 +53,16 @@ export const ROLE_LABEL: Record<Role, string> = {
   [ROLES.ADMIN_OPS]: 'Admin OPS',
 };
 
+// Label role sistem untuk ditampilkan (mis. kolom Access di Talent Management).
+// Custom role (bukan Partner/Admin HR/Admin OPS) = Employee; tanpa akun = '-'.
+export function systemRoleLabel(idRole?: string | null): string {
+  if (!idRole) return '-';
+  if (idRole === ROLES.PARTNER || idRole === ROLES.ADMIN_HR || idRole === ROLES.ADMIN_OPS) {
+    return ROLE_LABEL[idRole];
+  }
+  return ROLE_LABEL[ROLES.EMPLOYEE];
+}
+
 // Pemetaan department -> tampilan label (untuk display "Partner · Health" dll)
 export const DEPARTMENT_LABEL: Record<string, string> = {
   health: 'Health & Wellbeing',

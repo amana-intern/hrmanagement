@@ -106,7 +106,8 @@ model Karyawan {
   auditTrails     AuditTrail[]
   sertifikat      SertifikatKaryawan[]
   assessmentSubmissions AssessmentSubmission[]
-  hrTodos         HrTodo[]
+  madingRecipients MadingRecipient[]
+  madingStates   MadingUserState[]
   notifications   Notification[]
   karyawanHistory KaryawanHistory[]
 }
@@ -310,16 +311,41 @@ model AssessmentAnswer {
   pertanyaan    AssessmentQuestion?   @relation(fields: [idPertanyaan], references: [idPertanyaan])
 }
 
-model HrTodo {
-  idTodo      String    @id @db.VarChar
-  idKaryawan  String?   @db.VarChar
-  teks        String?   @db.VarChar
-  done        Boolean   @default(false)
-  doneAt      DateTime? @db.Timestamp()
-  createdAt   DateTime? @default(now()) @db.Timestamp()
-  modul       String?   @db.VarChar
-  idReferensi String?   @db.VarChar
-  karyawan    Karyawan? @relation(fields: [idKaryawan], references: [idKaryawan])
+model Mading {
+  idMading       String    @id @db.VarChar
+  judul          String?   @db.VarChar
+  pesan          String?   @db.Text
+  link           String?   @db.Text
+  audience       String?   @default("ALL")
+  tanggalMulai   DateTime? @db.Timestamp
+  tanggalSelesai DateTime? @db.Timestamp
+  createdBy      String?   @db.VarChar
+  createdAt      DateTime? @default(now()) @db.Timestamp
+  recipients     MadingRecipient[]
+  states         MadingUserState[]
+}
+
+model MadingRecipient {
+  idMading   String   @db.VarChar
+  idKaryawan String   @db.VarChar
+  mading     Mading   @relation(fields: [idMading], references: [idMading], onDelete: Cascade)
+  karyawan   Karyawan @relation(fields: [idKaryawan], references: [idKaryawan], onDelete: Cascade)
+  @@id([idMading, idKaryawan])
+}
+
+model MadingUserState {
+  idMading    String   @db.VarChar
+  idKaryawan  String   @db.VarChar
+  isRead      Boolean  @default(false)
+  readAt      DateTime? @db.Timestamp
+  isDismissed Boolean  @default(false)
+  dismissedAt DateTime? @db.Timestamp
+  // Checklist pribadi: post yang saya centang → hanya muncul di archive akun saya.
+  isDone      Boolean  @default(false)
+  doneAt      DateTime? @db.Timestamp
+  mading      Mading   @relation(fields: [idMading], references: [idMading], onDelete: Cascade)
+  karyawan    Karyawan @relation(fields: [idKaryawan], references: [idKaryawan], onDelete: Cascade)
+  @@id([idMading, idKaryawan])
 }
 
 model ApprovalHistory {

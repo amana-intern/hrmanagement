@@ -5,7 +5,6 @@ import { ROLES } from '@/lib/roles';
 import { LEAVE_TYPES } from '@/lib/constants';
 import { persistLeaveBalance, computeLeaveBalance } from '@/lib/leave';
 import { sendEmail } from '@/lib/notify';
-import { completeTodo } from '@/lib/todos';
 
 // PATCH /api/leave/[id] — Partner approve/reject cuti (pilar department).
 // Matriks approver (Fitur 9):
@@ -153,9 +152,6 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
           : `Hello ${applicantName},\n\nYour leave request (${range}) was rejected.\nReason: ${catatan}\n\nThank you.`;
       await sendEmail({ to: applicantEmail, subject, text });
     }
-
-    // Tandai to-do partner selesai
-    await completeTodo('LEAVE', id);
 
     return Response.json({ ok: true, cuti: updated });
   } catch (e) {

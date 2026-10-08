@@ -225,7 +225,7 @@ export default function PaymentSchedulerPage() {
     { key: 'idRequest', label: 'ID', width: '7%', minPx: 75 },
     { key: 'chargecode', label: 'Chargecode', width: '12%', minPx: 125 },
     { key: 'user', label: 'Requester', width: '10%', minPx: 100 },
-    { key: 'pm', label: 'PM', width: '9%', minPx: 90 },
+    { key: 'pm', label: 'Project Manager', width: '9%', minPx: 90 },
     { key: 'paymentUnder', label: 'Payment Under', width: '9%', minPx: 90 },
     {
       key: 'createdAt',

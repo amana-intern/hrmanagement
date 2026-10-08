@@ -1,6 +1,6 @@
 import { requireAuth } from '@/lib/dal';
 import { prisma } from '@/lib/prisma';
-import { ROLES } from '@/lib/roles';
+import { ROLES, systemRoleLabel } from '@/lib/roles';
 import { ASSESSMENT_STATUS } from '@/lib/constants';
 
 // GET /api/hr/talent-roster - data roster live + assessment (terbuka/latest) + hasil per karyawan.
@@ -86,6 +86,7 @@ export async function GET() {
         grade: k.masterGrade?.namaGrade ?? '-',
         department: k.department ?? '-',
         roleLabel: k.user?.role?.namaRole ?? '-',
+        accessLabel: systemRoleLabel(k.user?.idRole),
         pictureUrl: k.user?.pictureUrl ?? null,
         tipeKontrak: k.tipeKontrak ?? '-',
         contractStartDate: activeContract?.tanggalMulai

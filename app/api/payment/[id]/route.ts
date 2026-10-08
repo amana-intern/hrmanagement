@@ -3,7 +3,6 @@ import { requireAuth, partnerForDepartment } from '@/lib/dal';
 import { prisma } from '@/lib/prisma';
 import { ROLES } from '@/lib/roles';
 import { sendEmail, notifyAllOpsAdmins, notifyUsers } from '@/lib/notify';
-import { completeTodo } from '@/lib/todos';
 import { todayISOWIB } from '@/lib/constants';
 
 const nota = () => `NOTIF-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -73,7 +72,7 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
           'Ops review passed',
           `Your payment request ${id} has passed the Ops review and is waiting for final Partner approval.`
         );
-        // Buat to-do + notifikasi bell/email untuk partner di department yang sama
+        // Notifikasi bell/email untuk partner di department yang sama
         const empDept = payment.karyawan?.department;
         if (empDept) {
           const partners = await partnerForDepartment(empDept);
@@ -88,22 +87,7 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
               idReferensi: id,
             }
           );
-          for (const partner of partners) {
-            if (partner.karyawan?.idKaryawan) {
-              await prisma.hrTodo.create({
-                data: {
-                  idTodo: `TODO-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-                  idKaryawan: partner.karyawan.idKaryawan,
-                  teks: `Review payment ${payment.karyawan?.nama ?? '-'}`,
-                  modul: 'PAYMENT',
-                  idReferensi: id,
-                },
-              });
-            }
-          }
         }
-        // To-do OPS "Review payment…" (dibuat saat submit) selesai setelah review/reject
-        await completeTodo('PAYMENT_REVIEW', id);
         return Response.json({ ok: true, payment: updated });
       }
       if (action === 'schedule') {
@@ -137,8 +121,6 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
           'Payment schedule',
           `Your payment request ${id} is scheduled to be paid on ${tanggal.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}.`
         );
-        // To-do OPS "Schedule payment…" selesai setelah schedule
-        await completeTodo('PAYMENT_SCHEDULE', id);
         return Response.json({ ok: true, payment: updated });
       }
       if (action === 'paid') {
@@ -186,8 +168,6 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
           return u;
         });
         await sendNotifEmail('Payment request rejected', `Your payment request ${id} was rejected. Reason: ${catatan}`);
-        // To-do OPS "Review payment…" selesai setelah reject
-        await completeTodo('PAYMENT_REVIEW', id);
         return Response.json({ ok: true, payment: updated });
       }
       return Response.json({ error: 'Invalid action for OPS' }, { status: 400 });
@@ -214,19 +194,13 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
           'Payment request approved',
           `Your payment request ${id} has been approved and is waiting for a payment schedule.`
         );
-        // Beri tahu semua Admin OPS + to-do "Schedule payment" (bersamaan)
+        // Beri tahu semua Admin OPS
         await notifyAllOpsAdmins({
           tipe: 'PAY_WAITING_SCHEDULE',
           judul: 'Payment ready to schedule',
           pesan: `Payment request ${id} from ${payment.karyawan?.nama ?? 'an employee'} has been approved. Please schedule the payment.`,
           idReferensi: id,
-          todo: {
-            teks: `Schedule payment ${payment.karyawan?.nama ?? '-'} (${id})`,
-            modul: 'PAYMENT_SCHEDULE',
-          },
         });
-        // To-do Partner selesai setelah final approve
-        await completeTodo('PAYMENT', id);
         return Response.json({ ok: true, payment: updated });
       }
       if (action === 'reject' && payment.idStatus === 'ST_PAY_PENDING_PARTNER') {
@@ -249,7 +223,6 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
           return u;
         });
         await sendNotifEmail('Payment request rejected', `Your payment request ${id} was rejected. Reason: ${catatan}`);
-        await completeTodo('PAYMENT', id);
         return Response.json({ ok: true, payment: updated });
       }
       return Response.json({ error: 'Invalid action for Partner' }, { status: 400 });

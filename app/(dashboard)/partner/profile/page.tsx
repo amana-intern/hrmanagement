@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import ProfileOverview, { type Stat, type SummaryPanelConfig, type ProfileBio } from '@/app/components/data-display/ProfileOverview';
-import { useTodos } from '@/lib/useTodos';
 
 interface Me {
   nama: string;
@@ -23,7 +22,6 @@ interface Me {
 
 export default function PartnerProfilePage() {
   const [me, setMe] = useState<Me | null>(null);
-  const { todos, loadTodos, addTodo, toggleTodo, deleteTodo } = useTodos();
 
   useEffect(() => {
     (async () => {
@@ -31,9 +29,8 @@ export default function PartnerProfilePage() {
         const res = await fetch('/api/me', { cache: 'no-store' });
         if (res.ok) setMe(((await res.json()).user ?? null) as Me | null);
       } catch {}
-      await loadTodos();
     })();
-  }, [loadTodos]);
+  }, []);
 
   const stat = (value: number | string, label: string, caption: string): Stat => ({ value, label, caption });
 
@@ -74,9 +71,6 @@ export default function PartnerProfilePage() {
       showGreeting
       panels={[approvalPanel, partnerPanel]}
       bio={bio}
-      todos={todos}
-      onAddTodo={addTodo}
-      onToggleTodo={toggleTodo}
-      onDeleteTodo={deleteTodo}    />
+    />
   );
 }

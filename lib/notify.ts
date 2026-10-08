@@ -58,13 +58,10 @@ type BroadcastNotif = {
   judul: string;
   pesan: string;
   idReferensi: string;
-  /** Jika diisi, tiap penerima yang punya karyawan juga mendapat to-do ini (bersamaan dengan notifikasi). */
-  todo?: { teks: string; modul: string };
 };
 
 // Notifikasi ke daftar user (bell in-app + email best-effort).
 // Dipakai untuk broadcast ke Admin OPS / partner pilar.
-// Jika opts.todo diisi, to-do dibuat bersamaan untuk penerima yang punya karyawan.
 export async function notifyUsers(
   recipients: { idKaryawan?: string | null; email?: string | null }[],
   opts: BroadcastNotif
@@ -87,19 +84,6 @@ export async function notifyUsers(
             },
           })
         );
-        if (opts.todo) {
-          jobs.push(
-            prisma.hrTodo.create({
-              data: {
-                idTodo: `TODO-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-                idKaryawan: r.idKaryawan,
-                teks: opts.todo.teks,
-                modul: opts.todo.modul,
-                idReferensi: opts.idReferensi,
-              },
-            })
-          );
-        }
       }
       if (r.email) jobs.push(sendEmail({ to: r.email, subject: opts.judul, text: opts.pesan }));
       await Promise.all(jobs);

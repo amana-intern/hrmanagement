@@ -1,0 +1,207 @@
+[browser] You have Reduced Motion enabled on your device. Animations may not appear as expected.. For more information and steps for solving, visit https://motion.dev/troubleshooting/reduced-motion-disabled (app/components/feedback/Modal.tsx:29:40)
+⨯ ./app/components/data-display/HRPortal.tsx:620:34
+Expected '</', got 'ident'
+  [90m618 |[0m                     target=[32m"_blank"[0m
+  [90m619 |[0m                     rel=[32m"noopener noreferrer"[0m
+[31m[1m>[0m [90m620 |[0m                     onClick={(e) e.stopPropagation()}
+  [90m    |[0m                                  [31m[1m^[0m
+  [90m621 |[0m                     className=[32m"flex items-center gap-1.5 text-[14px] text-amana-primary-5...[0m
+  [90m622 |[0m                   >
+  [90m623 |[0m                     <[33mLink2[0m className=[32m"w-3.5 h-3.5 flex-shrink-0"[0m />
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./app/components/data-display/HRPortal.tsx [Client Component Browser]
+    ./app/components/data-display/ProfileOverview.tsx [Client Component Browser]
+    ./app/(dashboard)/hr/profile/page.tsx [Client Component Browser]
+    ./app/(dashboard)/hr/profile/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/components/data-display/HRPortal.tsx [Client Component SSR]
+    ./app/components/data-display/ProfileOverview.tsx [Client Component SSR]
+    ./app/(dashboard)/hr/profile/page.tsx [Client Component SSR]
+    ./app/(dashboard)/hr/profile/page.tsx [Server Component]
+
+
+⨯ ./app/components/data-display/HRPortal.tsx:620:34
+Expected '</', got 'ident'
+  [90m618 |[0m                     target=[32m"_blank"[0m
+  [90m619 |[0m                     rel=[32m"noopener noreferrer"[0m
+[31m[1m>[0m [90m620 |[0m                     onClick={(e) e.stopPropagation()}
+  [90m    |[0m                                  [31m[1m^[0m
+  [90m621 |[0m                     className=[32m"flex items-center gap-1.5 text-[14px] text-amana-primary-5...[0m
+  [90m622 |[0m                   >
+  [90m623 |[0m                     <[33mLink2[0m className=[32m"w-3.5 h-3.5 flex-shrink-0"[0m />
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./app/components/data-display/HRPortal.tsx [Client Component Browser]
+    ./app/components/data-display/ProfileOverview.tsx [Client Component Browser]
+    ./app/(dashboard)/hr/profile/page.tsx [Client Component Browser]
+    ./app/(dashboard)/hr/profile/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/components/data-display/HRPortal.tsx [Client Component SSR]
+    ./app/components/data-display/ProfileOverview.tsx [Client Component SSR]
+    ./app/(dashboard)/hr/profile/page.tsx [Client Component SSR]
+    ./app/(dashboard)/hr/profile/page.tsx [Server Component]
+
+
+⨯ ./app/components/data-display/HRPortal.tsx:620:34
+Expected '</', got 'ident'
+  [90m618 |[0m                     target=[32m"_blank"[0m
+  [90m619 |[0m                     rel=[32m"noopener noreferrer"[0m
+[31m[1m>[0m [90m620 |[0m                     onClick={(e) e.stopPropagation()}
+  [90m    |[0m                                  [31m[1m^[0m
+  [90m621 |[0m                     className=[32m"flex items-center gap-1.5 text-[14px] text-amana-primary-5...[0m
+  [90m622 |[0m                   >
+  [90m623 |[0m                     <[33mLink2[0m className=[32m"w-3.5 h-3.5 flex-shrink-0"[0m />
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./app/components/data-display/HRPortal.tsx [Client Component Browser]
+    ./app/components/data-display/ProfileOverview.tsx [Client Component Browser]
+    ./app/(dashboard)/hr/profile/page.tsx [Client Component Browser]
+    ./app/(dashboard)/hr/profile/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/components/data-display/HRPortal.tsx [Client Component SSR]
+    ./app/components/data-display/ProfileOverview.tsx [Client Component SSR]
+    ./app/(dashboard)/hr/profile/page.tsx [Client Component SSR]
+    ./app/(dashboard)/hr/profile/page.tsx [Server Component]
+
+
+⨯ ./app/components/data-display/HRPortal.tsx:620:34
+Expected '</', got 'ident'
+  [90m618 |[0m                     target=[32m"_blank"[0m
+  [90m619 |[0m                     rel=[32m"noopener noreferrer"[0m
+[31m[1m>[0m [90m620 |[0m                     onClick={(e) e.stopPropagation()}
+  [90m    |[0m                                  [31m[1m^[0m
+  [90m621 |[0m                     className=[32m"flex items-center gap-1.5 text-[14px] text-amana-primary-5...[0m
+  [90m622 |[0m                   >
+  [90m623 |[0m                     <[33mLink2[0m className=[32m"w-3.5 h-3.5 flex-shrink-0"[0m />
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./app/components/data-display/HRPortal.tsx [Client Component Browser]
+    ./app/components/data-display/ProfileOverview.tsx [Client Component Browser]
+    ./app/(dashboard)/hr/profile/page.tsx [Client Component Browser]
+    ./app/(dashboard)/hr/profile/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/components/data-display/HRPortal.tsx [Client Component SSR]
+    ./app/components/data-display/ProfileOverview.tsx [Client Component SSR]
+    ./app/(dashboard)/hr/profile/page.tsx [Client Component SSR]
+    ./app/(dashboard)/hr/profile/page.tsx [Server Component]
+
+
+[browser] Uncaught Error: ./app/components/data-display/HRPortal.tsx:620:34
+Expected '</', got 'ident'
+  618 |                     target="_blank"
+  619 |                     rel="noopener noreferrer"
+> 620 |                     onClick={(e) e.stopPropagation()}
+      |                                  ^
+  621 |                     className="flex items-center gap-1.5 text-[14px] text-amana-primary-5...
+  622 |                   >
+  623 |                     <Link2 className="w-3.5 h-3.5 flex-shrink-0" />
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./app/components/data-display/HRPortal.tsx [Client Component Browser]
+    ./app/components/data-display/ProfileOverview.tsx [Client Component Browser]
+    ./app/(dashboard)/hr/profile/page.tsx [Client Component Browser]
+    ./app/(dashboard)/hr/profile/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/components/data-display/HRPortal.tsx [Client Component SSR]
+    ./app/components/data-display/ProfileOverview.tsx [Client Component SSR]
+    ./app/(dashboard)/hr/profile/page.tsx [Client Component SSR]
+    ./app/(dashboard)/hr/profile/page.tsx [Server Component]
+
+
+    at <unknown> (Error: ./app/components/data-display/HRPortal.tsx:620:34)
+    at <unknown> (Error: (./app/components/data-display/HRPortal.tsx:620:34)
+[browser] ./app/components/data-display/HRPortal.tsx:620:34
+Expected '</', got 'ident'
+  618 |                     target="_blank"
+  619 |                     rel="noopener noreferrer"
+> 620 |                     onClick={(e) e.stopPropagation()}
+      |                                  ^
+  621 |                     className="flex items-center gap-1.5 text-[14px] text-amana-primary-5...
+  622 |                   >
+  623 |                     <Link2 className="w-3.5 h-3.5 flex-shrink-0" />
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./app/components/data-display/HRPortal.tsx [Client Component Browser]
+    ./app/components/data-display/ProfileOverview.tsx [Client Component Browser]
+    ./app/(dashboard)/hr/profile/page.tsx [Client Component Browser]
+    ./app/(dashboard)/hr/profile/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/components/data-display/HRPortal.tsx [Client Component SSR]
+    ./app/components/data-display/ProfileOverview.tsx [Client Component SSR]
+    ./app/(dashboard)/hr/profile/page.tsx [Client Component SSR]
+    ./app/(dashboard)/hr/profile/page.tsx [Server Component] 
+[browser] ./app/components/data-display/HRPortal.tsx:620:34
+Expected '</', got 'ident'
+  618 |                     target="_blank"
+  619 |                     rel="noopener noreferrer"
+> 620 |                     onClick={(e) e.stopPropagation()}
+      |                                  ^
+  621 |                     className="flex items-center gap-1.5 text-[14px] text-amana-primary-5...
+  622 |                   >
+  623 |                     <Link2 className="w-3.5 h-3.5 flex-shrink-0" />
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./app/components/data-display/HRPortal.tsx [Client Component Browser]
+    ./app/components/data-display/ProfileOverview.tsx [Client Component Browser]
+    ./app/(dashboard)/hr/profile/page.tsx [Client Component Browser]
+    ./app/(dashboard)/hr/profile/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/components/data-display/HRPortal.tsx [Client Component SSR]
+    ./app/components/data-display/ProfileOverview.tsx [Client Component SSR]
+    ./app/(dashboard)/hr/profile/page.tsx [Client Component SSR]
+    ./app/(dashboard)/hr/profile/page.tsx [Server Component] 
+[browser] ./app/components/data-display/HRPortal.tsx:620:34
+Expected '</', got 'ident'
+  618 |                     target="_blank"
+  619 |                     rel="noopener noreferrer"
+> 620 |                     onClick={(e) e.stopPropagation()}
+      |                                  ^
+  621 |                     className="flex items-center gap-1.5 text-[14px] text-amana-primary-5...
+  622 |                   >
+  623 |                     <Link2 className="w-3.5 h-3.5 flex-shrink-0" />
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./app/components/data-display/HRPortal.tsx [Client Component Browser]
+    ./app/components/data-display/ProfileOverview.tsx [Client Component Browser]
+    ./app/(dashboard)/hr/profile/page.tsx [Client Component Browser]
+    ./app/(dashboard)/hr/profile/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/components/data-display/HRPortal.tsx [Client Component SSR]
+    ./app/components/data-display/ProfileOverview.tsx [Client Component SSR]
+    ./app/(dashboard)/hr/profile/page.tsx [Client Component SSR]
+    ./app/(dashboard)/hr/profile/page.tsx [Server Component] 
+[browser] You have Reduced Motion enabled on your device. Animations may not appear as expected.. For more information and steps for solving, visit https://motion.dev/troubleshooting/reduced-motion-disabled (app/components/feedback/Modal.tsx:29:40)
+[browser] [GSI_LOGGER]: google.accounts.id.initialize() is called multiple times. This could cause unexpected behavior and only the last initialized instance will be used. (https://accounts.google.com/gsi/client:87:460)

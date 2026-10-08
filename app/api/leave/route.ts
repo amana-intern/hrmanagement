@@ -1,7 +1,7 @@
 import { requireAuth, partnerForDepartment } from '@/lib/dal';
 import { prisma } from '@/lib/prisma';
 import { ROLES, DEPARTMENT_LABEL } from '@/lib/roles';
-import { LEAVE_TYPES, specialLeaveMaxDays, specialLeaveName, todayISOWIB, isLeaveContractRestricted, LEAVE_RESTRICTED_CONTRACT_MESSAGE } from '@/lib/constants';
+import { LEAVE_TYPES, specialLeaveMaxDays, specialLeaveName, todayISOWIB, isLeaveContractRestricted, LEAVE_RESTRICTED_CONTRACT_MESSAGE, isPeriodLeave } from '@/lib/constants';
 import { computeLeaveBalance, parseDateOnly } from '@/lib/leave';
 import { sendEmail } from '@/lib/notify';
 
@@ -105,22 +105,19 @@ export async function POST(request: Request) {
       }
     }
 
-    // Special Leave: batas hari per pengajuan sesuai alasan (mis. Marriage = 3 hari)
+    // Special Leave: batas hari per pengajuan sesuai alasan (mis. Marriage Leave = 3 hari)
     if (idJenisCuti === LEAVE_TYPES.SPECIAL) {
       const maxDays = specialLeaveMaxDays(keterangan);
       if (maxDays != null && jumlahHari > maxDays) {
         return Response.json(
-          { error: `${specialLeaveName(keterangan ?? '')} leave is limited to ${maxDays} day(s) per request (you requested ${jumlahHari}).` },
+          { error: `${specialLeaveName(keterangan ?? '')} is limited to ${maxDays} day(s) per request (you requested ${jumlahHari}).` },
           { status: 400 }
         );
       }
     }
 
     // Fitur 10: Special menstruasi maksimal 2 hari per bulan
-    if (
-      idJenisCuti === LEAVE_TYPES.SPECIAL &&
-      keterangan?.toLowerCase().includes('menstruation')
-    ) {
+    if (idJenisCuti === LEAVE_TYPES.SPECIAL && isPeriodLeave(keterangan)) {
       const monthUsage = await prisma.pengajuanCuti.findMany({
         where: {
           idKaryawan: auth.idKaryawan,
@@ -133,7 +130,7 @@ export async function POST(request: Request) {
         },
       });
       const usedThisMonth = monthUsage
-        .filter((c) => c.keterangan?.toLowerCase().includes('menstruation'))
+        .filter((c) => isPeriodLeave(c.keterangan))
         .reduce((s, c) => s + (c.jumlahHari ?? 0), 0);
       if (usedThisMonth + jumlahHari > 2) {
         return Response.json(
@@ -247,7 +244,7 @@ export async function POST(request: Request) {
       }
     }
 
-    // Jika employee submit, notifikasi + to-do ke partner di department yang sama
+    // Jika employee submit, notifikasi ke partner di department yang sama
     if (!isPartner && cuti.idKaryawan) {
       const partners = await partnerForDepartment(auth.department);
       for (const partner of partners) {
@@ -259,15 +256,6 @@ export async function POST(request: Request) {
               tipe: 'LEAVE_INFO',
               judul: 'Leave Request Pending',
               pesan: `${auth.nama} from ${DEPARTMENT_LABEL[auth.department ?? ''] || auth.department} has submitted leave (${start.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })} - ${end.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}). Pending your approval.`,
-              idReferensi: cuti.idCuti,
-            },
-          });
-          await prisma.hrTodo.create({
-            data: {
-              idTodo: `TODO-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-              idKaryawan: partner.karyawan.idKaryawan,
-              teks: `Approve leave ${auth.nama} from ${DEPARTMENT_LABEL[auth.department ?? ''] || auth.department} (${start.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })} - ${end.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })})`,
-              modul: 'LEAVE',
               idReferensi: cuti.idCuti,
             },
           });

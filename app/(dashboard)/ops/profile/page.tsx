@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import ProfileOverview, { type Stat, type SummaryPanelConfig, type ProfileBio, type ProfileBioDetails } from '@/app/components/data-display/ProfileOverview';
-import { useTodos } from '@/lib/useTodos';
 
 interface Me {
   nama: string;
@@ -24,7 +23,6 @@ interface Me {
 
 export default function OPSProfilePage() {
   const [me, setMe] = useState<Me | null>(null);
-  const { todos, loadTodos, addTodo, toggleTodo, deleteTodo } = useTodos();
 
   useEffect(() => {
     (async () => {
@@ -32,9 +30,8 @@ export default function OPSProfilePage() {
         const res = await fetch('/api/me', { cache: 'no-store' });
         if (res.ok) setMe(((await res.json()).user ?? null) as Me | null);
       } catch {}
-      await loadTodos();
     })();
-  }, [loadTodos]);
+  }, []);
 
   const stat = (value: number | string, label: string, caption: string): Stat => ({ value, label, caption });
 
@@ -84,9 +81,6 @@ export default function OPSProfilePage() {
       panels={[paymentPanel, opsPanel]}
       bio={bio}
       bioDetails={bioDetails}
-      todos={todos}
-      onAddTodo={addTodo}
-      onToggleTodo={toggleTodo}
-      onDeleteTodo={deleteTodo}    />
+    />
   );
 }

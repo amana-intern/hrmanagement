@@ -78,7 +78,6 @@ export async function POST(request: NextRequest) {
         judul: 'Payment Request Submitted',
         pesan: `${auth.nama ?? 'An employee'} has submitted a payment request (${payment.idRequest}) for review.`,
         idReferensi: payment.idRequest,
-        todo: { teks: `Review payment ${payment.idRequest}`, modul: 'PAYMENT_REVIEW' },
       });
 
       return Response.json({ ok: true, payment }, { status: 201 });
@@ -110,7 +109,6 @@ export async function POST(request: NextRequest) {
       judul: 'Payment Request Submitted',
       pesan: `${auth.nama ?? 'An employee'} has submitted a payment request (${payment.idRequest}) for review.`,
       idReferensi: payment.idRequest,
-      todo: { teks: `Review payment ${payment.idRequest}`, modul: 'PAYMENT_REVIEW' },
     });
 
     return Response.json({ ok: true, payment }, { status: 201 });
