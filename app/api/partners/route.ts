@@ -9,8 +9,9 @@ export async function GET() {
   try {
     const auth = await requireAuth();
 
-    // Hanya employee yang boleh lihat daftar partner (untuk pengajuan payment)
-    if (!auth.idRole || auth.idRole === ROLES.PARTNER) {
+    // Semua role yang login boleh lihat daftar partner (untuk resolve "Related Partner",
+    // termasuk saat Partner mengajukan payment sendiri).
+    if (!auth.idRole) {
       return Response.json({ error: 'Forbidden' }, { status: 403 });
     }
 

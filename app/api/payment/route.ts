@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import path from 'path';
 import { requireAuth } from '@/lib/dal';
 import { prisma } from '@/lib/prisma';
-import { canUseEmployeeFeatures } from '@/lib/roles';
+import { canUseEmployeeFeatures, ROLES } from '@/lib/roles';
 import { notifyAllOpsAdmins } from '@/lib/notify';
 import { saveFile } from '@/lib/storage';
 
@@ -14,7 +14,9 @@ const ALLOWED_EXT = ['.pdf', '.jpg', '.jpeg', '.png'];
 export async function POST(request: NextRequest) {
   try {
     const auth = await requireAuth();
-    if (!canUseEmployeeFeatures(auth.idRole) || !auth.idKaryawan) {
+    // Employee (termasuk custom role), Admin HR/OPS, dan Partner boleh mengajukan payment.
+    // canUseEmployeeFeatures tetap mengecualikan Partner untuk fitur lain (assessment gate dsb).
+    if ((!canUseEmployeeFeatures(auth.idRole) && auth.idRole !== ROLES.PARTNER) || !auth.idKaryawan) {
       return Response.json({ error: 'Forbidden' }, { status: 403 });
     }
 

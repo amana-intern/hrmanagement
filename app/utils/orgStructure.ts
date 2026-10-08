@@ -1,4 +1,4 @@
-export const DEPARTMENT_OPTIONS = ['Operations', 'Health and Wellbeing', 'Education and HR', 'Digital and Finance'] as const;
+export const DEPARTMENT_OPTIONS = ['Operations', 'Health and Wellbeing', 'Education and HR', 'Digital and Finance', 'Strategy and Transformation'] as const;
 
 export type Department = (typeof DEPARTMENT_OPTIONS)[number];
 

@@ -63,7 +63,6 @@ function renderLinks(text: string): ReactNode[] {
   return nodes;
 }
 
-// ---------------------------------------------------------------- compose modal
 function HRPortalComposeModal({
   onClose,
   onPublish,
@@ -503,7 +502,7 @@ export function HRPortalFeed() {
 
       <div className="flex-shrink-0 pt-2">
         <Button variant="outline" size="md" className="w-full" onClick={() => setArchiveOpen(true)}>
-          View Archive Announcement
+          View Announcement Archive 
         </Button>
       </div>
 

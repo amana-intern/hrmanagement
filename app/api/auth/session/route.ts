@@ -19,6 +19,14 @@ export async function GET() {
     return Response.json({ authenticated: false }, { status: 401 });
   }
 
+  const department = user.karyawan?.department ?? null;
+  const departments =
+    user.karyawan?.departments && user.karyawan.departments.length > 0
+      ? user.karyawan.departments
+      : department
+        ? [department]
+        : [];
+
     return Response.json({
       authenticated: true,
       user: {
@@ -29,7 +37,8 @@ export async function GET() {
         email: user.email,
         nama: user.karyawan?.nama ?? user.email,
         grade: user.karyawan?.masterGrade?.namaGrade ?? null,
-        department: user.karyawan?.department ?? null,
+        department,
+        departments,
       },
     });
 }

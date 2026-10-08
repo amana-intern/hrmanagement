@@ -42,6 +42,8 @@ export default function QuickSearchBox({
         <Search className="w-6 h-6 text-amana-primary-500 flex-shrink-0" />
       </button>
 
+      {/* Input + children (mis. hasil search AI) dalam satu Collapse —
+          menutup fitur ikut menutup result, bukan hanya text fieldnya. */}
       <Collapse open={open}>
         <div className="pt-3 mt-2 border-t border-amana-primary-500">
           <input
@@ -53,9 +55,9 @@ export default function QuickSearchBox({
             className="w-full border border-amana-neutral-300 rounded-[8px] px-3 py-2.5 text-[16px] text-amana-neutral-500 placeholder:text-amana-neutral-300 transition-colors duration-200 focus:outline-none focus:border-amana-primary-500"
           />
         </div>
-      </Collapse>
 
-      {children}
+        {children}
+      </Collapse>
     </div>
   );
 }

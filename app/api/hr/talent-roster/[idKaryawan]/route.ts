@@ -20,7 +20,7 @@ export async function PATCH(
     }
     const { idKaryawan } = await ctx.params;
     const body = await request.json();
-    const { nama, email, department, namaGrade, namaRole, akses, noTelepon, tanggalLahir, kontrakTanggalMulai, kontrakTanggalBerakhir } = body || {};
+    const { nama, email, department, namaGrade, namaRole, akses, noTelepon, tanggalLahir, kontrakTanggalMulai, kontrakTanggalBerakhir, posisi } = body || {};
 
     const isSelf = auth.idKaryawan === idKaryawan;
 
@@ -100,7 +100,7 @@ export async function PATCH(
     const oldRole = karyawan.user?.role?.namaRole ?? null;
     let newGradeName: string | null = oldGrade;
 
-    const data: { idGrade?: string | null; department?: string | null; departments?: string[]; noTelepon?: string | null; tanggalLahir?: Date | null; nama?: string | null } = {};
+    const data: { idGrade?: string | null; department?: string | null; departments?: string[]; noTelepon?: string | null; tanggalLahir?: Date | null; nama?: string | null; posisi?: string | null } = {};
 
     // Update nama karyawan (bila berubah).
     if (cleanNamaEdit !== null && cleanNamaEdit !== karyawan.nama) {
@@ -117,6 +117,11 @@ export async function PATCH(
         return Response.json({ error: 'Invalid birth date format' }, { status: 400 });
       }
       data.tanggalLahir = d;
+    }
+
+    // Posisi tampil (kolom Position di Talent Management) — bebas diedit, independent dari Role authz.
+    if (posisi !== undefined) {
+      data.posisi = String(posisi ?? '').trim() || null;
     }
 
     if (department !== undefined) {

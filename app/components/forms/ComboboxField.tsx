@@ -23,6 +23,7 @@ export default function ComboboxField({
   placeholder?: string;
 }) {
   const [open, setOpen] = useState(false);
+  const [active, setActive] = useState(0);
   const [pos, setPos] = useState<{ top: number; left: number; width: number } | null>(null);
   const triggerRef = useRef<HTMLInputElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -32,6 +33,59 @@ export default function ComboboxField({
     if (!q) return options;
     return options.filter((o) => o.toLowerCase().includes(q) || (labels?.[o] ?? '').toLowerCase().includes(q));
   }, [options, labels, value]);
+
+  // Opsi aktif (untuk navigasi keyboard): indeks ke `filtered`, selalu di-clamp agar valid.
+  const activeIdx = active < filtered.length ? active : 0;
+
+  const pick = (o: string) => {
+    onChange(o);
+    setOpen(false);
+  };
+
+  const openList = () => {
+    if (open) return;
+    const i = filtered.indexOf(value);
+    setActive(i >= 0 ? i : 0);
+    setOpen(true);
+  };
+
+  // Jaga opsi aktif selalu terlihat saat navigasi keyboard (arrow) — scroll panel saja
+  // (block: 'nearest' = no-op bila sudah terlihat, tak mengguncang halaman).
+  useEffect(() => {
+    if (!open) return;
+    panelRef.current
+      ?.querySelector('[data-active="true"]')
+      ?.scrollIntoView({ block: 'nearest' });
+  }, [open, activeIdx]);
+
+  const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (!open) {
+        openList();
+      } else if (e.key === 'ArrowDown') {
+        setActive((a) => Math.min(a + 1, filtered.length - 1));
+      } else {
+        setActive((a) => Math.max(a - 1, 0));
+      }
+    } else if (e.key === 'Enter') {
+      if (open && filtered.length > 0) {
+        e.preventDefault();
+        pick(filtered[activeIdx]);
+      }
+    } else if (e.key === 'Tab') {
+      // Tab saat dropdown terbuka = pilih opsi aktif; fokus tetap lanjut normal (tanpa preventDefault).
+      if (open) {
+        if (filtered.length > 0) pick(filtered[activeIdx]);
+        else setOpen(false);
+      }
+    } else if (e.key === 'Escape') {
+      if (open) {
+        e.preventDefault();
+        setOpen(false);
+      }
+    }
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -68,9 +122,11 @@ export default function ComboboxField({
           value={value}
           onChange={(e) => {
             onChange(e.target.value);
+            setActive(0);
             setOpen(true);
           }}
-          onFocus={() => setOpen(true)}
+          onMouseDown={openList}
+          onKeyDown={onKeyDown}
           placeholder={placeholder}
           className="w-full border border-amana-neutral-300 rounded-[8px] px-3 py-2.5 pr-9 text-[16px] text-amana-neutral-500 placeholder:text-amana-neutral-300 transition-colors duration-200 focus:outline-none focus:border-amana-primary-500"
         />
@@ -88,16 +144,19 @@ export default function ComboboxField({
           {filtered.length === 0 ? (
             <p className="px-2 py-2 text-[14px] text-amana-neutral-400">No match found.</p>
           ) : (
-            filtered.map((o) => (
+            filtered.map((o, i) => (
               <button
                 key={o}
                 type="button"
-                onClick={() => {
-                  onChange(o);
-                  setOpen(false);
-                }}
+                onClick={() => pick(o)}
+                onMouseEnter={() => setActive(i)}
+                data-active={i === activeIdx ? 'true' : undefined}
                 className={`w-full text-left px-2 py-1.5 rounded text-[14px] transition-colors ${
-                  o === value ? 'bg-amana-primary-500 text-white' : 'text-amana-neutral-500 hover:bg-amana-primary-100'
+                  o === value
+                    ? 'bg-amana-primary-500 text-white'
+                    : i === activeIdx
+                      ? 'bg-amana-primary-100 text-amana-neutral-500'
+                      : 'text-amana-neutral-500 hover:bg-amana-primary-100'
                 }`}
               >
                 {labels?.[o] ?? o}

@@ -87,6 +87,7 @@ export async function GET() {
         department: k.department ?? '-',
         roleLabel: k.user?.role?.namaRole ?? '-',
         accessLabel: systemRoleLabel(k.user?.idRole),
+        posisi: k.posisi ?? '-',
         pictureUrl: k.user?.pictureUrl ?? null,
         tipeKontrak: k.tipeKontrak ?? '-',
         contractStartDate: activeContract?.tanggalMulai
@@ -306,6 +307,8 @@ export async function POST(request: Request) {
           accrualRate: 1,
           tipeKontrak: cleanTipe,
           noTelepon: String(noTelepon ?? '').trim() || null,
+          // Posisi tampil (dari field Position form): leader -> 'Partner', promoted -> label akses, sisanya teks bebas.
+          posisi: String(namaRole ?? '').trim() || null,
         },
       });
       await tx.user.create({

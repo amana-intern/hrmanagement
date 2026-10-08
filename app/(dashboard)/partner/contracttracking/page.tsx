@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import ContractTrackingPage from '@/app/components/data-display/ContractTrackingPage';
 import type { Contract } from '@/app/components/data-display/ContractTrackingPage';
 import { needActionBadge } from '@/app/components/data-display/ContractTrackingPage';
@@ -146,7 +146,9 @@ export default function PartnerContractTrackingPage() {
 
   return (
     <>
-      <ContractTrackingPage contracts={contracts} showStartDate actionsColumn={actionsColumn} />
+      <Suspense fallback={null}>
+        <ContractTrackingPage contracts={contracts} showStartDate actionsColumn={actionsColumn} />
+      </Suspense>
 
       {confirmTarget && confirmAction && (
         <ConfirmModal

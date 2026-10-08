@@ -1,5 +1,5 @@
 ﻿import { requireAuth } from '@/lib/dal';
-import { buildGradeLabel, DEPARTMENT_LABEL, ROLES, ROLE_LABEL, type Role } from '@/lib/roles';
+import { buildGradeLabel, DEPARTMENT_LABEL, ROLES, ROLE_LABEL, systemRoleLabel, type Role } from '@/lib/roles';
 import { prisma } from '@/lib/prisma';
 import { computeLeaveBalance } from '@/lib/leave';
 import { LEAVE_TYPES, LEAVE_STATUS } from '@/lib/constants';
@@ -119,6 +119,8 @@ export async function GET() {
         grade: auth.grade,
         displayGrade,
         department: auth.department,
+        posisi: auth.posisi ?? null,
+        accessLabel: systemRoleLabel(auth.idRole),
         noTelepon: auth.noTelepon,
         tipeKontrak: auth.tipeKontrak,
         pictureUrl: auth.pictureUrl,

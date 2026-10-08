@@ -46,6 +46,7 @@ interface Employee {
   department: string;
   roleLabel: string;
   accessLabel: string;
+  posisi: string;
   tipeKontrak?: string;
   noTelepon: string;
   tanggalLahir: string | null;
@@ -165,7 +166,7 @@ export default function TalentRosterPage() {
   const [deletingUser, setDeletingUser] = useState(false);
 
   const [modalMode, setModalMode] = useState<'view' | 'edit'>('view');
-  const [editForm, setEditForm] = useState({ nama: '', email: '', department: '', grade: '', roleLabel: '', akses: 'employee', contractStartDate: '', contractEndDate: '', noTelepon: '', tanggalLahir: '' });
+  const [editForm, setEditForm] = useState({ nama: '', email: '', department: '', grade: '', posisi: '', akses: 'employee', contractStartDate: '', contractEndDate: '', noTelepon: '', tanggalLahir: '' });
   const [customEditGrade, setCustomEditGrade] = useState('');
   const [savingEdit, setSavingEdit] = useState(false);
   const [editMsg, setEditMsg] = useState('');
@@ -343,7 +344,7 @@ export default function TalentRosterPage() {
       email: e.email || '',
       department: e.department && e.department !== '-' ? e.department : '',
       grade: e.grade && e.grade !== '-' ? e.grade : '',
-      roleLabel: e.roleLabel && e.roleLabel !== '-' ? e.roleLabel : '',
+      posisi: e.posisi && e.posisi !== '-' ? e.posisi : '',
       akses: 'employee',
       contractStartDate: e.contractStartDate ?? '',
       contractEndDate: e.contractEndDate ?? '',
@@ -376,10 +377,8 @@ export default function TalentRosterPage() {
       setEditMsg('Grade is required');
       return;
     }
-    const isLeader = LEADER_GRADES.includes(gradeVal.toLowerCase());
-    const isPromotedEditAccess = editForm.akses === 'admin_hr' || editForm.akses === 'admin_ops';
-    const roleVal = isLeader ? 'Partner' : isPromotedEditAccess ? ACCESS_LABELS[editForm.akses] : editForm.roleLabel.trim();
-    if (!roleVal) {
+    const positionVal = editForm.posisi.trim();
+    if (!positionVal) {
       setEditMsg('Position is required');
       return;
     }
@@ -407,7 +406,7 @@ export default function TalentRosterPage() {
         body: JSON.stringify({
           department: editForm.department,
           namaGrade: gradeVal,
-          namaRole: roleVal,
+          posisi: positionVal,
           // 'employee' = tanpa akses admin -> jangan kirim field akses.
           ...(editForm.akses && editForm.akses !== 'employee' ? { akses: editForm.akses } : {}),
           ...(identityChanged ? { nama: editForm.nama.trim(), email: cleanEditEmail } : {}),
@@ -488,7 +487,7 @@ export default function TalentRosterPage() {
     { key: 'nama', label: 'Name' },
     { key: 'department', label: 'Practice Group', render: (e) => departmentLabel(e.department) },
     { key: 'grade', label: 'Grade' },
-    { key: 'accessLabel', label: 'Web App Access' },
+    { key: 'posisi', label: 'Position' },
     { key: 'tipeKontrak', label: 'Contract Type', sortValue: (e) => {
       const order: Record<string, number> = { PKWTT: 1, PKWT: 2, KKI: 3, INTERNSHIP: 4, KONTRAK: 5 };
       return order[e.tipeKontrak ?? ''] ?? 9;
@@ -560,7 +559,7 @@ export default function TalentRosterPage() {
                   .filter(Boolean)
                   .join(' · ');
                 return (
-                  <div key={m.id} className="rounded-[8px] border border-amana-neutral-300 bg-white px-4 py-3">
+                  <div key={m.id} className="rounded-[8px] border border-amana-neutral-300 bg-amana-neutral-100 px-4 py-3">
                     <div className="flex items-center gap-4 border-b border-amana-primary-500 pb-1.5">
                       <div className="flex-1 min-w-0 flex items-center gap-2 flex-wrap">
                         <span className="text-[24px] font-light leading-none text-amana-primary-500">{m.name}</span>
@@ -640,10 +639,11 @@ export default function TalentRosterPage() {
                     name: detailsModal.nama,
                     grade: detailsModal.grade,
                     department: departmentLabel(detailsModal.department),
-                    position: detailsModal.roleLabel || '-',
+                    position: detailsModal.posisi && detailsModal.posisi !== '-' ? detailsModal.posisi : detailsModal.roleLabel || '-',
                     contractType: contractLabel(detailsModal.tipeKontrak),
                     email: detailsModal.email,
                     phone: detailsModal.noTelepon || '-',
+                    webAppAccess: detailsModal.accessLabel,
                     photoSrc: detailsModal.pictureUrl ?? undefined,
                     assessmentDone: !!detailsModal.assessment,
                     assessmentName: assessmentName ?? undefined,
@@ -726,25 +726,11 @@ export default function TalentRosterPage() {
                     <div>
                       <TextField
                         label="Position"
-                        value={
-                          LEADER_GRADES.includes((editForm.grade === '__other__' ? customEditGrade : editForm.grade).toLowerCase())
-                            ? 'Partner'
-                            : editForm.akses === 'admin_hr' || editForm.akses === 'admin_ops'
-                              ? ACCESS_LABELS[editForm.akses]
-                              : editForm.roleLabel
-                        }
-                        onChange={(v) => setEditForm((p) => ({ ...p, roleLabel: v }))}
-                        disabled={
-                          isSelfEdit ||
-                          LEADER_GRADES.includes((editForm.grade === '__other__' ? customEditGrade : editForm.grade).toLowerCase()) ||
-                          editForm.akses === 'admin_hr' ||
-                          editForm.akses === 'admin_ops'
-                        }
+                        value={editForm.posisi}
+                        onChange={(v) => setEditForm((p) => ({ ...p, posisi: v }))}
+                        disabled={isSelfEdit}
                         placeholder="e.g.: Software Engineer, Data Analyst"
                       />
-                      {LEADER_GRADES.includes((editForm.grade === '__other__' ? customEditGrade : editForm.grade).toLowerCase()) && (
-                        <p className="pt-1.5 text-[12px] text-amana-neutral-400">Grade Head/Partner automatically becomes position Partner.</p>
-                      )}
                     </div>
 
                     <div>

@@ -15,7 +15,7 @@ import StatusModal from '@/app/components/feedback/StatusModal';
 import RejectReasonModal from '@/app/components/feedback/RejectReasonModal';
 import { statusColor } from '@/app/utils/statusColor';
 import { useFilters } from '@/app/utils/useFilters';
-import { DEPARTMENT_OPTIONS, getAllGradeOptions } from '@/app/utils/orgStructure';
+import { getAllGradeOptions } from '@/app/utils/orgStructure';
 import { TableSkeleton } from '@/app/components/feedback/PageSkeleton';
 import { formatDateWIB, formatDateTimeWIB } from '@/app/utils/formatDate';
 
@@ -59,6 +59,8 @@ const STATUS_MAP: Record<string, { label: string }> = {
 };
 
 const STATUS_OPTIONS = Object.values(STATUS_MAP).map((v) => v.label);
+
+const LEAVE_TYPE_OPTIONS = ['Paid Leave', 'Unpaid Leave', 'Special Leave', 'Compensatory Leave', 'Sick Leave'];
 
 interface LeaveRaw {
   idCuti: string;
@@ -146,13 +148,12 @@ function mapSickRows(rows: SickRaw[]): LeaveReq[] {
 
 interface Filters {
   search: string;
-  department: string;
   grade: string;
   type: string;
   status: string;
 }
 
-const emptyFilters: Filters = { search: '', department: '', grade: '', type: '', status: '' };
+const emptyFilters: Filters = { search: '', grade: '', type: '', status: '' };
 
 export default function PartnerLeaveApprovalPage() {
   const [requests, setRequests] = useState<LeaveReq[]>([]);
@@ -162,9 +163,9 @@ export default function PartnerLeaveApprovalPage() {
   const [rejecting, setRejecting] = useState(false);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [detailRow, setDetailRow] = useState<LeaveReq | null>(null);
+  const [myDeptLabels, setMyDeptLabels] = useState<string[]>([]);
   const { draft, applied, setField, handleSearch, handleReset } = useFilters<Filters>(emptyFilters);
   const gradeOptions = useMemo(() => getAllGradeOptions(), []);
-  const typeOptions = useMemo(() => Array.from(new Set(requests.map((r) => r.type))).sort(), [requests]);
 
   const load = async () => {
     const res = await fetch('/api/leave/list', { cache: 'no-store' });
@@ -175,7 +176,9 @@ export default function PartnerLeaveApprovalPage() {
       // Filter out partner's own leave (auto-approved, no need to approve)
       const sessionRes = await fetch('/api/auth/session', { cache: 'no-store' });
       const session = sessionRes.ok ? await sessionRes.json() : null;
-      const myIdKaryawan = session?.karyawan?.idKaryawan;
+      const myIdKaryawan = session?.user?.idKaryawan;
+      const deptCodes: string[] = session?.user?.departments ?? [];
+      setMyDeptLabels(deptCodes.map((c) => DEPARTMENT_LABEL[c] ?? c));
       const filteredCuti = myIdKaryawan
         ? cuti.filter((c) => c.idKaryawan !== myIdKaryawan)
         : cuti;
@@ -197,13 +200,15 @@ export default function PartnerLeaveApprovalPage() {
     const q = applied.search.trim().toLowerCase();
     return requests.filter((r) => {
       const matchSearch = !q || r.name.toLowerCase().includes(q) || r.idCuti.toLowerCase().includes(q);
-      if (applied.department && r.department !== applied.department) return false;
+      // Hanya Practice Group milik partner yang login; bila session gagal, data sudah
+      // tersaring server-side sehingga tetap ditampilkan apa adanya.
+      if (myDeptLabels.length > 0 && !myDeptLabels.includes(r.department)) return false;
       if (applied.grade && r.grade !== applied.grade) return false;
       if (applied.type && r.type !== applied.type) return false;
       if (applied.status && (STATUS_MAP[r.status]?.label ?? r.status) !== applied.status) return false;
       return matchSearch;
     });
-  }, [requests, applied]);
+  }, [requests, applied, myDeptLabels]);
 
   const handleAction = async (id: string, action: 'approve' | 'reject', catatan?: string) => {
     if (processingId) return; // cegah double-processing
@@ -293,7 +298,7 @@ export default function PartnerLeaveApprovalPage() {
 
         <SearchPanel
           title="Search Leave Approval"
-          subtitle="Filter leave requests by employee name, department, grade, leave type, or status."
+          subtitle="Filter leave requests by employee name, grade, leave type, or status."
           onReset={handleReset}
           onSearch={handleSearch}
         >
@@ -303,9 +308,18 @@ export default function PartnerLeaveApprovalPage() {
             onChange={(v) => setField('search', v)}
             placeholder="Search by name or ID..."
           />
-          <SearchSelectField label="Practice Group" value={draft.department} onChange={(v) => setField('department', v)} options={DEPARTMENT_OPTIONS} />
+          <div className="flex flex-col gap-1.5 w-full">
+            <label className="text-[16px] font-semibold text-amana-neutral-500">Practice Group</label>
+            <div className="w-full border border-amana-neutral-300 rounded-[8px] px-3 py-2.5 text-[16px] bg-amana-neutral-200">
+              {myDeptLabels.length > 0 ? (
+                <span className="text-amana-neutral-500">{myDeptLabels.join(', ')}</span>
+              ) : (
+                <span className="text-amana-neutral-300">All</span>
+              )}
+            </div>
+          </div>
           <SearchSelectField label="Grade" value={draft.grade} onChange={(v) => setField('grade', v)} options={gradeOptions} />
-          <SearchSelectField label="Leave Type" value={draft.type} onChange={(v) => setField('type', v)} options={typeOptions} />
+          <SearchSelectField label="Leave Type" value={draft.type} onChange={(v) => setField('type', v)} options={LEAVE_TYPE_OPTIONS} />
           <SearchSelectField label="Status" value={draft.status} onChange={(v) => setField('status', v)} options={STATUS_OPTIONS} />
         </SearchPanel>
 

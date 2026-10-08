@@ -1,6 +1,7 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import PageTopBar from '../layout/PageTopBar';
 import SectionCard from '../layout/SectionCard';
 import SearchPanel from './SearchPanel';
@@ -38,6 +39,15 @@ export interface Contract {
 
 type FilterKey = 'all' | 'over90' | 'under90' | 'under60' | 'under30' | 'needaction';
 
+const FILTER_KEYS: readonly string[] = ['all', 'over90', 'under90', 'under60', 'under30', 'needaction'];
+
+// Parse ?filter= dari URL (deep-link, mis. klik notifikasi renewal/offboarding di NotificationBell).
+// 'needaction' hanya valid bila filter itu memang ada (HR view) — partner view fallback ke 'all'.
+function parseFilterParam(q: string | null, allowNeedAction: boolean): FilterKey {
+  if (q && FILTER_KEYS.includes(q) && (q !== 'needaction' || allowNeedAction)) return q as FilterKey;
+  return 'all';
+}
+
 const baseFilters: { key: FilterKey; label: string }[] = [
   { key: 'all', label: 'Show All' },
   { key: 'over90', label: 'Over 90 Days' },
@@ -72,7 +82,17 @@ export default function ContractTrackingPage({
   showStartDate = false,
   needActionConfig,
 }: ContractTrackingPageProps) {
-  const [activeFilter, setActiveFilter] = useState<FilterKey>('all');
+  const searchParams = useSearchParams();
+  const [activeFilter, setActiveFilter] = useState<FilterKey>(() =>
+    parseFilterParam(searchParams.get('filter'), !!needActionConfig)
+  );
+
+  // Sinkron saat query URL berubah: Next tidak me-remount halaman utk perubahan query,
+  // jadi tanpa effect ini klik notifikasi saat sudah di halaman yang sama tak memindah filter.
+  useEffect(() => {
+    setActiveFilter(parseFilterParam(searchParams.get('filter'), !!needActionConfig));
+  }, [searchParams, needActionConfig]);
+
   const { draft, applied, setField, handleSearch, handleReset } = useFilters({
     name: '',
     department: '',

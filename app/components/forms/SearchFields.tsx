@@ -266,18 +266,24 @@ export function SearchDateRangeCalendarField({
   }, []);
 
   const handlePick = (iso: string) => {
-    if (!fromValue || toValue) {
+    // Klik pertama (kosong / belum lengkap) -> langsung satu hari (from = to = iso),
+    // sehingga action Submit bisa aktif tanpa klik tanggal yang sama dua kali.
+    if (!fromValue || !toValue) {
       onFromChange(iso);
-      onToChange('');
-    } else if (iso < fromValue) {
-      onFromChange(iso);
+      onToChange(iso);
+    } else if (fromValue === toValue) {
+      // Sudah satu hari: klik tanggal lain -> perluas jadi rentang.
+      if (iso < fromValue) onFromChange(iso);
+      else if (iso > toValue) onToChange(iso);
     } else {
+      // Sudah rentang penuh: klik -> mulai seleksi baru (satu hari).
+      onFromChange(iso);
       onToChange(iso);
     }
   };
 
   const displayText = fromValue
-    ? `${formatDateWIB(fromValue)}${toValue ? ` - ${formatDateWIB(toValue)}` : ''}`
+    ? `${formatDateWIB(fromValue)}${toValue && toValue !== fromValue ? ` - ${formatDateWIB(toValue)}` : ''}`
     : 'Select date';
 
   return (

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import ProfileOverview, { type Stat, type SummaryPanelConfig, type ProfileBio } from '@/app/components/data-display/ProfileOverview';
+import ProfileOverview, { type Stat, type SummaryPanelConfig, type ProfileBio, type ProfileBioDetails } from '@/app/components/data-display/ProfileOverview';
 
 interface Me {
   nama: string;
@@ -11,7 +11,11 @@ interface Me {
   pictureUrl?: string | null;
   rolesDivisi: string;
   displayGrade?: string | null;
+  grade?: string | null;
+  posisi?: string | null;
+  accessLabel?: string | null;
   roleLabel: string;
+  tipeKontrak?: string | null;
   stats: {
     pendingLeaves: number;
     sickLeaves: number;
@@ -66,11 +70,21 @@ export default function PartnerProfilePage() {
     photoSrc: me?.pictureUrl ?? undefined,
   };
 
+  const bioDetails: ProfileBioDetails = {
+    grade: me?.grade || '-',
+    department: me?.departmentLabel || '-',
+    position: me?.posisi || me?.roleLabel || '-',
+    contractType: me?.tipeKontrak || '-',
+    webAppAccess: me?.accessLabel || undefined,
+  };
+
   return (
     <ProfileOverview
       showGreeting
+      showCareerHistory
       panels={[approvalPanel, partnerPanel]}
       bio={bio}
+      bioDetails={bioDetails}
     />
   );
 }

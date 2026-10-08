@@ -16,6 +16,7 @@ export const groups: NavGroup[] = [
     links: [
       { href: '/user/attendance/leaverequest', label: 'Leave Request' },
       { href: '/user/attendance/sickleave', label: 'Sick Leave' },
+      { href: '/user/payment', label: 'Payment Request' },
     ],
   },
   {

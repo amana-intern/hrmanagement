@@ -32,6 +32,9 @@ interface Me {
   pictureUrl?: string | null;
   rolesDivisi: string;
   displayGrade?: string | null;
+  grade?: string | null;
+  posisi?: string | null;
+  accessLabel?: string | null;
   roleLabel: string;
   tipeKontrak?: string | null;
 }
@@ -91,10 +94,11 @@ export default function HRProfilePage() {
   };
 
   const bioDetails: ProfileBioDetails = {
-    grade: me?.displayGrade || '-',
+    grade: me?.grade || '-',
     department: me?.departmentLabel || '-',
-    position: me?.roleLabel || '-',
+    position: me?.posisi || me?.roleLabel || '-',
     contractType: me?.tipeKontrak || '-',
+    webAppAccess: me?.accessLabel || undefined,
   };
 
   return (

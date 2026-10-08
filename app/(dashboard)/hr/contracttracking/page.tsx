@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import ContractTrackingPage from '@/app/components/data-display/ContractTrackingPage';
 import type { Contract } from '@/app/components/data-display/ContractTrackingPage';
 import type { DataTableColumn } from '@/app/components/data-display/DataTable';
@@ -166,7 +166,9 @@ export default function HRContractTrackingPage() {
 
   return (
     <>
-      <ContractTrackingPage contracts={contracts} showStartDate needActionConfig={{ actionColumn }} />
+      <Suspense fallback={null}>
+        <ContractTrackingPage contracts={contracts} showStartDate needActionConfig={{ actionColumn }} />
+      </Suspense>
 
       {extendTarget && (
         <Modal title="Add / Extend Contract" onClose={() => setExtendTarget(null)} maxWidth="max-w-lg" showCloseButton={false}>

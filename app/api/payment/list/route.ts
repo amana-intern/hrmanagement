@@ -12,7 +12,12 @@ export async function GET(request: Request) {
 
     const where: Record<string, unknown> = {};
 
-    if (isEmployeeRole(auth.idRole)) {
+    // Outgoing Payments (halaman /user/payment): hanya payment request milik pengaju sendiri,
+    // berlaku untuk semua role (employee, Admin HR, Admin OPS, partner). Tanpa idKaryawan
+    // -> sentinel supaya list kosong, bukan bocor ke seluruh data.
+    if (scope === 'mine') {
+      where.idKaryawan = auth.idKaryawan ?? '\u0000no-karyawan\u0000';
+    } else if (isEmployeeRole(auth.idRole)) {
       where.idKaryawan = auth.idKaryawan ?? undefined;
     } else if (auth.idRole === ROLES.ADMIN_OPS) {
       // Board OPS Payment Request: PENDING_OPS + PENDING_PARTNER (Waiting Partner) + REJECTED

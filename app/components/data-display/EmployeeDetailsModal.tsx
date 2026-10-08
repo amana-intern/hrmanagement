@@ -25,6 +25,8 @@ export interface EmployeeDetails {
   contractType: string;
   email: string;
   phone: string;
+  /** Akses web app (Employee/Partner/Admin HR/Admin OPS) — opsional, tampil setelah Phone. */
+  webAppAccess?: string;
   photoSrc?: string;
   assessmentDone: boolean;
   assessmentName?: string;
@@ -94,12 +96,13 @@ export function EmployeeDetailsContent({
           </h4>
           <div className="flex flex-col">
             <DetailRow label="Name" value={employee.name} />
-            <DetailRow label="PG" value={employee.department} />
+            <DetailRow label="Practice Group" value={employee.department} />
             <DetailRow label="Grade" value={employee.grade} />
             <DetailRow label="Position" value={employee.position} />
             <DetailRow label="Contract" value={employee.contractType} />
             <DetailRow label="Email" value={employee.email} href={`mailto:${employee.email}`} />
             <DetailRow label="Phone" value={employee.phone} />
+            {employee.webAppAccess && <DetailRow label="Web App Access" value={employee.webAppAccess} />}
           </div>
           {(onRemove || onEdit) && (
             <>

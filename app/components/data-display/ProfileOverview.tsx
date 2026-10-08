@@ -35,6 +35,8 @@ export interface ProfileBioDetails {
   department: string;
   position: string;
   contractType: string;
+  /** Akses web app (Employee/Partner/Admin HR/Admin OPS) — sama dgn kolom Web App Access di HR. */
+  webAppAccess?: string;
 }
 
 const CONTRACT_LABELS: Record<string, string> = { PKWTT: 'PKWTT', PKWT: 'PKWT', KKI: 'KKI', INTERNSHIP: 'Internship', KONTRAK: 'Contract' };
@@ -203,6 +205,7 @@ export default function ProfileOverview({
               contractType: CONTRACT_LABELS[bioDetails.contractType] ?? bioDetails.contractType,
               email: bio.email,
               phone: bio.phone,
+              webAppAccess: bioDetails.webAppAccess,
               photoSrc: bio.photoSrc,
               assessmentDone: assessment.done,
               assessmentName: assessment.name,

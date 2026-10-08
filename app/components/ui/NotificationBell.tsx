@@ -79,9 +79,16 @@ function getRedirectUrl(tipe: string, role: string | null | undefined): string |
     case 'CONTRACT_REMINDER_30':
     case 'CONTRACT_REMINDER_60':
     case 'CONTRACT_REMINDER_90':
+      if (role === ROLES.ADMIN_HR) return '/hr/contracttracking';
+      if (role === ROLES.PARTNER) return '/partner/contracttracking';
+      return '/user/profile';
+
+    // Keputusan partner (renewal/offboarding) = sifat need action → HR langsung ke filter
+    // "Need Action" (ContractTrackingPage sinkron dgn ?filter=). Partner view tak punya
+    // filter itu (diabaikan dgn aman), karyawan tetap ke profil.
     case 'CONTRACT_RENEWAL':
     case 'CONTRACT_OFFBOARDING':
-      if (role === ROLES.ADMIN_HR) return '/hr/contracttracking';
+      if (role === ROLES.ADMIN_HR) return '/hr/contracttracking?filter=needaction';
       if (role === ROLES.PARTNER) return '/partner/contracttracking';
       return '/user/profile';
 
