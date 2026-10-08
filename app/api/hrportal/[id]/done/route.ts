@@ -1,11 +1,13 @@
 import { requireAuth } from '@/lib/dal';
 import { prisma } from '@/lib/prisma';
+import { ROLES } from '@/lib/roles';
 
 // PATCH /api/hrportal/[id]/done — checklist per-user (arsip pribadi).
 // Body: { done: boolean } — check (true) = post masuk ke archive akun saya;
 // uncheck (false) = restore ke feed saya. Hanya menulis MadingUserState milik saya,
 // sehingga centang saya TIDAK memengaruhi feed/archive akun lain.
-// Guard: post TARGETED hanya boleh dicek penerima (post itu memang tidak terlihat utk non-penerima).
+// Guard: post TARGETED hanya boleh dicek penerima (post itu memang tidak terlihat utk non-penerima),
+// kecuali Admin HR — feed HR menampilkan semua pengumuman.
 export async function PATCH(request: Request, ctx: { params: Promise<{ id: string }> }) {
   try {
     const auth = await requireAuth();
@@ -25,7 +27,7 @@ export async function PATCH(request: Request, ctx: { params: Promise<{ id: strin
     if (!mading) {
       return Response.json({ error: 'Announcement not found' }, { status: 404 });
     }
-    if (done && mading.audience === 'TARGETED') {
+    if (done && mading.audience === 'TARGETED' && auth.idRole !== ROLES.ADMIN_HR) {
       const recipient = await prisma.madingRecipient.findUnique({
         where: { idMading_idKaryawan: { idMading: id, idKaryawan: me } },
       });

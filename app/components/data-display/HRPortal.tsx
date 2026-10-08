@@ -467,7 +467,7 @@ export function HRPortalFeed() {
                         <Check className="w-4 h-4" strokeWidth={3} />
                       </button>
                     )}
-                    {item.isAuthor && (
+                    {canManage && (
                       <>
                         <button
                           type="button"

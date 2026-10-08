@@ -1,5 +1,6 @@
 import { requireAuth } from '@/lib/dal';
 import { prisma } from '@/lib/prisma';
+import { ROLES } from '@/lib/roles';
 
 // PATCH /api/hrportal/[id]/state — tandai read / dismiss milik saya (per-user).
 // Body: { action: 'read' | 'dismiss' } → upsert MadingUserState.
@@ -23,7 +24,9 @@ export async function PATCH(request: Request, ctx: { params: Promise<{ id: strin
     if (!mading) {
       return Response.json({ error: 'Announcement not found' }, { status: 404 });
     }
-    if (mading.audience === 'TARGETED') {
+    // Targeted: hanya penerima yang boleh menulis state — kecuali Admin HR
+    // (feed HR menampilkan semua pengumuman, termasuk yang bukan ia penerima).
+    if (mading.audience === 'TARGETED' && auth.idRole !== ROLES.ADMIN_HR) {
       const recipient = await prisma.madingRecipient.findUnique({
         where: { idMading_idKaryawan: { idMading: id, idKaryawan: me } },
       });

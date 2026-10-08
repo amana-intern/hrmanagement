@@ -83,17 +83,24 @@ export function useHrPortal() {
   );
 
   // Tandai read — optimis di lokal (badge unread ikut berkurang) tanpa reload penuh.
-  const markRead = useCallback(async (id: string) => {
-    setList((prev) => prev.map((m) => (m.idMading === id ? { ...m, isRead: true } : m)));
-    setUnread((n) => Math.max(0, n - 1));
-    try {
-      await fetch(`/api/hrportal/${id}/state`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'read' }),
-      });
-    } catch {}
-  }, []);
+  // Bila server menolak (gagal persist) → load() ulang supaya tidak ada "read hantu".
+  const markRead = useCallback(
+    async (id: string) => {
+      setList((prev) => prev.map((m) => (m.idMading === id ? { ...m, isRead: true } : m)));
+      setUnread((n) => Math.max(0, n - 1));
+      try {
+        const res = await fetch(`/api/hrportal/${id}/state`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'read' }),
+        });
+        if (!res.ok) await load();
+      } catch {
+        await load();
+      }
+    },
+    [load]
+  );
 
   const dismiss = useCallback(
     async (id: string): Promise<ActionResult> => {
@@ -163,7 +170,7 @@ export function useHrPortal() {
     [load]
   );
 
-  // Edit announcement (Admin HR, hanya buatan sendiri) → PATCH /api/hrportal/[id].
+  // Edit announcement (Admin HR — semua akun, siapa pun pembuatnya) → PATCH /api/hrportal/[id].
   const update = useCallback(
     async (id: string, payload: HrPortalCreatePayload): Promise<ActionResult> => {
       try {

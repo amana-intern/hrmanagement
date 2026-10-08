@@ -2,7 +2,7 @@ import { requireAuth } from '@/lib/dal';
 import { prisma } from '@/lib/prisma';
 import { ROLES } from '@/lib/roles';
 
-// GET /api/hrportal/[id] — detail announcement utk modal edit (Admin HR, hanya buatan sendiri).
+// GET /api/hrportal/[id] — detail announcement utk modal edit (Admin HR — semua akun, siapa pun pembuatnya).
 // Return recipientIds penuh supaya form edit bisa prefill picker Targeted.
 export async function GET(_request: Request, ctx: { params: Promise<{ id: string }> }) {
   try {
@@ -18,9 +18,6 @@ export async function GET(_request: Request, ctx: { params: Promise<{ id: string
     });
     if (!mading) {
       return Response.json({ error: 'Announcement not found' }, { status: 404 });
-    }
-    if (mading.createdBy !== auth.idKaryawan) {
-      return Response.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     return Response.json({
@@ -39,7 +36,7 @@ export async function GET(_request: Request, ctx: { params: Promise<{ id: string
   }
 }
 
-// PATCH /api/hrportal/[id] — edit announcement (Admin HR, hanya buatan sendiri).
+// PATCH /api/hrportal/[id] — edit announcement (Admin HR — semua akun, siapa pun pembuatnya).
 // Body sama dengan POST: { judul, pesan, audience, tanggalMulai?, tanggalSelesai?, recipientIds? }
 // Validasi sama dengan POST; recipients diganti total (ALL → hapus semua recipient).
 export async function PATCH(request: Request, ctx: { params: Promise<{ id: string }> }) {
@@ -50,15 +47,9 @@ export async function PATCH(request: Request, ctx: { params: Promise<{ id: strin
     }
     const { id } = await ctx.params;
 
-    const mading = await prisma.mading.findUnique({
-      where: { idMading: id },
-      select: { createdBy: true },
-    });
+    const mading = await prisma.mading.findUnique({ where: { idMading: id } });
     if (!mading) {
       return Response.json({ error: 'Announcement not found' }, { status: 404 });
-    }
-    if (mading.createdBy !== auth.idKaryawan) {
-      return Response.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const body = await request.json();
@@ -124,7 +115,7 @@ export async function PATCH(request: Request, ctx: { params: Promise<{ id: strin
   }
 }
 
-// DELETE /api/hrportal/[id] — hard delete pengumuman (Admin HR, hanya buatan sendiri).
+// DELETE /api/hrportal/[id] — hard delete pengumuman (Admin HR — semua akun, siapa pun pembuatnya).
 // Cascade menghapus MadingRecipient + MadingUserState.
 export async function DELETE(_request: Request, ctx: { params: Promise<{ id: string }> }) {
   try {
@@ -134,15 +125,9 @@ export async function DELETE(_request: Request, ctx: { params: Promise<{ id: str
     }
     const { id } = await ctx.params;
 
-    const mading = await prisma.mading.findUnique({
-      where: { idMading: id },
-      select: { createdBy: true },
-    });
+    const mading = await prisma.mading.findUnique({ where: { idMading: id } });
     if (!mading) {
       return Response.json({ error: 'Announcement not found' }, { status: 404 });
-    }
-    if (mading.createdBy !== auth.idKaryawan) {
-      return Response.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     await prisma.mading.delete({ where: { idMading: id } });
