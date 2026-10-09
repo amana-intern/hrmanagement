@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Modal from '../feedback/Modal';
 import Button from '../forms/Button';
 import StatusPill from './StatusPill';
@@ -71,6 +72,7 @@ export function EmployeeDetailsContent({
   // No Remove/Edit alongside (self-service profile view) means these View buttons
   // aren't competing with a stronger CTA, so they can be the plain solid blue button.
   const viewButtonVariant = onRemove || onEdit ? 'outline' : 'primary';
+  const [photoBroken, setPhotoBroken] = useState(false);
 
   return (
     <>
@@ -81,9 +83,14 @@ export function EmployeeDetailsContent({
           </h3>
           <div className="flex justify-center mb-3">
             <div className="w-[120px] h-[120px] rounded-[8px] overflow-hidden border border-amana-primary-500 shadow-sm bg-amana-neutral-200 flex items-center justify-center flex-shrink-0">
-              {employee.photoSrc ? (
+              {employee.photoSrc && !photoBroken ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={employee.photoSrc} alt="" className="w-full h-full object-cover" />
+                <img
+                  src={employee.photoSrc}
+                  alt=""
+                  className="w-full h-full object-cover"
+                  onError={() => setPhotoBroken(true)}
+                />
               ) : (
                 <span className="text-[28px] font-semibold text-amana-primary-500">
                   {employee.name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase()}

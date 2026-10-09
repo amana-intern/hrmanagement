@@ -63,8 +63,9 @@ export async function POST(request: Request) {
     }
 
     // Link konsisten via Google `sub`: login pertama auto-link, berikutnya wajib cocok.
-    // Foto profil Google diunduh & disimpan lokal (URL lh3.googleusercontent.com
-    // di-rate-limit Google/429 bila di-hotlink langsung).
+    // Foto profil Google diunduh & disimpan ke storage (lihat lib/storage.ts).
+    // Bila unduhan/simpanan gagal, pakai URL Google langsung sebagai fallback
+    // (lh3.googleusercontent.com bisa kena 429, tapi lebih baik daripada foto hilang).
     const googleSub = payload.sub ?? '';
     if (googleSub) {
       if (user.googleSub && user.googleSub !== googleSub) {
@@ -76,18 +77,25 @@ export async function POST(request: Request) {
 
       let pictureUrl = user.pictureUrl; // fallback: pertahankan foto lama
       if (payload.picture) {
+        const googlePicture = payload.picture;
         try {
           // Minta resolusi tinggi (default ID token hanya s96 -> blur saat ditampilkan besar).
-          const hiRes = /=[sS]\d+(-c)?$/.test(payload.picture)
-            ? payload.picture.replace(/=[sS]\d+(-c)?$/, '=s400-c')
-            : `${payload.picture}=s400-c`;
+          const hiRes = /=[sS]\d+(-c)?$/.test(googlePicture)
+            ? googlePicture.replace(/=[sS]\d+(-c)?$/, '=s400-c')
+            : `${googlePicture}=s400-c`;
           const res = await fetch(hiRes, { signal: AbortSignal.timeout(5000) });
           if (res.ok) {
             const buffer = Buffer.from(await res.arrayBuffer());
             pictureUrl = await saveFile(buffer, `avatar-${googleSub}-400.jpg`);
+          } else {
+            // Unduhan dari Google gagal (mis. 429) -> pakai URL Google langsung.
+            console.warn(`[google-auth] Foto profil gagal diunduh (HTTP ${res.status}) untuk ${email}`);
+            pictureUrl = user.pictureUrl ?? googlePicture;
           }
-        } catch {
-          // Unduhan gagal (timeout/network) -> pakai foto lama.
+        } catch (e) {
+          // Simpan ke storage gagal -> pakai URL Google langsung agar foto tetap tampil.
+          console.warn(`[google-auth] Gagal simpan foto profil untuk ${email}:`, e);
+          pictureUrl = user.pictureUrl ?? googlePicture;
         }
       }
 

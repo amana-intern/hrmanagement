@@ -71,6 +71,7 @@ function SummaryPanel({ title, stats, updates }: SummaryPanelConfig) {
 }
 
 function EmployeeBio({ name, role, email, phone, photoSrc, onViewDetails }: ProfileBio & { onViewDetails?: () => void }) {
+  const [photoBroken, setPhotoBroken] = useState(false);
   return (
     <div className="flex-shrink-0 bg-amana-neutral-100 rounded-[5px] border border-amana-primary-500 shadow-sm px-4 py-2.5">
       <div className="flex items-center justify-between pb-1.5 mb-3 border-b border-amana-primary-500">
@@ -90,9 +91,14 @@ function EmployeeBio({ name, role, email, phone, photoSrc, onViewDetails }: Prof
           <p className="text-[19px] font-light text-amana-primary-500 truncate">{phone}</p>
         </div>
         <div className="w-[92px] h-[123px] rounded-[8px] overflow-hidden border border-amana-primary-500 shadow-md flex-shrink-0 bg-amana-neutral-200 flex items-center justify-center">
-          {photoSrc ? (
+          {photoSrc && !photoBroken ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={photoSrc} alt="" className="w-full h-full object-cover" />
+            <img
+              src={photoSrc}
+              alt=""
+              className="w-full h-full object-cover"
+              onError={() => setPhotoBroken(true)}
+            />
           ) : (
             <span className="text-[28px] font-semibold text-amana-primary-500">
               {name

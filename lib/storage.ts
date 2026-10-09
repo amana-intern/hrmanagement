@@ -38,6 +38,8 @@ async function saveFileLocal(buffer: Buffer, filename: string): Promise<string> 
 
 async function saveFileBlob(buffer: Buffer, filename: string): Promise<string> {
   const { put } = await import('@vercel/blob');
-  const blob = await put(filename, buffer, { access: 'public' });
+  // allowOverwrite: filename deterministik (mis. avatar-<sub>-400.jpg) wajib bisa
+  // ditimpa; default @vercel/blob melempar error bila pathname sudah ada.
+  const blob = await put(filename, buffer, { access: 'public', allowOverwrite: true });
   return blob.url;
 }
