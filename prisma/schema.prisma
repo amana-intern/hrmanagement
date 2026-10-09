@@ -96,6 +96,10 @@ model Karyawan {
   accrualRate     Float?            @db.DoublePrecision
   tipeKontrak     String?           @default("PKWT") @db.VarChar
   posisi          String?           @db.VarChar
+  // Keputusan Partner (Offboarding) untuk karyawan tanpa kontrak ber-end date (mis. PKWTT); yang punya kontrak memakai KontrakKaryawan.needAction.
+  needAction      String?           @db.VarChar
+  needActionAt    DateTime?
+  needActionBy    String?           @db.VarChar
   user            User?             @relation
   masterGrade     MasterGrade?      @relation(fields: [idGrade], references: [idGrade])
   masterDepartment MasterDepartment? @relation(fields: [department], references: [idDepartment])

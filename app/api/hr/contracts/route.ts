@@ -61,8 +61,8 @@ export async function GET() {
         daysLeft,
         idKontrak: latest?.idKontrak ?? null,
         statusKontrak: latest?.idStatus ?? null,
-        needAction: latest?.needAction ?? null,
-        needActionBy: latest?.needActionBy ?? null,
+        needAction: latest?.needAction ?? k.needAction ?? null,
+        needActionBy: latest?.needActionBy ?? k.needActionBy ?? null,
       };
     });
 

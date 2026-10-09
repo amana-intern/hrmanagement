@@ -117,6 +117,7 @@ export default function PartnerContractTrackingPage() {
           </span>
         );
       }
+      const noEnd = !c.endDate;
       return (
         <div className="flex gap-2">
           <Button
@@ -132,7 +133,8 @@ export default function PartnerContractTrackingPage() {
             variant="primary"
             size="sm"
             className="flex-1 whitespace-nowrap"
-            disabled={processingId === String(c.id)}
+            title={noEnd ? 'No contract end date — there is no contract to renew.' : undefined}
+            disabled={noEnd || processingId === String(c.id)}
             onClick={() => { setConfirmTarget(c); setConfirmAction('renewal'); }}
           >
             Renewal

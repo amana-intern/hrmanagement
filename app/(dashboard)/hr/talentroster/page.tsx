@@ -6,6 +6,7 @@ import { AlertTriangle } from 'lucide-react';
 import { durationFast, easeOut } from '@/app/utils/motion';
 import PageTopBar from '@/app/components/layout/PageTopBar';
 import QuickSearchBox from '@/app/components/data-display/QuickSearchBox';
+import SearchPanel from '@/app/components/data-display/SearchPanel';
 import SectionCard from '@/app/components/layout/SectionCard';
 import DataTable from '@/app/components/data-display/DataTable';
 import type { DataTableColumn } from '@/app/components/data-display/DataTable';
@@ -17,7 +18,8 @@ import { AssessmentBadge, EmployeeDetailsContent } from '@/app/components/data-d
 import CareerHistoryModal, { type CareerHistoryEntry } from '@/app/components/data-display/CareerHistoryModal';
 import TextField from '@/app/components/forms/TextField';
 import DateField from '@/app/components/forms/DateField';
-import { SearchDateRangeCalendarField } from '@/app/components/forms/SearchFields';
+import { SearchDateRangeCalendarField, SearchTextField, SearchSelectField } from '@/app/components/forms/SearchFields';
+import { useFilters } from '@/app/utils/useFilters';
 import SelectField from '@/app/components/forms/SelectField';
 import AssessmentResultView from '@/app/components/hr/AssessmentResultView';
 import { TableSkeleton } from '@/app/components/feedback/PageSkeleton';
@@ -101,12 +103,18 @@ interface AiSearchResult {
 
 const DEPARTMENT_OPTION_LIST = Object.keys(DEPARTMENT_LABELS);
 
+// Label tampilan tipe kontrak (dipakai kolom tabel dan filter).
+const CONTRACT_DISPLAY: Record<string, string> = { PKWTT: 'PKWTT', PKWT: 'PKWT', KKI: 'KKI', INTERNSHIP: 'Internship', KONTRAK: 'Contract' };
+
+const EMPTY_FILTERS = { name: '', department: '', grade: '', position: '', contract: '', assessment: '' };
+
 export default function TalentRosterPage() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [assessmentName, setAssessmentName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const { draft, applied, setField, handleSearch, handleReset } = useFilters(EMPTY_FILTERS);
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [appliedQuery, setAppliedQuery] = useState('');
@@ -205,12 +213,25 @@ export default function TalentRosterPage() {
   // Mode pencarian AI aktif (loading/sukses) -> tabel menampilkan seluruh roster.
   // Fallback (AI gagal) tetap memakai filter nama, begitu juga saat idle.
   const aiMode = aiState === 'loading' || aiState === 'ai';
+
+  // Filter biasa (panel "Filter Talent") berlaku di atas hasil di atas, termasuk saat mode AI.
+  const gradeFilterOptions = useMemo(() => Array.from(new Set(employees.map((e) => e.grade).filter((g) => g && g !== '-'))).sort(), [employees]);
+  const positionFilterOptions = useMemo(() => Array.from(new Set(employees.map((e) => e.posisi).filter((p) => p && p !== '-'))).sort(), [employees]);
+  const departmentFilterOptions = useMemo(() => DEPARTMENT_OPTION_LIST.map((k) => DEPARTMENT_LABELS[k]), []);
+
   const filtered = useMemo(
     () =>
-      aiMode
-        ? employees
-        : employees.filter((e) => e.nama.toLowerCase().includes(appliedQuery.toLowerCase())),
-    [employees, appliedQuery, aiMode]
+      employees.filter((e) => {
+        if (!aiMode && !e.nama.toLowerCase().includes(appliedQuery.toLowerCase())) return false;
+        if (applied.name && !e.nama.toLowerCase().includes(applied.name.toLowerCase())) return false;
+        if (applied.department && (DEPARTMENT_LABELS[e.department] || e.department) !== applied.department) return false;
+        if (applied.grade && e.grade !== applied.grade) return false;
+        if (applied.position && e.posisi !== applied.position) return false;
+        if (applied.contract && (CONTRACT_DISPLAY[e.tipeKontrak ?? ''] ?? e.tipeKontrak) !== applied.contract) return false;
+        if (applied.assessment && (applied.assessment === 'Done') !== !!e.assessment) return false;
+        return true;
+      }),
+    [employees, appliedQuery, aiMode, applied]
   );
 
   const rosterRows: RosterRow[] = useMemo(() => filtered.map((e) => ({ ...e, id: e.idKaryawan })), [filtered]);
@@ -468,8 +489,7 @@ export default function TalentRosterPage() {
 
   const departmentLabel = (d: string) => DEPARTMENT_LABELS[d] || d || '-';
   const contractLabel = (t?: string) => {
-    const map: Record<string, string> = { PKWTT: 'PKWTT', PKWT: 'PKWT', KKI: 'KKI', INTERNSHIP: 'Internship', KONTRAK: 'Contract' };
-    return map[t ?? ''] ?? t ?? '-';
+    return CONTRACT_DISPLAY[t ?? ''] ?? t ?? '-';
   };
 
   const badgeBase = 'rounded-full border px-4 py-1 text-xs font-bold uppercase tracking-wider';
@@ -602,10 +622,25 @@ export default function TalentRosterPage() {
           )}
         </QuickSearchBox>
 
+        <SearchPanel
+          title="Filter Talent"
+          subtitle="Filter employees based on name, practice group, grade, position, contract type, or assessment."
+          onReset={handleReset}
+          onSearch={handleSearch}
+        >
+          <SearchTextField label="Employee Name" value={draft.name} onChange={(v) => setField('name', v)} placeholder="Search by name..." />
+          <SearchSelectField label="Practice Group" value={draft.department} onChange={(v) => setField('department', v)} options={departmentFilterOptions} />
+          <SearchSelectField label="Grade" value={draft.grade} onChange={(v) => setField('grade', v)} options={gradeFilterOptions} />
+          <SearchSelectField label="Position" value={draft.position} onChange={(v) => setField('position', v)} options={positionFilterOptions} />
+          <SearchSelectField label="Contract Type" value={draft.contract} onChange={(v) => setField('contract', v)} options={Object.values(CONTRACT_DISPLAY).filter((v) => v !== 'Contract')} />
+          <SearchSelectField label="Assessment" value={draft.assessment} onChange={(v) => setField('assessment', v)} options={['Done', 'Not Done']} />
+        </SearchPanel>
+
         <SectionCard
           title="Talent Management"
           subtitle={`${rosterRows.length} employee(s)`}
           scroll
+          className="flex-1 min-h-[260px]"
           action={
             <Button variant="primary" size="md" onClick={() => { setIsAddUserOpen(true); setAddUserMsg(''); }}>
               Add New Talent

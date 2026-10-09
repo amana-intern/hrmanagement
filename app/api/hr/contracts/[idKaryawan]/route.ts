@@ -34,6 +34,19 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ idKar
       return Response.json({ error: 'Not your department' }, { status: 403 });
     }
 
+    // Kontrak aktif ber-end date menyimpan keputusan Partner di baris kontraknya. Karyawan tanpa end date
+    // (mis. PKWTT) tidak punya kontrak untuk diperpanjang: hanya Offboarding yang berlaku, disimpan di Karyawan.
+    const activeContract = await prisma.kontrakKaryawan.findFirst({
+      where: { idKaryawan, idStatus: 'ST_KON_ACTIVE', tanggalBerakhir: { not: null } },
+      orderBy: { tanggalMulai: 'desc' },
+    });
+    if (!activeContract && action === 'renewal') {
+      return Response.json(
+        { error: `${karyawan.nama ?? 'This employee'} has no contract end date, so there is no contract to renew. Only offboarding is available.` },
+        { status: 400 }
+      );
+    }
+
     // Cari semua user HR (role ADMIN_HR) utk notifikasi
     const hrUsers = await prisma.user.findMany({
       where: { idRole: ROLES.ADMIN_HR },
@@ -73,19 +86,15 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ idKar
 
     await prisma.$transaction(async (tx) => {
       // Simpan decision partner pada kontrak aktif terbaru (untuk filter Need Action HR).
-      const activeContract = await tx.kontrakKaryawan.findFirst({
-        where: { idKaryawan, idStatus: 'ST_KON_ACTIVE' },
-        orderBy: { tanggalMulai: 'desc' },
-      });
+      const decision = {
+        needAction: isRenewal ? 'RENEWAL' : 'OFFBOARDING',
+        needActionAt: new Date(),
+        needActionBy: auth.nama ?? auth.idKaryawan ?? null,
+      };
       if (activeContract) {
-        await tx.kontrakKaryawan.update({
-          where: { idKontrak: activeContract.idKontrak },
-          data: {
-            needAction: isRenewal ? 'RENEWAL' : 'OFFBOARDING',
-            needActionAt: new Date(),
-            needActionBy: auth.nama ?? auth.idKaryawan ?? null,
-          },
-        });
+        await tx.kontrakKaryawan.update({ where: { idKontrak: activeContract.idKontrak }, data: decision });
+      } else {
+        await tx.karyawan.update({ where: { idKaryawan }, data: decision });
       }
 
       // Notifikasi ke Karyawan
