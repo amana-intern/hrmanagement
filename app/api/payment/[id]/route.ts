@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import { after } from 'next/server';
 import { requireAuth, partnerForDepartment } from '@/lib/dal';
 import { prisma } from '@/lib/prisma';
 import { ROLES } from '@/lib/roles';
@@ -7,6 +8,18 @@ import { todayISOWIB } from '@/lib/constants';
 
 const nota = () => `NOTIF-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 const hist = () => `HIST-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+
+// Side-effect (email / fan-out notifikasi) dijalankan setelah response terkirim
+// supaya user tidak menunggu round-trip SMTP/DB tambahan di tiap aksi.
+const defer = (fn: () => Promise<unknown>) => {
+  after(async () => {
+    try {
+      await fn();
+    } catch {
+      // kegagalan fan-out tidak boleh membatalkan aksi yang sudah tersimpan
+    }
+  });
+};
 
 // PATCH /api/payment/[id] — transisi status sesuai peran
 // - ADMIN_OPS:   review_approve / reject / schedule / paid
@@ -29,8 +42,10 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
 
     const idKaryawan = payment.karyawan?.idKaryawan ?? null;
     const applicantEmail = payment.karyawan?.user?.email ?? null;
-    const sendNotifEmail = (subject: string, text: string) =>
-      applicantEmail ? sendEmail({ to: applicantEmail, subject, text }) : Promise.resolve();
+    const sendNotifEmail = (subject: string, text: string) => {
+      defer(() => (applicantEmail ? sendEmail({ to: applicantEmail, subject, text }) : Promise.resolve()));
+      return Promise.resolve();
+    };
     const notifData = (tipe: string, judul: string, pesan: string) => ({
       idNotif: nota(),
       idKaryawan,
@@ -75,18 +90,20 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
         // Notifikasi bell/email untuk partner di department yang sama
         const empDept = payment.karyawan?.department;
         if (empDept) {
-          const partners = await partnerForDepartment(empDept);
-          await notifyUsers(
-            partners
-              .filter((p) => p.idUser !== auth.idUser && p.karyawan?.idKaryawan)
-              .map((p) => ({ idKaryawan: p.karyawan?.idKaryawan, email: p.email })),
-            {
-              tipe: 'PAY_PENDING_PARTNER',
-              judul: 'Payment awaiting Partner approval',
-              pesan: `Payment request ${id} from ${payment.karyawan?.nama ?? 'an employee'} has passed Ops review and is waiting for your final approval.`,
-              idReferensi: id,
-            }
-          );
+          defer(async () => {
+            const partners = await partnerForDepartment(empDept);
+            await notifyUsers(
+              partners
+                .filter((p) => p.idUser !== auth.idUser && p.karyawan?.idKaryawan)
+                .map((p) => ({ idKaryawan: p.karyawan?.idKaryawan, email: p.email })),
+              {
+                tipe: 'PAY_PENDING_PARTNER',
+                judul: 'Payment awaiting Partner approval',
+                pesan: `Payment request ${id} from ${payment.karyawan?.nama ?? 'an employee'} has passed Ops review and is waiting for your final approval.`,
+                idReferensi: id,
+              }
+            );
+          });
         }
         return Response.json({ ok: true, payment: updated });
       }
@@ -195,12 +212,14 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
           `Your payment request ${id} has been approved and is waiting for a payment schedule.`
         );
         // Beri tahu semua Admin OPS
-        await notifyAllOpsAdmins({
-          tipe: 'PAY_WAITING_SCHEDULE',
-          judul: 'Payment ready to schedule',
-          pesan: `Payment request ${id} from ${payment.karyawan?.nama ?? 'an employee'} has been approved. Please schedule the payment.`,
-          idReferensi: id,
-        });
+        defer(() =>
+          notifyAllOpsAdmins({
+            tipe: 'PAY_WAITING_SCHEDULE',
+            judul: 'Payment ready to schedule',
+            pesan: `Payment request ${id} from ${payment.karyawan?.nama ?? 'an employee'} has been approved. Please schedule the payment.`,
+            idReferensi: id,
+          })
+        );
         return Response.json({ ok: true, payment: updated });
       }
       if (action === 'reject' && payment.idStatus === 'ST_PAY_PENDING_PARTNER') {

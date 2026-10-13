@@ -98,7 +98,8 @@ function getRedirectUrl(tipe: string, role: string | null | undefined): string |
 }
 
 // NotificationBell — lonceng notifikasi di header (semua role).
-// Data dari /api/notifications, polling tiap 30 detik.
+// Data dari /api/notifications, polling tiap 60 detik, dan berhenti saat tab
+// tersembunyi (tab background tidak perlu jalan tiap menit).
 export default function NotificationBell() {
   const router = useRouter();
   const { user } = useAuth();
@@ -126,8 +127,28 @@ export default function NotificationBell() {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
-    const t = setInterval(load, 30000);
-    return () => clearInterval(t);
+
+    // Bersihkan notifikasi > 7 hari (fire-and-forget, sekali saat mount lalu tiap 6 jam).
+    const cleanup = () => {
+      fetch('/api/notifications/cleanup', { method: 'POST' }).catch(() => {});
+    };
+    cleanup();
+
+    const t = setInterval(() => {
+      if (document.visibilityState === 'visible') load();
+    }, 60000);
+    const c = setInterval(cleanup, 6 * 60 * 60 * 1000);
+    // Segarkan begitu tab kembali aktif (polling sempat berhenti selama tersembunyi).
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') load();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+
+    return () => {
+      clearInterval(t);
+      clearInterval(c);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, []);
 
   useEffect(() => {

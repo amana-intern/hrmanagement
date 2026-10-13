@@ -6,9 +6,23 @@
 - Local:         http://localhost:3000
 - Network:       http://192.168.56.1:3000
 - Environments: .env.local, .env
-✓ Ready in 603ms
+✓ Ready in 505ms
 
- GET /user/payment 200 in 951ms (next.js: 312ms, proxy.ts: 160ms, application-code: 479ms)
- GET /api/partners 200 in 157ms (next.js: 48ms, application-code: 110ms)
- GET /api/payment/list?scope=mine 200 in 182ms (next.js: 93ms, application-code: 90ms)
-[?25h
+ GET /user/attendance/leaverequest 200 in 886ms (next.js: 254ms, proxy.ts: 172ms, application-code: 460ms)
+ GET /api/leave/list 200 in 328ms (next.js: 134ms, application-code: 194ms)
+ GET /api/hr/blocked-dates 200 in 331ms (next.js: 189ms, application-code: 142ms)
+ GET /api/me 200 in 378ms (next.js: 74ms, application-code: 305ms)
+[browser] You have Reduced Motion enabled on your device. Animations may not appear as expected.. For more information and steps for solving, visit https://motion.dev/troubleshooting/reduced-motion-disabled (app/components/feedback/Modal.tsx:29:40)
+ POST /api/auth/login 200 in 419ms (next.js: 367ms, application-code: 52ms)
+ GET /user/attendance/leaverequest 200 in 127ms (next.js: 11ms, proxy.ts: 11ms, application-code: 105ms)
+ GET /user/attendance/sickleave 200 in 749ms (next.js: 633ms, proxy.ts: 9ms, application-code: 107ms)
+ GET /user/payment 200 in 180ms (next.js: 54ms, proxy.ts: 9ms, application-code: 118ms)
+ GET /user/careerhub 200 in 705ms (next.js: 588ms, proxy.ts: 10ms, application-code: 107ms)
+ POST /api/auth/login 200 in 40ms (next.js: 6ms, application-code: 34ms)
+ GET /hr/blockeddates 200 in 172ms (next.js: 54ms, proxy.ts: 7ms, application-code: 111ms)
+ GET /user/payment 200 in 68ms (next.js: 14ms, proxy.ts: 10ms, application-code: 44ms)
+ GET /api/partners 200 in 179ms (next.js: 56ms, application-code: 123ms)
+ GET /api/payment/list?scope=mine 200 in 186ms (next.js: 120ms, application-code: 66ms)
+ GET /api/partners 200 in 196ms (next.js: 136ms, application-code: 60ms)
+ GET /api/payment/list?scope=mine 200 in 197ms (next.js: 147ms, application-code: 50ms)
+^C^C

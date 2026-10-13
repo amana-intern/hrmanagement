@@ -4,6 +4,7 @@ import { ROLES, DEPARTMENT_LABEL } from '@/lib/roles';
 import { LEAVE_TYPES, specialLeaveMaxDays, specialLeaveName, todayISOWIB, isLeaveContractRestricted, LEAVE_RESTRICTED_CONTRACT_MESSAGE, isPeriodLeave } from '@/lib/constants';
 import { computeLeaveBalance, parseDateOnly } from '@/lib/leave';
 import { sendEmail } from '@/lib/notify';
+import { after } from 'next/server';
 
 // POST: Employee/Admin/Partner membuat pengajuan cuti.
 // Aturan (Fitur 10): Unpaid hanya boleh saat saldo Paid = 0;
@@ -161,11 +162,15 @@ export async function POST(request: Request) {
         return Response.json({ error: 'Holiday work end date cannot be earlier than start date.' }, { status: 400 });
       }
       const holidayWorkDaysCalc = Math.round((holidayEnd.getTime() - holidayStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-      if (tipeCutiKompensasi === 'HALF' && holidayWorkDaysCalc > 1) {
-        return Response.json({ error: 'Half Day compensatory leave requires exactly 1 holiday work day.' }, { status: 400 });
-      }
       const multiplier = tipeCutiKompensasi === 'HALF' ? 0.5 : 1;
       jumlahHariKompensasi = holidayWorkDaysCalc * multiplier;
+      // Total hari cuti (periode yang diajukan) tidak boleh melebihi hari kompensasi yang diperoleh.
+      if (jumlahHari > jumlahHariKompensasi) {
+        return Response.json(
+          { error: `Compensatory Leave period of ${jumlahHari} day(s) exceeds the earned compensatory leave of ${jumlahHariKompensasi} day(s) from your holiday work period.` },
+          { status: 400 }
+        );
+      }
     }
 
     // Partner submit -> auto APPROVED (tanpa perlu partner lain approve)
@@ -211,63 +216,77 @@ export async function POST(request: Request) {
         },
       });
 
-      // Notifikasi ke partner lain di departemen berbeda
-      const otherPartners = await prisma.user.findMany({
-        where: {
-          idRole: ROLES.PARTNER,
-          idUser: { not: auth.idUser },
-          karyawan: { department: { not: auth.department } },
-        },
-        include: { karyawan: true },
-      });
-
-      for (const partner of otherPartners) {
-        if (partner.karyawan?.idKaryawan) {
-          await prisma.notification.create({
-            data: {
-              idNotif: `NOTIF-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-              idKaryawan: partner.karyawan.idKaryawan,
-              tipe: 'LEAVE_INFO',
-              judul: 'Leave Notification',
-              pesan: `Partner ${auth.nama} from ${DEPARTMENT_LABEL[auth.department ?? ''] || auth.department} has submitted leave (${start.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })} - ${end.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}).`,
-              idReferensi: cuti.idCuti,
+      // Notifikasi ke partner lain di departemen berbeda.
+      // Fan-out notif+email bisa puluhan query sekuensial -> jalankan setelah
+      // response terkirim (after()), bukan menahan request user.
+      after(async () => {
+        try {
+          const otherPartners = await prisma.user.findMany({
+            where: {
+              idRole: ROLES.PARTNER,
+              idUser: { not: auth.idUser },
+              karyawan: { department: { not: auth.department } },
             },
+            include: { karyawan: true },
           });
-          if (partner.email) {
-            await sendEmail({
-              to: partner.email,
-              subject: 'Leave Notification',
-              text: `Partner ${auth.nama} from ${DEPARTMENT_LABEL[auth.department ?? ''] || auth.department} has submitted leave (${start.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })} - ${end.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}).`,
-            });
+
+          for (const partner of otherPartners) {
+            if (partner.karyawan?.idKaryawan) {
+              await prisma.notification.create({
+                data: {
+                  idNotif: `NOTIF-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+                  idKaryawan: partner.karyawan.idKaryawan,
+                  tipe: 'LEAVE_INFO',
+                  judul: 'Leave Notification',
+                  pesan: `Partner ${auth.nama} from ${DEPARTMENT_LABEL[auth.department ?? ''] || auth.department} has submitted leave (${start.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })} - ${end.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}).`,
+                  idReferensi: cuti.idCuti,
+                },
+              });
+              if (partner.email) {
+                await sendEmail({
+                  to: partner.email,
+                  subject: 'Leave Notification',
+                  text: `Partner ${auth.nama} from ${DEPARTMENT_LABEL[auth.department ?? ''] || auth.department} has submitted leave (${start.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })} - ${end.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}).`,
+                });
+              }
+            }
           }
+        } catch {
+          // gagal fan-out notifikasi tidak boleh membatalkan cuti yang sudah tersimpan
         }
-      }
+      });
     }
 
     // Jika employee submit, notifikasi ke partner di department yang sama
     if (!isPartner && cuti.idKaryawan) {
-      const partners = await partnerForDepartment(auth.department);
-      for (const partner of partners) {
-        if (partner.idUser !== auth.idUser && partner.karyawan?.idKaryawan) {
-          await prisma.notification.create({
-            data: {
-              idNotif: `NOTIF-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-              idKaryawan: partner.karyawan.idKaryawan,
-              tipe: 'LEAVE_INFO',
-              judul: 'Leave Request Pending',
-              pesan: `${auth.nama} from ${DEPARTMENT_LABEL[auth.department ?? ''] || auth.department} has submitted leave (${start.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })} - ${end.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}). Pending your approval.`,
-              idReferensi: cuti.idCuti,
-            },
-          });
-          if (partner.email) {
-            await sendEmail({
-              to: partner.email,
-              subject: 'Leave Request Pending',
-              text: `${auth.nama} from ${DEPARTMENT_LABEL[auth.department ?? ''] || auth.department} has submitted leave (${tanggalMulai} - ${tanggalSelesai}). Pending your approval.`,
-            });
+      after(async () => {
+        try {
+          const partners = await partnerForDepartment(auth.department);
+          for (const partner of partners) {
+            if (partner.idUser !== auth.idUser && partner.karyawan?.idKaryawan) {
+              await prisma.notification.create({
+                data: {
+                  idNotif: `NOTIF-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+                  idKaryawan: partner.karyawan.idKaryawan,
+                  tipe: 'LEAVE_INFO',
+                  judul: 'Leave Request Pending',
+                  pesan: `${auth.nama} from ${DEPARTMENT_LABEL[auth.department ?? ''] || auth.department} has submitted leave (${start.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })} - ${end.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}). Pending your approval.`,
+                  idReferensi: cuti.idCuti,
+                },
+              });
+              if (partner.email) {
+                await sendEmail({
+                  to: partner.email,
+                  subject: 'Leave Request Pending',
+                  text: `${auth.nama} from ${DEPARTMENT_LABEL[auth.department ?? ''] || auth.department} has submitted leave (${tanggalMulai} - ${tanggalSelesai}). Pending your approval.`,
+                });
+              }
+            }
           }
+        } catch {
+          // lihat komentar di atas
         }
-      }
+      });
     }
 
     return Response.json({ ok: true, cuti }, { status: 201 });

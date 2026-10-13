@@ -1,12 +1,10 @@
 'use client';
 
-import { ReactNode } from 'react';
+import { ReactNode, ButtonHTMLAttributes } from 'react';
 import { cn } from '@/app/utils/cn';
-import { motion, HTMLMotionProps } from 'framer-motion';
-import { springSnappy } from '@/app/utils/motion';
 import Spinner from '../feedback/Spinner';
 
-interface ButtonProps extends Omit<HTMLMotionProps<"button">, "onAnimationStart" | "onDragStart" | "onDragEnd" | "onDrag" | "ref"> {
+interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   children: ReactNode;
   variant?: 'primary' | 'danger' | 'ghost' | 'outline' | 'danger-outline';
   size?: 'sm' | 'md' | 'lg';
@@ -45,9 +43,7 @@ export default function Button({
   ...props
 }: ButtonProps) {
   return (
-    <motion.button
-      whileTap={!(disabled || isLoading) ? { scale: 0.94 } : {}}
-      transition={springSnappy}
+    <button
       disabled={disabled || isLoading}
       className={cn(
         'inline-flex items-center justify-center gap-2 rounded-lg font-semibold select-none outline-none focus-visible:ring-4 focus-visible:ring-amana-primary-500/30 border',
@@ -60,6 +56,6 @@ export default function Button({
     >
       {isLoading ? <Spinner className="h-5 w-5 flex-shrink-0" /> : null}
       {children}
-    </motion.button>
+    </button>
   );
 }

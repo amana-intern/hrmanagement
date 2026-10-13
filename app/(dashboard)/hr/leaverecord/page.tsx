@@ -271,14 +271,14 @@ export default function LeaveRecordPage() {
           <DetailRow label="Start Date" value={detailsModal.startDate ? formatDateWIB(detailsModal.startDate) : '-'} />
           <DetailRow label="End Date" value={detailsModal.endDate ? formatDateWIB(detailsModal.endDate) : '-'} />
           {detailsModal.totalDays != null && <DetailRow label="Total Days" value={`${detailsModal.totalDays} day(s)`} />}
+          {detailsModal.tipeCutiKompensasi && (
+            <DetailRow label="Day Type" value={detailsModal.tipeCutiKompensasi === 'FULL' ? 'Full Day (1 day)' : 'Half Day (0.5 day)'} />
+          )}
           {detailsModal.tanggalKerjaHariLibur && (
             <DetailRow
               label="Holiday Work Date"
               value={`${formatDateWIB(detailsModal.tanggalKerjaHariLibur)}${detailsModal.tanggalSelesaiKerjaLibur ? ` - ${formatDateWIB(detailsModal.tanggalSelesaiKerjaLibur)}` : ''}`}
             />
-          )}
-          {detailsModal.tipeCutiKompensasi && (
-            <DetailRow label="Day Type" value={detailsModal.tipeCutiKompensasi === 'FULL' ? 'Full Day (1 day)' : 'Half Day (0.5 day)'} />
           )}
           {detailsModal.jumlahHariKompensasi != null && (
             <DetailRow label="Compensatory Days" value={`${detailsModal.jumlahHariKompensasi} day(s)`} />

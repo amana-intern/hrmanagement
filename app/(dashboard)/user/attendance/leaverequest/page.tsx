@@ -14,6 +14,7 @@ import Button from '@/app/components/forms/Button';
 import Modal from '@/app/components/feedback/Modal';
 import DetailModal, { DetailRow } from '@/app/components/feedback/DetailModal';
 import StatusModal from '@/app/components/feedback/StatusModal';
+import SubmitReviewModal from '@/app/components/feedback/SubmitReviewModal';
 import { LEAVE_TYPES, LEAVE_STATUS, specialLeaveMaxDays, specialLeaveName, todayISOWIB, isLeaveContractRestricted, LEAVE_RESTRICTED_CONTRACT_MESSAGE, isPeriodLeave } from '@/lib/constants';
 import { statusColor } from '@/app/utils/statusColor';
 import { formatDateWIB } from '@/app/utils/formatDate';
@@ -42,6 +43,8 @@ const LEAVE_TYPE_MAP: Record<string, string> = {
 const leaveOptions = ['Paid Leave', 'Unpaid Leave', 'Special Leave', 'Compensatory Leave'];
 
 const dayTypeOptions = ['Full Day (1 day)', 'Half Day (0.5 day)'];
+// Nilai yang disimpan state `dayType` adalah string opsi tampilan ini (bukan kode API 'HALF'/'FULL').
+const HALF_DAY_OPTION = 'Half Day (0.5 day)';
 const DAY_TYPE_MAP: Record<string, string> = {
   'Full Day (1 day)': 'FULL',
   'Half Day (0.5 day)': 'HALF',
@@ -139,6 +142,7 @@ export default function LeaveRequestPage() {
   const [menstrualUses, setMenstrualUses] = useState<{ start: string; days: number }[]>([]);
   const [blockedDates, setBlockedDates] = useState<{ tanggal: string | null; tanggalAkhir: string | null; alasan: string | null }[]>([]);
   const [tipeKontrak, setTipeKontrak] = useState<string | null>(null);
+  const [showReview, setShowReview] = useState(false);
 
   const loadBalance = async () => {
     try {
@@ -244,9 +248,16 @@ export default function LeaveRequestPage() {
   // Jumlah hari cuti kompensasi = hari kerja × multiplier
   const compensatoryDays = useMemo(() => {
     if (holidayWorkDays == null || !dayType) return null;
-    const multiplier = dayType === 'HALF' ? 0.5 : 1;
+    const multiplier = dayType === HALF_DAY_OPTION ? 0.5 : 1;
     return holidayWorkDays * multiplier;
   }, [holidayWorkDays, dayType]);
+
+  // Compensatory: total hari cuti tidak boleh melebihi hari yang diperoleh (holiday work × day type).
+  const compensatoryExceededError =
+    selectedLeave === 'Compensatory Leave' &&
+    requestedDays != null &&
+    compensatoryDays != null &&
+    requestedDays > compensatoryDays;
 
   // Warning keterlebihan saldo Paid Leave (live, saat rentang diisi).
   const balanceExceeded =
@@ -299,15 +310,13 @@ export default function LeaveRequestPage() {
     pendingPaidDays > 0 &&
     (availableAfterPending <= 0 || (requestedDays != null && requestedDays > availableAfterPending));
 
-  // Validasi: Half Day cuti kompensasi hanya boleh 1 hari kerja
-  const halfDayMultiDayError =
-    selectedLeave === 'Compensatory Leave' &&
-    dayType === 'HALF' &&
-    holidayWorkDays != null &&
-    holidayWorkDays > 1;
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isFormValid || contractLeaveBlocked) return;
+    setShowReview(true);
+  };
+
+  const doSubmit = async () => {
     if (!isFormValid || contractLeaveBlocked) return;
 
     const idJenisCuti = leaveOptions.includes(selectedLeave) ? LEAVE_TYPE_MAP[selectedLeave] : '';
@@ -323,29 +332,35 @@ export default function LeaveRequestPage() {
     setSubmitting(true);
     setMessage(null);
 
-    const res = await fetch('/api/leave', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
+    try {
+      const res = await fetch('/api/leave', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
 
-    const data = await res.json();
-    setSubmitting(false);
+      const data = await res.json().catch(() => null);
 
-    if (res.ok) {
-      setMessage({ ok: true, text: 'Leave request successfully submitted for partner approval.' });
-      setSelectedLeave('');
-      setSelectedSpecialLeave('');
-      setReason('');
-      setStartDate('');
-      setEndDate('');
-      setHolidayWorkDate('');
-      setHolidayWorkEndDate('');
-      setDayType('');
-      loadBalance();
-      loadHistory();
-    } else {
-      setMessage({ ok: false, text: data.error || 'Failed to submit request.' });
+      if (res.ok) {
+        setMessage({ ok: true, text: 'Leave request successfully submitted for partner approval.' });
+        setSelectedLeave('');
+        setSelectedSpecialLeave('');
+        setReason('');
+        setStartDate('');
+        setEndDate('');
+        setHolidayWorkDate('');
+        setHolidayWorkEndDate('');
+        setDayType('');
+        loadBalance();
+        loadHistory();
+      } else {
+        setMessage({ ok: false, text: data?.error || 'Failed to submit request.' });
+      }
+    } catch {
+      setMessage({ ok: false, text: 'Failed to submit request. Please check your connection and try again.' });
+    } finally {
+      setSubmitting(false);
+      setShowReview(false);
     }
   };
 
@@ -420,15 +435,6 @@ export default function LeaveRequestPage() {
         {selectedLeave === 'Compensatory Leave' && (
           <>
             <div className="mb-4">
-              <SearchDateRangeCalendarField
-                label="Holiday Work Period"
-                fromValue={holidayWorkDate}
-                toValue={holidayWorkEndDate}
-                onFromChange={setHolidayWorkDate}
-                onToChange={setHolidayWorkEndDate}
-              />
-            </div>
-            <div className="mb-4">
               <SelectField
                 label="Day Type"
                 value={dayType}
@@ -437,9 +443,18 @@ export default function LeaveRequestPage() {
                 placeholder="Select full day or half day..."
               />
             </div>
+            <div className="mb-4">
+              <SearchDateRangeCalendarField
+                label="Holiday Work Period"
+                fromValue={holidayWorkDate}
+                toValue={holidayWorkEndDate}
+                onFromChange={setHolidayWorkDate}
+                onToChange={setHolidayWorkEndDate}
+              />
+            </div>
             {compensatoryDays != null && (
               <div className="mb-4 px-4 py-3 rounded-lg border text-[13px] font-medium bg-amana-success-100 border-amana-success-300 text-amana-success-500">
-                {`Compensatory leave to be earned: ${compensatoryDays} day(s) (${holidayWorkDays} holiday work day(s) × ${dayType === 'HALF' ? '0.5' : '1'})`}
+                {`Compensatory leave to be earned: ${compensatoryDays} day(s) (${holidayWorkDays} holiday work day(s) × ${dayType === HALF_DAY_OPTION ? '0.5' : '1'})`}
               </div>
             )}
             <div className="mb-4">
@@ -508,21 +523,50 @@ export default function LeaveRequestPage() {
           </div>
         )}
 
-        {halfDayMultiDayError && (
+        {compensatoryExceededError && (
           <div className="mb-4 px-4 py-3 rounded-lg border text-[13px] font-medium bg-amana-danger-100 border-amana-danger-500 text-amana-danger-500">
-            Half Day compensatory leave requires exactly 1 holiday work day. Please adjust your holiday work date range.
+            {`Your Compensatory Leave period of ${requestedDays} day(s) exceeds the earned compensatory leave of ${compensatoryDays} day(s). Please adjust your leave period or holiday work period.`}
           </div>
         )}
         </div>
 
         <div className="flex-shrink-0 flex justify-end pt-4 border-t border-amana-neutral-200">
-          <Button type="submit" variant="primary" size="lg" className="w-full max-w-[280px]" disabled={!isFormValid || submitting || !!halfDayMultiDayError || balanceExceeded || quotaInUse || unpaidBlocked || contractLeaveBlocked || !!specialLeaveError || !!blockedError} isLoading={submitting}>
+          <Button type="submit" variant="primary" size="lg" className="w-full max-w-[280px]" disabled={!isFormValid || submitting || balanceExceeded || quotaInUse || unpaidBlocked || contractLeaveBlocked || !!specialLeaveError || !!compensatoryExceededError || !!blockedError} isLoading={submitting}>
             {submitting ? 'Submitting...' : 'Submit'}
           </Button>
         </div>
       </SectionCard>
 
       <StatusModal state={message} onClose={() => setMessage(null)} />
+
+      {showReview && (
+        <SubmitReviewModal
+          title="Confirm Leave Request"
+          fields={[
+            { label: 'Leave Type', value: selectedLeave },
+            { label: 'Special Leave', value: selectedLeave === 'Special Leave' ? selectedSpecialLeave : '' },
+            { label: 'Day Type', value: selectedLeave === 'Compensatory Leave' ? dayType : '' },
+            {
+              label: 'Holiday Work Period',
+              value: selectedLeave === 'Compensatory Leave' && holidayWorkDate && holidayWorkEndDate
+                ? `${formatDateWIB(holidayWorkDate)} - ${formatDateWIB(holidayWorkEndDate)}`
+                : '',
+            },
+            {
+              label: 'Compensatory Leave to be Earned',
+              value: selectedLeave === 'Compensatory Leave' && compensatoryDays != null ? `${compensatoryDays} Day(s)` : '',
+            },
+            { label: 'Reason', value: selectedLeave !== 'Special Leave' ? reason : '' },
+            { label: 'Period', value: startDate && endDate ? `${formatDateWIB(startDate)} - ${formatDateWIB(endDate)}` : '' },
+            { label: 'Duration', value: requestedDays != null ? `${requestedDays} Day(s)` : '' },
+          ]}
+          confirmLabel="Submit"
+          loadingLabel="Submitting..."
+          loading={submitting}
+          onConfirm={doSubmit}
+          onCancel={() => setShowReview(false)}
+        />
+      )}
 
       {showHistoryModal && (
         <Modal title="Leave History" onClose={() => setShowHistoryModal(false)} maxWidth="max-w-4xl" className="max-h-[80vh]" showCloseButton={false}>

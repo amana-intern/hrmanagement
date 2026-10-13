@@ -62,7 +62,7 @@ export default function BlockedDatesPage() {
     })();
   }, []);
 
-  const blockLabel = (row: BlockedDate) =>
+  const blockLabel = (row: Pick<BlockedDate, 'tanggal' | 'tanggalAkhir'>) =>
     row.tanggalAkhir ? `${fmt(row.tanggal)} - ${fmt(row.tanggalAkhir)}` : fmt(row.tanggal);
 
   const handleAdd = async () => {
@@ -92,12 +92,14 @@ export default function BlockedDatesPage() {
       setStatus({ ok: false, text: data?.error || 'Failed to block date' });
       return;
     }
+    const label = blockLabel(rowToBlock);
     await load();
     setSaving(false);
     setRowToBlock(null);
     setNewDate('');
     setNewEndDate('');
     setNewReason('');
+    setStatus({ ok: true, text: `Period "${label}" successfully blocked.` });
   };
 
   const handleDelete = async (row: BlockedDate) => {
@@ -108,6 +110,7 @@ export default function BlockedDatesPage() {
       setStatus({ ok: false, text: 'Failed to delete' });
     } else {
       await load();
+      setStatus({ ok: true, text: `Blocked date "${blockLabel(row)}" removed.` });
     }
     setDeletingId(null);
   };

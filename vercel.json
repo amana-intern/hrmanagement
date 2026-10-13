@@ -11,6 +11,10 @@
     {
       "path": "/api/cron/assessments",
       "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/cron/joblistings",
+      "schedule": "0 3 * * *"
     }
   ]
 }

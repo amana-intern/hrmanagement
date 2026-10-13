@@ -124,6 +124,8 @@ model SertifikatKaryawan {
   fileName     String?   @db.VarChar
   fileURL      String?   @db.VarChar
   karyawan     Karyawan? @relation(fields: [idKaryawan], references: [idKaryawan])
+
+  @@index([idKaryawan])
 }
 
 model PengajuanCuti {
@@ -146,6 +148,10 @@ model PengajuanCuti {
   karyawan             Karyawan?        @relation(fields: [idKaryawan], references: [idKaryawan])
   masterJenisCuti      MasterJenisCuti? @relation(fields: [idJenisCuti], references: [idJenisCuti])
   masterStatus         MasterStatus?    @relation(fields: [idStatus], references: [idStatus])
+
+  // Hot path: daftar cuti per karyawan + filter status, dan rentang tanggal di leave balance.
+  @@index([idKaryawan, idStatus])
+  @@index([tanggalMulai])
 }
 
 model IzinSakit {
@@ -159,6 +165,8 @@ model IzinSakit {
   createdAt              DateTime                @default(now()) @db.Timestamp()
   karyawan               Karyawan?               @relation(fields: [idKaryawan], references: [idKaryawan])
   masterKategoriPenyakit MasterKategoriPenyakit? @relation(fields: [idKategoriPenyakit], references: [idKategori])
+
+  @@index([idKaryawan])
 }
 
 model KontrakKaryawan {
@@ -178,6 +186,9 @@ model KontrakKaryawan {
   cutiTerpakaiAwal   Float?        @default(0)
   karyawan           Karyawan?     @relation(fields: [idKaryawan], references: [idKaryawan])
   masterStatus       MasterStatus? @relation(fields: [idStatus], references: [idStatus])
+
+  // Kontrak aktif per karyawan (contract tracking & assessment gate).
+  @@index([idKaryawan])
 }
 
 model TalentProfile {
@@ -211,6 +222,8 @@ model PaymentRequest {
   masterKategoriPayment    MasterKategoriPayment? @relation(fields: [idKategoriPayment], references: [idKategori])
   masterStatus             MasterStatus?          @relation(fields: [idStatus], references: [idStatus])
   attachments              PaymentAttachment[]
+
+  @@index([idKaryawan, idStatus])
 }
 
 model PaymentAttachment {
@@ -220,6 +233,8 @@ model PaymentAttachment {
   fileURL      String?         @db.VarChar
   kategori     String?         @db.VarChar
   payment      PaymentRequest? @relation(fields: [idRequest], references: [idRequest])
+
+  @@index([idRequest])
 }
 
 model AuditTrail {
@@ -233,6 +248,8 @@ model AuditTrail {
   perubahan   Json?
   waktu       DateTime? @db.Timestamp()
   karyawan    Karyawan? @relation(fields: [idKaryawan], references: [idKaryawan])
+
+  @@index([idKaryawan])
 }
 
 model LowonganKarir {
@@ -241,6 +258,8 @@ model LowonganKarir {
   deskripsi     String?   @db.VarChar
   idStatus      String?   @db.VarChar
   googleFormURL String?   @db.VarChar
+  tipeKerja     String?   @db.VarChar
+  modeKerja     String?   @db.VarChar
   createdAt     DateTime? @default(now()) @db.Timestamp()
   updatedAt     DateTime? @updatedAt @db.Timestamp()
 }
@@ -267,6 +286,8 @@ model AssessmentCategory {
   urutan        Int?
   assessment    Assessment?          @relation(fields: [idAssessment], references: [idAssessment])
   questions     AssessmentQuestion[]
+
+  @@index([idAssessment])
 }
 
 model AssessmentSubmission {
@@ -279,6 +300,9 @@ model AssessmentSubmission {
   karyawan             Karyawan?          @relation(fields: [idKaryawan], references: [idKaryawan])
   assessment           Assessment?        @relation(fields: [idAssessment], references: [idAssessment])
   answers              AssessmentAnswer[]
+
+  // "sudah pernah ikut assessment ini?" per karyawan — cek di tiap login & buka halaman.
+  @@index([idKaryawan, idAssessment])
 }
 
 model AssessmentQuestion {
@@ -293,6 +317,8 @@ model AssessmentQuestion {
   kategori      AssessmentCategory?        @relation(fields: [idKategoriAsm], references: [idKategoriAsm])
   options       AssessmentQuestionOption[]
   answers       AssessmentAnswer[]
+
+  @@index([idKategoriAsm])
 }
 
 model AssessmentQuestionOption {
@@ -301,6 +327,8 @@ model AssessmentQuestionOption {
   teks         String?             @db.VarChar
   urutan       Int?
   pertanyaan   AssessmentQuestion? @relation(fields: [idPertanyaan], references: [idPertanyaan])
+
+  @@index([idPertanyaan])
 }
 
 model AssessmentAnswer {
@@ -314,6 +342,9 @@ model AssessmentAnswer {
   jawabanTeks   String?               @db.VarChar
   submission    AssessmentSubmission? @relation(fields: [idSubmission], references: [idSubmission])
   pertanyaan    AssessmentQuestion?   @relation(fields: [idPertanyaan], references: [idPertanyaan])
+
+  @@index([idSubmission])
+  @@index([idPertanyaan])
 }
 
 model Mading {
@@ -373,6 +404,8 @@ model Notification {
   isRead       Boolean   @default(false)
   createdAt    DateTime? @default(now()) @db.Timestamp()
   karyawan     Karyawan? @relation(fields: [idKaryawan], references: [idKaryawan])
+  
+  @@index([idKaryawan, isRead, createdAt])
 }
 
 model TanggalBlokir {
@@ -392,4 +425,6 @@ model KaryawanHistory {
   diubahOleh  String?   @db.VarChar
   createdAt   DateTime? @default(now()) @db.Timestamp()
   karyawan    Karyawan? @relation(fields: [idKaryawan], references: [idKaryawan])
+
+  @@index([idKaryawan])
 }

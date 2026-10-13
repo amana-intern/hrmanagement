@@ -1,4 +1,5 @@
 import 'server-only';
+import { cache } from 'react';
 import { getSession } from '@/lib/session';
 import { prisma } from '@/lib/prisma';
 import { ROLES, type Role } from '@/lib/roles';
@@ -14,8 +15,11 @@ export class AuthError extends Error {
 /**
  * Memverifikasi sesi dan mengambil data user + karyawan + role.
  * Melempar AuthError jika tidak login.
+ *
+ * Dibungkus React.cache: beberapa pemanggilan dalam satu render/route yang sama
+ * hanya membaca DB sekali (dedup per-request).
  */
-export async function requireAuth() {
+export const requireAuth = cache(async function requireAuth() {
   const session = await getSession();
   if (!session?.idUser) {
     throw new AuthError('Unauthorized', 401);
@@ -57,7 +61,7 @@ export async function requireAuth() {
     pictureUrl: user.pictureUrl ?? null,
     rolePermissions: user.role?.rolePermissions.map((rp) => rp.idPermission) ?? [],
   };
-}
+});
 
 /** Helper untuk memastikan user punya role tertentu. */
 export function requiresRole(role: Role, userRole: Role, allowPartner = false) {

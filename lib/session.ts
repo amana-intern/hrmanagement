@@ -1,4 +1,5 @@
 import 'server-only';
+import { cache } from 'react';
 import { SignJWT, jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
 
@@ -54,11 +55,13 @@ export async function createSession(data: Omit<SessionPayload, 'expiresAt'>) {
   });
 }
 
-export async function getSession() {
+// cache(): baca + verifikasi cookie hanya sekali per request, meski dipanggil
+// oleh requireAuth() dan pemanggilan lain di proses yang sama.
+export const getSession = cache(async function getSession() {
   const cookieStore = await cookies();
   const cookie = cookieStore.get('session')?.value;
   return decrypt(cookie);
-}
+});
 
 export async function deleteSession() {
   const cookieStore = await cookies();

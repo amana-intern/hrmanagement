@@ -1,4 +1,4 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, after } from 'next/server';
 import { requireAuth } from '@/lib/dal';
 import { prisma } from '@/lib/prisma';
 import { ROLES } from '@/lib/roles';
@@ -127,11 +127,18 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ idKar
     });
 
     // Email notifikasi ke karyawan & semua HR (renewal maupun offboarding).
-    const employeeEmail = karyawan.user?.email;
-    if (employeeEmail) await sendEmail({ to: employeeEmail, ...emailKaryawan });
-    for (const hrUser of hrUsers) {
-      if (hrUser.email) await sendEmail({ to: hrUser.email, ...emailHR });
-    }
+    // Ditunda sampai response terkirim — jumlah email bisa banyak & lambat.
+    after(async () => {
+      try {
+        const employeeEmail = karyawan.user?.email;
+        if (employeeEmail) await sendEmail({ to: employeeEmail, ...emailKaryawan });
+        for (const hrUser of hrUsers) {
+          if (hrUser.email) await sendEmail({ to: hrUser.email, ...emailHR });
+        }
+      } catch {
+        // email gagal tidak boleh membatalkan aksi yang sudah tersimpan
+      }
+    });
 
     return Response.json({ ok: true });
   } catch (e) {

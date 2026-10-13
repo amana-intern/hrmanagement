@@ -10,7 +10,9 @@ import { SearchTextField, SearchSelectField, SearchDateRangeCalendarField } from
 import Button from '@/app/components/forms/Button';
 import Modal from '@/app/components/feedback/Modal';
 import StatusModal from '@/app/components/feedback/StatusModal';
-import PdfPreviewModal, { PdfPreviewTarget } from '@/app/components/feedback/PdfPreviewModal';
+import dynamic from 'next/dynamic';
+import type { PdfPreviewTarget } from '@/app/components/feedback/PdfPreviewModal';
+const PdfPreviewModal = dynamic(() => import('@/app/components/feedback/PdfPreviewModal'), { ssr: false });
 import { useFilters } from '@/app/utils/useFilters';
 import { DEPARTMENT_OPTIONS, getAllGradeOptions } from '@/app/utils/orgStructure';
 import { copyTSV } from '@/lib/sheets';

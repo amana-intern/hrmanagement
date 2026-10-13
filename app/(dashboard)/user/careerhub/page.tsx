@@ -13,7 +13,9 @@ import Modal from '@/app/components/feedback/Modal';
 import ConfirmModal from '@/app/components/feedback/ConfirmModal';
 import StatusModal from '@/app/components/feedback/StatusModal';
 import UploadProgressModal from '@/app/components/feedback/UploadProgressModal';
-import PdfPreviewModal, { PdfPreviewTarget } from '@/app/components/feedback/PdfPreviewModal';
+import dynamic from 'next/dynamic';
+import type { PdfPreviewTarget } from '@/app/components/feedback/PdfPreviewModal';
+const PdfPreviewModal = dynamic(() => import('@/app/components/feedback/PdfPreviewModal'), { ssr: false });
 import { cn } from '@/app/utils/cn';
 import { uploadWithProgress } from '@/app/utils/uploadWithProgress';
 import { canUseCareerHub } from '@/lib/roles';
@@ -43,6 +45,7 @@ function DocumentUploadModal({
   onFileSelect,
   submitLabel,
   submitDisabled = false,
+  submitting = false,
   onSubmit,
   onDelete,
   onClose,
@@ -57,6 +60,7 @@ function DocumentUploadModal({
   onFileSelect: (file: File | null) => void;
   submitLabel: string;
   submitDisabled?: boolean;
+  submitting?: boolean;
   onSubmit: (e: FormEvent) => void;
   onDelete?: () => void;
   onClose: () => void;
@@ -77,7 +81,7 @@ function DocumentUploadModal({
               Delete
             </Button>
           )}
-          <Button type="submit" variant="primary" size="lg" disabled={submitDisabled} className={onDelete ? 'flex-1' : 'w-full max-w-[280px]'}>
+          <Button type="submit" variant="primary" size="lg" disabled={submitDisabled || submitting} isLoading={submitting} className={onDelete ? 'flex-1' : 'w-full max-w-[280px]'}>
             {submitLabel}
           </Button>
         </div>
@@ -104,6 +108,7 @@ export default function CareerHubPage() {
   const [deletingCert, setDeletingCert] = useState(false);
   const [idRole, setIdRole] = useState('');
   const [loading, setLoading] = useState(true);
+  const [cvSaving, setCvSaving] = useState(false);
   const [status, setStatus] = useState<{ ok: boolean; text: string } | null>(null);
   const [uploadPct, setUploadPct] = useState<number | null>(null);
 
@@ -116,11 +121,30 @@ export default function CareerHubPage() {
     return data.url;
   };
 
-  const loadCertifications = async () => {
+  const loadInitial = async () => {
     try {
-      const res = await fetch('/api/certificates', { cache: 'no-store' });
-      if (res.ok) {
-        const data = await res.json();
+      // Ketiga request independen -> paralel (sebelumnya berantai, menambah latensi tiap buka halaman).
+      const [meRes, asmRes, certRes] = await Promise.all([
+        fetch('/api/me', { cache: 'no-store' }),
+        fetch('/api/assessments/open', { cache: 'no-store' }),
+        fetch('/api/certificates', { cache: 'no-store' }),
+      ]);
+      if (meRes.ok) {
+        const me = await meRes.json();
+        const url = me.user?.cvURL;
+        if (url) setCvFile({ name: url.split('/').pop() ?? 'CV.pdf', url });
+        if (me.user?.idRole) setIdRole(me.user.idRole);
+      }
+      if (asmRes.ok) {
+        const d = await asmRes.json();
+        const open = d.assessment as { idAssessment: string; judul: string } | null;
+        const taken = !!d.submission;
+        if (open) {
+          setAssessments([{ id: open.idAssessment, name: open.judul, done: taken }]);
+        }
+      }
+      if (certRes.ok) {
+        const data = await certRes.json();
         setCertifications(
           (data.list ?? []).map((c: { idSertifikat: string; judul: string; fileURL?: string | null; fileName?: string | null }) => ({
             id: c.idSertifikat,
@@ -130,28 +154,6 @@ export default function CareerHubPage() {
           }))
         );
       }
-    } catch {}
-  };
-
-  const loadInitial = async () => {
-    try {
-      const meRes = await fetch('/api/me', { cache: 'no-store' });
-      if (meRes.ok) {
-        const me = await meRes.json();
-        const url = me.user?.cvURL;
-        if (url) setCvFile({ name: url.split('/').pop() ?? 'CV.pdf', url });
-        if (me.user?.idRole) setIdRole(me.user.idRole);
-      }
-      const asmRes = await fetch('/api/assessments/open', { cache: 'no-store' });
-      if (asmRes.ok) {
-        const d = await asmRes.json();
-        const open = d.assessment as { idAssessment: string; judul: string } | null;
-        const taken = !!d.submission;
-        if (open) {
-          setAssessments([{ id: open.idAssessment, name: open.judul, done: taken }]);
-        }
-      }
-      await loadCertifications();
     } catch {}
     setLoading(false);
   };
@@ -171,7 +173,7 @@ export default function CareerHubPage() {
   const handleCvSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!selectedCvFile) return;
-    setLoading(true);
+    setCvSaving(true);
     setUploadPct(0);
     try {
       const fd = new FormData();
@@ -185,10 +187,11 @@ export default function CareerHubPage() {
       }
       setCvFile({ name: selectedCvFile.name, url: data.fileURL });
       setIsCvModalOpen(false);
+      setStatus({ ok: true, text: 'CV successfully updated.' });
     } catch (err: unknown) {
       setStatus({ ok: false, text: err instanceof Error ? err.message : 'Failed to upload CV' });
     } finally {
-      setLoading(false);
+      setCvSaving(false);
       setUploadPct(null);
     }
   };
@@ -235,6 +238,7 @@ export default function CareerHubPage() {
         setCertifications((prev) =>
           prev.map((item) => item.id === editingCertId ? { ...item, title: certTitleInput, fileName, ...(fileURL ? { fileUrl: fileURL } : {}) } : item)
         );
+        setStatus({ ok: true, text: `Certificate "${certTitleInput}" updated successfully.` });
       } else {
         const res = await fetch('/api/certificates', {
           method: 'POST',
@@ -250,6 +254,7 @@ export default function CareerHubPage() {
           ...prev,
           { id: data.certificate.idSertifikat, title: certTitleInput, fileUrl: fileURL, fileName },
         ]);
+        setStatus({ ok: true, text: `Certificate "${certTitleInput}" added successfully.` });
       }
     } catch (err) {
       setStatus({ ok: false, text: err instanceof Error ? err.message : 'A network error occurred' });
@@ -268,11 +273,13 @@ export default function CareerHubPage() {
       setDeletingCert(false);
       return;
     }
+    const title = certifications.find((item) => item.id === id)?.title;
     setCertifications((prev) => prev.filter((item) => item.id !== id));
     setIsCertModalOpen(false);
     setPreviewPdf(null);
     setDeletingCert(false);
     setCertToDelete(null);
+    setStatus({ ok: true, text: title ? `Certificate "${title}" deleted successfully.` : 'Certificate deleted successfully.' });
   };
 
   const handleViewPdf = (title: string, url: string) => {
@@ -390,6 +397,7 @@ export default function CareerHubPage() {
               onFileSelect={setSelectedCvFile}
               submitLabel={cvFile ? 'Update' : 'Add CV'}
               submitDisabled={!selectedCvFile}
+              submitting={cvSaving}
               onSubmit={handleCvSubmit}
               onClose={() => setIsCvModalOpen(false)}
             />

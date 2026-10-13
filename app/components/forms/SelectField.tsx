@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronRight } from 'lucide-react';
+import { cn } from '@/app/utils/cn';
 
 // Same look & portal-dropdown behavior as ComboboxField (Chargecode) — type-to-filter box +
 // floating option list. Unlike ComboboxField, `value` only ever changes when an option is
@@ -16,8 +17,10 @@ export default function SelectField({
   disabled,
   placeholder = 'Select...',
   labels,
+  inline = false,
+  inputClassName,
 }: {
-  label: string;
+  label?: string;
   value: string;
   onChange: (v: string) => void;
   options: readonly string[];
@@ -25,11 +28,15 @@ export default function SelectField({
   placeholder?: string;
   /** Optional display label per option value (e.g. for meta values like "__other__"). */
   labels?: Record<string, string>;
+  /** Horizontal layout: control sejajar (footer/toolbar) alih-alih label di atas kontrol. */
+  inline?: boolean;
+  /** Di-merge (twMerge) setelah class input default — utk tampilan kecil/khusus. */
+  inputClassName?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
   const [query, setQuery] = useState('');
-  const [pos, setPos] = useState<{ top: number; left: number; width: number } | null>(null);
+  const [pos, setPos] = useState<{ top?: number; bottom?: number; left: number; width: number } | null>(null);
   const triggerRef = useRef<HTMLInputElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -46,7 +53,16 @@ export default function SelectField({
     if (!open) return;
     const update = () => {
       const r = triggerRef.current?.getBoundingClientRect();
-      if (r) setPos({ top: r.bottom + 4, left: r.left, width: r.width });
+      if (!r) return;
+      const spaceBelow = window.innerHeight - r.bottom;
+      const spaceAbove = r.top;
+      // Buka ke bawah bila muat (panel max-h-64 = 256px) atau ruang bawah lebih lega;
+      // selain itu tumbuh ke atas dari trigger — panel tak lagi keluar viewport di dekat bawah layar.
+      if (spaceBelow >= 256 || spaceBelow >= spaceAbove) {
+        setPos({ top: r.bottom + 4, left: r.left, width: r.width });
+      } else {
+        setPos({ bottom: window.innerHeight - r.top + 4, left: r.left, width: r.width });
+      }
     };
     update();
     window.addEventListener('scroll', update, true);
@@ -131,8 +147,8 @@ export default function SelectField({
   };
 
   return (
-    <div className="flex flex-col gap-1.5">
-      <label className="text-[16px] font-semibold text-amana-neutral-500">{label}</label>
+    <div className={cn('gap-1.5', inline ? 'flex items-center' : 'flex flex-col')}>
+      {label && <label className="text-[16px] font-semibold text-amana-neutral-500">{label}</label>}
       <div className="relative">
         <input
           ref={triggerRef}
@@ -152,7 +168,10 @@ export default function SelectField({
           onKeyDown={onKeyDown}
           disabled={disabled}
           placeholder={placeholder}
-          className="w-full border border-amana-neutral-300 rounded-[8px] px-3 py-2.5 pr-9 text-[16px] text-amana-neutral-500 placeholder:text-amana-neutral-300 transition-colors duration-200 focus:outline-none focus:border-amana-primary-500 disabled:bg-amana-neutral-200 disabled:text-amana-neutral-400 disabled:cursor-not-allowed"
+          className={cn(
+            'w-full border border-amana-neutral-300 rounded-[8px] px-3 py-2.5 pr-9 text-[16px] text-amana-neutral-500 placeholder:text-amana-neutral-300 transition-colors duration-200 focus:outline-none focus:border-amana-primary-500 disabled:bg-amana-neutral-200 disabled:text-amana-neutral-400 disabled:cursor-not-allowed',
+            inputClassName
+          )}
         />
         <ChevronRight
           className={`w-4 h-4 text-amana-neutral-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none transition-transform duration-200 ${open ? 'rotate-90' : ''}`}
@@ -162,7 +181,12 @@ export default function SelectField({
       {open && pos && typeof document !== 'undefined' && createPortal(
         <div
           ref={panelRef}
-          style={{ position: 'fixed', top: pos.top, left: pos.left, width: pos.width }}
+          style={{
+            position: 'fixed',
+            ...(pos.top != null ? { top: pos.top } : { bottom: pos.bottom }),
+            left: pos.left,
+            width: pos.width,
+          }}
           className="z-50 bg-amana-neutral-100 border border-amana-primary-500 rounded-[8px] shadow-lg p-2 max-h-64 overflow-y-auto"
         >
           {filtered.length === 0 ? (

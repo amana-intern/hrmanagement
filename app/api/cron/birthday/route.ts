@@ -11,15 +11,31 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  // Hanya Vercel cron (header x-vercel-cron) yang boleh menjalankan ini tanpa eksplisit.
+  // Panggilan manual harus ?force=1 — mencegah pengiriman dobel tak sengaja (insiden 09:46).
+  const isVercelCron = request.headers.get('x-vercel-cron') !== null;
+  const force = new URL(request.url).searchParams.get('force') === '1';
+  if (!isVercelCron && !force) {
+    return NextResponse.json(
+      { error: 'Triggered only by Vercel cron. Use ?force=1 to run manually.' },
+      { status: 403 }
+    );
+  }
+
   try {
     // Tanggal hari ini di timezone Asia/Jakarta (WIB)
     const jakartaParts = new Intl.DateTimeFormat('en-US', {
       timeZone: 'Asia/Jakarta',
+      year: 'numeric',
       month: 'numeric',
       day: 'numeric',
     }).formatToParts(new Date());
+    const currentYear = Number(jakartaParts.find((p) => p.type === 'year')?.value ?? 0);
     const currentMonth = Number(jakartaParts.find((p) => p.type === 'month')?.value ?? 0);
     const currentDay = Number(jakartaParts.find((p) => p.type === 'day')?.value ?? 0);
+    // Tanggal WIB hari ini (YYYY-MM-DD) — kunci dedup marker.
+    const dateStr = `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(currentDay).padStart(2, '0')}`;
+    const markerIdFor = (idKaryawan: string) => `BDAY-${idKaryawan}-${dateStr}`;
 
     // Ambil semua karyawan yang punya tanggal lahir (dari schema Prisma `Karyawan`)
     const karyawan = await prisma.karyawan.findMany({
@@ -49,6 +65,12 @@ export async function GET(request: Request) {
     const names = birthdays.map((p) => p.nama ?? p.idKaryawan);
     console.log(`Found ${birthdays.length} birthday(s): ${names.join(', ')}`);
 
+    // Dedup: orang yang marker-nya sudah ada di tabel `notification` = sudah terkirim hari ini.
+    const markerIds = birthdays.map((p) => markerIdFor(p.idKaryawan));
+    const existing = await prisma.notification.findMany({ where: { idNotif: { in: markerIds } }, select: { idNotif: true } });
+    const alreadySent = new Set(existing.map((n) => n.idNotif));
+    let skippedCount = 0;
+
     // Pakai model Gemini versi terbaru yang selalu didukung
     const model = genAI.getGenerativeModel({ model: 'gemini-flash-latest' });
 
@@ -57,6 +79,32 @@ export async function GET(request: Request) {
 
     // 2. Try/catch per orang agar 1 error tidak hentikan yang lain
     for (const person of birthdays) {
+      const markerId = markerIdFor(person.idKaryawan);
+      if (alreadySent.has(markerId)) {
+        skippedCount++;
+        continue;
+      }
+
+      // Klaim dulu sebelum kirim: PK `idNotif` (BDAY-<id>-<tanggal>) menjamin idempotency —
+      // insert duplikat berarti run lain sudah mengirim orang ini → skip (anti-dobel, race-safe).
+      // idKaryawan: null supaya marker tidak pernah tampil di bell siapa pun & tidak kena auto-delete 7 hari.
+      const claimed = await prisma.notification
+        .create({
+          data: {
+            idNotif: markerId,
+            idKaryawan: null,
+            tipe: 'BIRTHDAY_SENT',
+            judul: 'Birthday greeting (dedup marker)',
+            pesan: `Google Chat greeting for ${dateStr}`,
+            idReferensi: dateStr,
+          },
+        })
+        .then(() => true)
+        .catch(() => false);
+      if (!claimed) {
+        skippedCount++;
+        continue;
+      }
       const nama = person.nama ?? 'our colleague';
       const grade = person.masterGrade?.namaGrade ? ` (${person.masterGrade.namaGrade})` : '';
 
@@ -91,14 +139,18 @@ export async function GET(request: Request) {
         // 2. Error handling per orang + 3. Logging: failed
         console.error(`❌ Failed for ${nama}:`, err);
         failedCount++;
+        // Kirim gagal → lepas klaim supaya run berikutnya bisa mencoba ulang orang ini.
+        await prisma.notification.deleteMany({ where: { idNotif: markerId } }).catch(() => undefined);
       }
     }
 
+    console.log(`Birthday cron run ${dateStr}: sent=${sentCount} failed=${failedCount} skipped=${skippedCount}`);
     return NextResponse.json({
       success: true,
       message: `Birthday check completed.`,
       sent: sentCount,
       failed: failedCount,
+      skipped: skippedCount,
       names,
     });
   } catch (error) {

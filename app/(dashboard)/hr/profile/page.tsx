@@ -45,14 +45,13 @@ export default function HRProfilePage() {
 
   useEffect(() => {
     (async () => {
-      try {
-        const res = await fetch('/api/me', { cache: 'no-store' });
-        if (res.ok) setMe(((await res.json()).user ?? null) as Me | null);
-      } catch {}
-      try {
-        const res = await fetch('/api/hr/dashboard', { cache: 'no-store' });
-        if (res.ok) setData((await res.json()) as DashboardData);
-      } catch {}
+      // Kedua request independen -> paralel, bukan berantai (waterfall).
+      const [meRes, dashRes] = await Promise.all([
+        fetch('/api/me', { cache: 'no-store' }).catch(() => null),
+        fetch('/api/hr/dashboard', { cache: 'no-store' }).catch(() => null),
+      ]);
+      if (meRes?.ok) setMe(((await meRes.json()).user ?? null) as Me | null);
+      if (dashRes?.ok) setData((await dashRes.json()) as DashboardData);
     })();
   }, []);
 

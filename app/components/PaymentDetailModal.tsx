@@ -2,7 +2,9 @@
 
 import { ReactNode, useState } from 'react';
 import DetailModal, { DetailRow } from './feedback/DetailModal';
-import PdfPreviewModal, { PdfPreviewTarget } from './feedback/PdfPreviewModal';
+import dynamic from 'next/dynamic';
+import type { PdfPreviewTarget } from './feedback/PdfPreviewModal';
+const PdfPreviewModal = dynamic(() => import('./feedback/PdfPreviewModal'), { ssr: false });
 import Button from './forms/Button';
 import { formatDateWIB } from '@/app/utils/formatDate';
 import { statusColor } from '@/app/utils/statusColor';

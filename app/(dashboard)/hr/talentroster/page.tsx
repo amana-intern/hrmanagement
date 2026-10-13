@@ -13,7 +13,10 @@ import type { DataTableColumn } from '@/app/components/data-display/DataTable';
 import Button from '@/app/components/forms/Button';
 import Modal from '@/app/components/feedback/Modal';
 import StatusModal from '@/app/components/feedback/StatusModal';
-import PdfPreviewModal, { PdfPreviewTarget } from '@/app/components/feedback/PdfPreviewModal';
+import dynamic from 'next/dynamic';
+import type { PdfPreviewTarget } from '@/app/components/feedback/PdfPreviewModal';
+const PdfPreviewModal = dynamic(() => import('@/app/components/feedback/PdfPreviewModal'), { ssr: false });
+const AssessmentResultView = dynamic(() => import('@/app/components/hr/AssessmentResultView'), { ssr: false });
 import { AssessmentBadge, EmployeeDetailsContent } from '@/app/components/data-display/EmployeeDetailsModal';
 import CareerHistoryModal, { type CareerHistoryEntry } from '@/app/components/data-display/CareerHistoryModal';
 import TextField from '@/app/components/forms/TextField';
@@ -21,7 +24,6 @@ import DateField from '@/app/components/forms/DateField';
 import { SearchDateRangeCalendarField, SearchTextField, SearchSelectField } from '@/app/components/forms/SearchFields';
 import { useFilters } from '@/app/utils/useFilters';
 import SelectField from '@/app/components/forms/SelectField';
-import AssessmentResultView from '@/app/components/hr/AssessmentResultView';
 import { TableSkeleton } from '@/app/components/feedback/PageSkeleton';
 import { DEPARTMENT_LABELS } from '@/lib/constants';
 
@@ -122,8 +124,6 @@ export default function TalentRosterPage() {
   const [aiResult, setAiResult] = useState<AiSearchResult | null>(null);
   // Detail modal untuk match AI yang bukan karyawan roster (tombol View).
   const [aiTalentModal, setAiTalentModal] = useState<AiMatch | null>(null);
-  // Sekali user search, animasi entrance tabel dimatikan agar tidak jalan lagi saat baris berubah.
-  const [hasSearched, setHasSearched] = useState(false);
   const aiRequestId = useRef(0);
 
   const [assessmentModal, setAssessmentModal] = useState<Employee | null>(null);
@@ -239,7 +239,6 @@ export default function TalentRosterPage() {
   const searchAi = async (raw: string) => {
     const q = raw.trim();
     setAppliedQuery(q);
-    setHasSearched(true);
     const requestId = ++aiRequestId.current;
     if (q.length < 3) {
       setAiState('idle');
@@ -637,17 +636,16 @@ export default function TalentRosterPage() {
         </SearchPanel>
 
         <SectionCard
-          title="Talent Management"
+          title="Talent Roster"
           subtitle={`${rosterRows.length} employee(s)`}
           scroll
-          className="flex-1 min-h-[260px]"
           action={
             <Button variant="primary" size="md" onClick={() => { setIsAddUserOpen(true); setAddUserMsg(''); }}>
               Add New Talent
             </Button>
           }
         >
-          <DataTable key="roster" columns={rosterColumns} rows={rosterRows} defaultSortKey="tipeKontrak" emptyMessage="No employees found." compact animate={!hasSearched} />
+          <DataTable key="roster" columns={rosterColumns} rows={rosterRows} defaultSortKey="tipeKontrak" emptyMessage="No employees found." compact pageSize={25} />
         </SectionCard>
       </div>
 

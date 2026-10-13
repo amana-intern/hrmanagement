@@ -168,14 +168,17 @@ export default function PartnerLeaveApprovalPage() {
   const gradeOptions = useMemo(() => getAllGradeOptions(), []);
 
   const load = async () => {
-    const res = await fetch('/api/leave/list', { cache: 'no-store' });
+    // Kedua request independen -> paralel (sebelumnya berantai).
+    const [res, sessionRes] = await Promise.all([
+      fetch('/api/leave/list', { cache: 'no-store' }),
+      fetch('/api/auth/session', { cache: 'no-store' }).catch(() => null),
+    ]);
     if (res.ok) {
       const data = await res.json();
       const cuti = mapRows((data.list ?? []) as LeaveRaw[]);
       const sick = mapSickRows((data.sickList ?? []) as SickRaw[]);
       // Filter out partner's own leave (auto-approved, no need to approve)
-      const sessionRes = await fetch('/api/auth/session', { cache: 'no-store' });
-      const session = sessionRes.ok ? await sessionRes.json() : null;
+      const session = sessionRes?.ok ? await sessionRes.json() : null;
       const myIdKaryawan = session?.user?.idKaryawan;
       const deptCodes: string[] = session?.user?.departments ?? [];
       setMyDeptLabels(deptCodes.map((c) => DEPARTMENT_LABEL[c] ?? c));
@@ -360,14 +363,14 @@ export default function PartnerLeaveApprovalPage() {
           <DetailRow label="Start Date" value={formatDateWIB(detailRow.startDate)} />
           <DetailRow label="End Date" value={formatDateWIB(detailRow.endDate)} />
           {detailRow.totalDays != null && <DetailRow label="Total Days" value={`${detailRow.totalDays} day(s)`} />}
+          {detailRow.tipeCutiKompensasi && (
+            <DetailRow label="Day Type" value={detailRow.tipeCutiKompensasi === 'FULL' ? 'Full Day (1 day)' : 'Half Day (0.5 day)'} />
+          )}
           {detailRow.tanggalKerjaHariLibur && (
             <DetailRow
               label="Holiday Work Date"
               value={`${formatDateWIB(detailRow.tanggalKerjaHariLibur)}${detailRow.tanggalSelesaiKerjaLibur ? ` - ${formatDateWIB(detailRow.tanggalSelesaiKerjaLibur)}` : ''}`}
             />
-          )}
-          {detailRow.tipeCutiKompensasi && (
-            <DetailRow label="Day Type" value={detailRow.tipeCutiKompensasi === 'FULL' ? 'Full Day (1 day)' : 'Half Day (0.5 day)'} />
           )}
           {detailRow.jumlahHariKompensasi != null && (
             <DetailRow label="Compensatory Days" value={`${detailRow.jumlahHariKompensasi} day(s)`} />

@@ -6,7 +6,8 @@ import { motion } from 'framer-motion';
 import { X } from 'lucide-react';
 import PageTopBar from '@/app/components/layout/PageTopBar';
 import Button from '@/app/components/forms/Button';
-import AssessmentResultView from '@/app/components/hr/AssessmentResultView';
+import dynamic from 'next/dynamic';
+const AssessmentResultView = dynamic(() => import('@/app/components/hr/AssessmentResultView'), { ssr: false });
 import { springSnappy } from '@/app/utils/motion';
 import { CardStackSkeleton } from '@/app/components/feedback/PageSkeleton';
 

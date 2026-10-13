@@ -1,4 +1,4 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, after } from 'next/server';
 import { requireAuth } from '@/lib/dal';
 import { prisma } from '@/lib/prisma';
 import { ROLES } from '@/lib/roles';
@@ -141,17 +141,24 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
     }
 
     // Email notifikasi hasil persetujuan ke pemohon (isi sama dengan bell).
-    const applicantEmail = cuti.karyawan?.user?.email;
-    const applicantName = cuti.karyawan?.nama ?? 'Employee';
-    if (applicantEmail) {
-      const subject = action === 'approve' ? 'Leave approved' : 'Leave rejected';
-      const range = `${cuti.tanggalMulai?.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })} - ${cuti.tanggalSelesai?.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}`;
-      const text =
-        action === 'approve'
-          ? `Hello ${applicantName},\n\nYour leave request (${range}) has been approved.\n\nThank you.`
-          : `Hello ${applicantName},\n\nYour leave request (${range}) was rejected.\nReason: ${catatan}\n\nThank you.`;
-      await sendEmail({ to: applicantEmail, subject, text });
-    }
+    // Ditunda setelah response terkirim (after()) — bukan bagian dari keputusan.
+    after(async () => {
+      try {
+        const applicantEmail = cuti.karyawan?.user?.email;
+        const applicantName = cuti.karyawan?.nama ?? 'Employee';
+        if (applicantEmail) {
+          const subject = action === 'approve' ? 'Leave approved' : 'Leave rejected';
+          const range = `${cuti.tanggalMulai?.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })} - ${cuti.tanggalSelesai?.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}`;
+          const text =
+            action === 'approve'
+              ? `Hello ${applicantName},\n\nYour leave request (${range}) has been approved.\n\nThank you.`
+              : `Hello ${applicantName},\n\nYour leave request (${range}) was rejected.\nReason: ${catatan}\n\nThank you.`;
+          await sendEmail({ to: applicantEmail, subject, text });
+        }
+      } catch {
+        // email gagal tidak boleh membatalkan approval yang sudah tersimpan
+      }
+    });
 
     return Response.json({ ok: true, cuti: updated });
   } catch (e) {

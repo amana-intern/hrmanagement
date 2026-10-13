@@ -1,6 +1,30 @@
 import { requireAuth } from '@/lib/dal';
+import { syncLowonganToFramer, withTimeout, type FramerSyncResult } from '@/lib/framer-sync';
 import { prisma } from '@/lib/prisma';
 import { ROLES } from '@/lib/roles';
+
+// Sync ke Framer (WebSocket + publish) bisa lambat — beri ruang di Vercel.
+export const maxDuration = 60;
+
+// Batas tunggu sync di dalam request publish; kalau lewat, sync tetap
+// jalan di background dan user diberi tahu untuk retry lewat tombol Sync.
+const SYNC_WAIT_MS = 50_000;
+
+async function syncWebsite(): Promise<FramerSyncResult | undefined> {
+  try {
+    return await withTimeout(syncLowonganToFramer(), SYNC_WAIT_MS, 'framer-sync');
+  } catch (e) {
+    return {
+      ok: false,
+      created: 0,
+      updated: 0,
+      removed: 0,
+      published: false,
+      durationMs: SYNC_WAIT_MS,
+      error: e instanceof Error ? e.message : String(e),
+    };
+  }
+}
 
 // DRAFT yang tidak diupdate/publish dalam 7 hari otomatis dihapus.
 const DRAFT_EXPIRE_MS = 7 * 24 * 60 * 60 * 1000;
@@ -34,6 +58,8 @@ export async function GET(request: Request) {
         deskripsi: l.deskripsi,
         idStatus: l.idStatus,
         googleFormURL: l.googleFormURL,
+        tipeKerja: l.tipeKerja,
+        modeKerja: l.modeKerja,
       }));
 
     return Response.json({ list: result });
@@ -52,7 +78,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { namaPosisi, deskripsi, googleFormURL, idStatus } = body || {};
+    const { namaPosisi, deskripsi, googleFormURL, idStatus, tipeKerja, modeKerja } = body || {};
     if (!namaPosisi || !deskripsi) {
       return Response.json({ error: 'Position name & description are required' }, { status: 400 });
     }
@@ -66,10 +92,15 @@ export async function POST(request: Request) {
         deskripsi,
         idStatus: status,
         googleFormURL: googleFormURL ?? null,
+        tipeKerja: tipeKerja || null,
+        modeKerja: modeKerja || null,
       },
     });
 
-    return Response.json({ ok: true, lowongan }, { status: 201 });
+    // Publish langsung push ke website Framer (tunggu sampai site ter-publish).
+    const sync = status === 'OPEN' ? await syncWebsite() : undefined;
+
+    return Response.json({ ok: true, lowongan, sync }, { status: 201 });
   } catch (e) {
     const status = (e as { status?: number }).status ?? 500;
     return Response.json({ error: 'An error occurred' }, { status });

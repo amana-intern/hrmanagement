@@ -100,23 +100,26 @@ export async function GET(request: Request) {
         { idKaryawan: karyawan.idKaryawan, email: karyawan.user?.email ?? null, pesan: pesanKaryawan },
       ];
 
-      for (const r of recipients) {
-        if (r.idKaryawan) {
-          await prisma.notification.create({
-            data: {
-              idNotif: nota(),
-              idKaryawan: r.idKaryawan,
-              tipe,
-              judul,
-              pesan: r.pesan,
-              idReferensi: contract.idKontrak,
-            },
-          });
-        }
-        if (r.email) {
-          await sendEmail({ to: r.email, subject: judul, text: r.pesan });
-        }
+      // Notifikasi di-batch (1 query), email dikirim paralel — sebelumnya
+      // sekuensial per penerima dan bisa menabrak limit durasi function.
+      const notificationRows = recipients
+        .filter((r) => r.idKaryawan)
+        .map((r) => ({
+          idNotif: nota(),
+          idKaryawan: r.idKaryawan as string,
+          tipe,
+          judul,
+          pesan: r.pesan,
+          idReferensi: contract.idKontrak,
+        }));
+      if (notificationRows.length > 0) {
+        await prisma.notification.createMany({ data: notificationRows });
       }
+      await Promise.all(
+        recipients
+          .filter((r) => r.email)
+          .map((r) => sendEmail({ to: r.email as string, subject: judul, text: r.pesan }).catch(() => {}))
+      );
 
       sent.push(contract.idKontrak);
     }

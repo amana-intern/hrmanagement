@@ -106,20 +106,28 @@ export interface LeaveBalance {
 
 // Hitung saldo dari data (selalu up-to-date terhadap tanggal & pengajuan).
 export async function computeLeaveBalance(idKaryawan: string): Promise<LeaveBalance> {
-  const k = await prisma.karyawan.findUnique({
-    where: { idKaryawan },
-    include: { kontrakKaryawan: true },
-  });
-  if (!k) {
-    return {
-      sisa: 0,
-      accrued: 0,
-      consumed: 0,
-      carryOver: 0,
-      annualQuota: 12,
-      period: { start: new Date(), end: new Date(), carryOver: 0, annualQuota: 12, cutiKompensasi: 0, cutiTerpakaiAwal: 0 },
-    };
-  }
+  const empty: LeaveBalance = {
+    sisa: 0,
+    accrued: 0,
+    consumed: 0,
+    carryOver: 0,
+    annualQuota: 12,
+    period: { start: new Date(), end: new Date(), carryOver: 0, annualQuota: 12, cutiKompensasi: 0, cutiTerpakaiAwal: 0 },
+  };
+
+  // Data karyawan & riwayat cuti dibaca PARALEL (konsumsi baru difilter di memori
+  // setelah periode diketahui) -> 1 round-trip ke DB, bukan 2 berantai.
+  const [k, approvedPaid] = await Promise.all([
+    prisma.karyawan.findUnique({
+      where: { idKaryawan },
+      include: { kontrakKaryawan: true },
+    }),
+    prisma.pengajuanCuti.findMany({
+      where: { idKaryawan, idJenisCuti: PAID_LEAVE_JENIS, idStatus: LEAVE_APPROVED },
+      select: { tanggalMulai: true, jumlahHari: true },
+    }),
+  ]);
+  if (!k) return empty;
 
   const contracts: ContractRow[] = k.kontrakKaryawan
     .filter((c) => c.tanggalMulai)
@@ -133,7 +141,12 @@ export async function computeLeaveBalance(idKaryawan: string): Promise<LeaveBala
     }));
 
   const period = resolvePeriod(k.tanggalMasuk, contracts);
-  const consumed = await consumedDays(idKaryawan, period.start, period.end, { includeFuture: true });
+  // Sama persis dengan consumedDays(..., { includeFuture: true }):
+  // semua cuti PAID approved dengan tanggalMulai >= awal periode (termasuk masa depan).
+  const consumed = approvedPaid.reduce((sum, r) => {
+    if (!r.tanggalMulai || r.tanggalMulai < period.start) return sum;
+    return sum + (r.jumlahHari ?? 0);
+  }, 0);
   const accrued = accruedMonths(period.start, new Date(), period.annualQuota);
   // Saldo = carry-over + accrual - pemakaian (riwayat pengajuan + offset historis).
   // Compensatory leave dipisah (dikurangi otomatis oleh cron harian).

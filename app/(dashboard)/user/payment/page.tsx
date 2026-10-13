@@ -16,6 +16,7 @@ import DateField from '@/app/components/forms/DateField';
 import SharedUploadBox from '@/app/components/forms/UploadBox';
 import { SearchTextField, SearchDateRangeCalendarField } from '@/app/components/forms/SearchFields';
 import StatusModal from '@/app/components/feedback/StatusModal';
+import SubmitReviewModal from '@/app/components/feedback/SubmitReviewModal';
 import UploadProgressModal from '@/app/components/feedback/UploadProgressModal';
 import PaymentDetailModal, { PaymentDetailRow } from '@/app/components/PaymentDetailModal';
 import { easeOut } from '@/app/utils/motion';
@@ -195,6 +196,7 @@ export default function PaymentPage() {
   const [loadingPayments, setLoadingPayments] = useState(true);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [detailRow, setDetailRow] = useState<PaymentDetailRow | null>(null);
+  const [showReview, setShowReview] = useState(false);
   const paymentColumns = makePaymentColumns(setDetailRow);
   const { draft, applied, setField, handleSearch, handleReset } = useFilters<Filters>(emptyFilters);
 
@@ -509,7 +511,7 @@ export default function PaymentPage() {
                     <UploadBox label="Upload Invoice Document (.pdf)" fileKey="vendor-invoice" files={files} onFileChange={handleFileChange} />
                   </div>
                   <div className="flex justify-end pt-4 border-t border-amana-neutral-200">
-                    <Button variant="primary" size="lg" disabled={!isVendorComplete} onClick={handleSubmitPayment}>
+                    <Button variant="primary" size="lg" disabled={!isVendorComplete || uploadPct !== null} onClick={() => setShowReview(true)}>
                       Submit Payment
                     </Button>
                   </div>
@@ -572,7 +574,7 @@ export default function PaymentPage() {
                     <UploadBox label="Upload Invoice Document (.pdf)" fileKey="ind-invoice" files={files} onFileChange={handleFileChange} />
                   </div>
                   <div className="flex justify-end pt-4 border-t border-amana-neutral-200">
-                    <Button variant="primary" size="lg" disabled={!isIndividualComplete} onClick={handleSubmitPayment}>
+                    <Button variant="primary" size="lg" disabled={!isIndividualComplete || uploadPct !== null} onClick={() => setShowReview(true)}>
                       Submit Payment
                     </Button>
                   </div>
@@ -614,7 +616,7 @@ export default function PaymentPage() {
                     <UploadBox label="Upload Participant List (.pdf)" fileKey="perdiem-file" files={files} onFileChange={handleFileChange} />
                   </div>
                   <div className="flex justify-end pt-4 border-t border-amana-neutral-200">
-                    <Button variant="primary" size="lg" disabled={!isPerDiemComplete} onClick={handleSubmitPayment}>
+                    <Button variant="primary" size="lg" disabled={!isPerDiemComplete || uploadPct !== null} onClick={() => setShowReview(true)}>
                       Submit Payment
                     </Button>
                   </div>
@@ -629,6 +631,58 @@ export default function PaymentPage() {
     <StatusModal state={message} onClose={() => setMessage(null)} />
     <UploadProgressModal open={uploadPct !== null} percent={uploadPct ?? 0} />
     <PaymentDetailModal open={!!detailRow} row={detailRow} onClose={() => setDetailRow(null)} />
+
+    {showReview && (
+      <SubmitReviewModal
+        title="Confirm Payment Request"
+        fields={[
+          { label: 'Project Manager', value: submittingAs },
+          { label: 'Related Email', value: emailTerkait },
+          { label: 'Chargecode', value: chargecode },
+          { label: 'Related Partner', value: partner },
+          { label: 'Payment Under', value: paymentUnder },
+          { label: 'Payment For', value: paymentFor },
+          ...(paymentFor === 'Vendor'
+            ? [
+                { label: 'Vendor Name', value: vendorName },
+                { label: 'NPWP Vendor', value: vendorNpwp },
+                {
+                  label: 'Payment Amount',
+                  value: vendorAmount.trim() && /[0-9]/.test(vendorAmount) ? `Rp ${Number(vendorAmount.replace(/[^0-9]/g, '')).toLocaleString('id-ID')}` : '',
+                },
+                { label: 'Due Date', value: vendorDueDate },
+              ]
+            : paymentFor === 'Individual(s)'
+              ? [
+                  { label: 'Name of Activity', value: indActivity },
+                  { label: 'Honor Receiver', value: indReceiver },
+                  { label: 'Role in Event', value: individualRole === 'Other' ? indOtherRole : individualRole },
+                  { label: 'Bank Account Name', value: indBankName },
+                  { label: 'Bank Account Number', value: indAccNumber },
+                  { label: 'Honor Components', value: indComponent },
+                  {
+                    label: 'Amount',
+                    value: indAmount.trim() && /[0-9]/.test(indAmount) ? `Rp ${Number(indAmount.replace(/[^0-9]/g, '')).toLocaleString('id-ID')}` : '',
+                  },
+                ]
+              : [
+                  { label: 'Name of Event', value: perDiemEvent },
+                  { label: 'Number of Participants', value: perDiemParticipants },
+                ]),
+        ]}
+        files={[
+          ...(files['vendor-invoice'] ? [{ label: 'Vendor Invoice', file: files['vendor-invoice'] }] : []),
+          ...(files['ind-ktp'] ? [{ label: 'Copy of Individual KTP (For tax purposes)', file: files['ind-ktp'] }] : []),
+          ...(files['ind-invoice'] ? [{ label: 'Attach Invoice', file: files['ind-invoice'] }] : []),
+          ...(files['perdiem-file'] ? [{ label: 'Participant List', file: files['perdiem-file'] }] : []),
+        ]}
+        confirmLabel="Submit Payment"
+        loadingLabel="Submitting..."
+        loading={uploadPct !== null}
+        onConfirm={handleSubmitPayment}
+        onCancel={() => setShowReview(false)}
+      />
+    )}
     </>
   );
 }

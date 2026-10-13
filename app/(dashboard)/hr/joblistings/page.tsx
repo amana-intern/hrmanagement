@@ -10,6 +10,7 @@ import Button from '@/app/components/forms/Button';
 import Modal from '@/app/components/feedback/Modal';
 import StatusPill from '@/app/components/data-display/StatusPill';
 import TextField from '@/app/components/forms/TextField';
+import SelectField from '@/app/components/forms/SelectField';
 import StatusModal from '@/app/components/feedback/StatusModal';
 import { TableSkeleton } from '@/app/components/feedback/PageSkeleton';
 
@@ -19,6 +20,8 @@ interface Job {
   status: 'DRAFT' | 'OPEN' | 'CLOSED';
   description: string;
   formLink: string;
+  tipeKerja: string;
+  modeKerja: string;
 }
 
 interface RawJob {
@@ -27,13 +30,39 @@ interface RawJob {
   idStatus?: string | null;
   deskripsi?: string | null;
   googleFormURL?: string | null;
+  tipeKerja?: string | null;
+  modeKerja?: string | null;
 }
+
+// Hasil sync dari server (lihat lib/framer-sync.ts).
+interface SyncResult {
+  ok: boolean;
+  error?: string;
+}
+
+// Pesan toast untuk aksi yang ikut sync ke website.
+const syncMessage = (sync: SyncResult | undefined, successText: string) => {
+  if (!sync) return { ok: true, text: successText };
+  if (sync.ok) return { ok: true, text: `${successText} & synced to website` };
+  return { ok: false, text: `${successText}, but website sync failed (${sync.error ?? 'unknown error'}). Saving again will retry the sync.` };
+};
 
 const STATUS_LABELS: Record<Job['status'], { label: string; color: string }> = {
   DRAFT: { label: 'Draft', color: 'bg-amana-neutral-400' },
   OPEN: { label: 'Active', color: 'bg-amana-success-500' },
   CLOSED: { label: 'Closed', color: 'bg-amana-neutral-400' },
 };
+
+const EMPTY_JOB_FIELDS = {
+  title: '',
+  description: '',
+  formLink: '',
+  tipeKerja: 'Full-time',
+  modeKerja: 'On-site',
+};
+
+const TIPE_KERJA_OPTIONS = ['Full-time', 'Part-time', 'Internship', 'Contract'] as const;
+const MODE_KERJA_OPTIONS = ['On-site', 'Hybrid', 'Remote'] as const;
 
 export default function JobListingsPage() {
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -48,8 +77,8 @@ export default function JobListingsPage() {
   const [showDeleteModal, setShowDeleteModal] = useState<Job | null>(null);
   const [editJob, setEditJob] = useState<Job | null>(null);
 
-  const [newJob, setNewJob] = useState({ title: '', description: '', formLink: '' });
-  const [editFields, setEditFields] = useState({ title: '', description: '', formLink: '' });
+  const [newJob, setNewJob] = useState({ ...EMPTY_JOB_FIELDS });
+  const [editFields, setEditFields] = useState({ ...EMPTY_JOB_FIELDS });
   const [status, setStatus] = useState<{ ok: boolean; text: string } | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
   const [busy, setBusy] = useState(false);
@@ -66,6 +95,8 @@ export default function JobListingsPage() {
           status: l.idStatus === 'DRAFT' ? 'DRAFT' : l.idStatus === 'CLOSED' ? 'CLOSED' : 'OPEN',
           description: l.deskripsi ?? '',
           formLink: l.googleFormURL ?? '',
+          tipeKerja: l.tipeKerja ?? '',
+          modeKerja: l.modeKerja ?? '',
         }))
       );
     }
@@ -90,7 +121,13 @@ export default function JobListingsPage() {
       body: JSON.stringify(body),
     });
     if (!res.ok) throw new Error('Failed to update job listing');
+    return (await res.json()) as { ok: boolean; sync?: SyncResult };
   };
+
+  const jobPayload = (f: typeof EMPTY_JOB_FIELDS) => ({
+    tipeKerja: f.tipeKerja || null,
+    modeKerja: f.modeKerja || null,
+  });
 
   const handleAddJob = async (asDraft: boolean) => {
     if (!newJob.title || !newJob.description) return;
@@ -106,16 +143,22 @@ export default function JobListingsPage() {
           deskripsi: newJob.description,
           googleFormURL: newJob.formLink || null,
           idStatus: asDraft ? 'DRAFT' : 'OPEN',
+          ...jobPayload(newJob),
         }),
       });
       if (!res.ok) {
         setErrorMsg('Failed to add job listing');
         return;
       }
+      const data = (await res.json()) as { sync?: SyncResult };
       await load();
-      setNewJob({ title: '', description: '', formLink: '' });
+      setNewJob({ ...EMPTY_JOB_FIELDS });
       setShowAddModal(false);
-      setStatus({ ok: true, text: asDraft ? `Job listing "${newJob.title}" saved as draft` : `Job listing "${newJob.title}" successfully published` });
+      if (asDraft) {
+        setStatus({ ok: true, text: `Job listing "${newJob.title}" saved as draft` });
+      } else {
+        setStatus(syncMessage(data.sync, `Job listing "${newJob.title}" successfully published`));
+      }
     } finally {
       setBusy(false);
     }
@@ -128,15 +171,20 @@ export default function JobListingsPage() {
     setErrorMsg('');
     try {
       const nextStatus = asDraft ? 'DRAFT' : 'OPEN';
-      await patchJob(editJob.id, {
+      const data = await patchJob(editJob.id, {
         namaPosisi: editFields.title,
         deskripsi: editFields.description,
         googleFormURL: editFields.formLink || null,
         idStatus: nextStatus,
+        ...jobPayload(editFields),
       });
       await load();
       setEditJob(null);
-      setStatus({ ok: true, text: asDraft ? `Job listing "${editFields.title}" saved as draft` : `Job listing "${editFields.title}" successfully published` });
+      if (asDraft) {
+        setStatus({ ok: true, text: `Job listing "${editFields.title}" saved as draft` });
+      } else {
+        setStatus(syncMessage(data.sync, `Job listing "${editFields.title}" successfully published`));
+      }
     } catch {
       setErrorMsg('Failed to update job listing');
     } finally {
@@ -157,10 +205,11 @@ export default function JobListingsPage() {
         setStatus({ ok: false, text: 'Failed to close job listing' });
         return;
       }
+      const data = (await res.json()) as { sync?: SyncResult };
       setShowTakedownModal(null);
       setEditJob(null);
       await load();
-      setStatus({ ok: true, text: `Job listing "${job.title}" successfully closed` });
+      setStatus(syncMessage(data.sync, `Job listing "${job.title}" successfully closed`));
     } finally {
       setBusy(false);
     }
@@ -175,17 +224,24 @@ export default function JobListingsPage() {
         setStatus({ ok: false, text: 'Failed to delete job listing' });
         return;
       }
+      const data = (await res.json()) as { sync?: SyncResult };
       setShowDeleteModal(null);
       setEditJob(null);
       await load();
-      setStatus({ ok: true, text: `Job listing "${job.title}" successfully deleted` });
+      setStatus(syncMessage(data.sync, `Job listing "${job.title}" successfully deleted`));
     } finally {
       setBusy(false);
     }
   };
 
   const openEdit = (job: Job) => {
-    setEditFields({ title: job.title, description: job.description, formLink: job.formLink });
+    setEditFields({
+      title: job.title,
+      description: job.description,
+      formLink: job.formLink,
+      tipeKerja: job.tipeKerja || 'Full-time',
+      modeKerja: job.modeKerja || 'On-site',
+    });
     setErrorMsg('');
     setEditJob(job);
   };
@@ -242,7 +298,7 @@ export default function JobListingsPage() {
           subtitle={`${filtered.length} listing(s)`}
           scroll
           action={
-            <Button variant="primary" size="md" onClick={() => { setNewJob({ title: '', description: '', formLink: '' }); setErrorMsg(''); setShowAddModal(true); }}>
+            <Button variant="primary" size="md" onClick={() => { setNewJob({ ...EMPTY_JOB_FIELDS }); setErrorMsg(''); setShowAddModal(true); }}>
               Add Listing
             </Button>
           }
@@ -269,6 +325,10 @@ export default function JobListingsPage() {
               />
             </div>
             <TextField label="Google Form Link" value={newJob.formLink} onChange={(v) => setNewJob((p) => ({ ...p, formLink: v }))} placeholder="https://docs.google.com/forms/..." />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <SelectField label="Employment Type" value={newJob.tipeKerja} onChange={(v) => setNewJob((p) => ({ ...p, tipeKerja: v }))} options={TIPE_KERJA_OPTIONS} placeholder="Select type..." />
+              <SelectField label="Work Mode" value={newJob.modeKerja} onChange={(v) => setNewJob((p) => ({ ...p, modeKerja: v }))} options={MODE_KERJA_OPTIONS} placeholder="Select mode..." />
+            </div>
           </div>
 
           {errorMsg && (
@@ -301,6 +361,10 @@ export default function JobListingsPage() {
               />
             </div>
             <TextField label="Google Form Link" value={editFields.formLink} onChange={(v) => setEditFields((p) => ({ ...p, formLink: v }))} placeholder="https://docs.google.com/forms/..." />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <SelectField label="Employment Type" value={editFields.tipeKerja} onChange={(v) => setEditFields((p) => ({ ...p, tipeKerja: v }))} options={TIPE_KERJA_OPTIONS} placeholder="Select type..." />
+              <SelectField label="Work Mode" value={editFields.modeKerja} onChange={(v) => setEditFields((p) => ({ ...p, modeKerja: v }))} options={MODE_KERJA_OPTIONS} placeholder="Select mode..." />
+            </div>
           </div>
 
           {errorMsg && (

@@ -2,17 +2,14 @@ import { requireAuth } from '@/lib/dal';
 import { prisma } from '@/lib/prisma';
 
 // GET /api/notifications - daftar notifikasi user (belum dibaca dulu, lalu sisanya).
-// Sekaligus membersihkan notifikasi berumur lebih dari 7 hari (auto-delete).
+// Murni SELECT. Pembersihan notifikasi > 7 hari dipindah ke POST /api/notifications/cleanup
+// agar polling lonceng tidak melakukan write di setiap request.
 export async function GET() {
   try {
     const auth = await requireAuth();
     if (!auth.idKaryawan) {
       return Response.json({ notifications: [], unread: 0 });
     }
-
-    // Auto-delete: notifikasi berumur > 7 hari dihapus permanen (hanya untuk user ini).
-    const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-    await prisma.notification.deleteMany({ where: { idKaryawan: auth.idKaryawan, createdAt: { lt: cutoff } } });
 
     const notifications = await prisma.notification.findMany({
       where: { idKaryawan: auth.idKaryawan },

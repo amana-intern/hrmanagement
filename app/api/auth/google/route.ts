@@ -1,4 +1,5 @@
 import { OAuth2Client } from 'google-auth-library';
+import { after } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { createSession } from '@/lib/session';
 import { saveFile } from '@/lib/storage';
@@ -75,36 +76,46 @@ export async function POST(request: Request) {
         );
       }
 
-      let pictureUrl = user.pictureUrl; // fallback: pertahankan foto lama
-      if (payload.picture) {
-        const googlePicture = payload.picture;
+      // Unduh & simpan foto Google dijalankan SETELAH response terkirim (after()).
+      // Sebelumnya dilakukan inline: fetch ke lh3.googleusercontent.com + upload
+      // storage menahan login 0.5-5 detik tiap kali.
+      const previousPicture = user.pictureUrl;
+      after(async () => {
         try {
-          // Minta resolusi tinggi (default ID token hanya s96 -> blur saat ditampilkan besar).
-          const hiRes = /=[sS]\d+(-c)?$/.test(googlePicture)
-            ? googlePicture.replace(/=[sS]\d+(-c)?$/, '=s400-c')
-            : `${googlePicture}=s400-c`;
-          const res = await fetch(hiRes, { signal: AbortSignal.timeout(5000) });
-          if (res.ok) {
-            const buffer = Buffer.from(await res.arrayBuffer());
-            pictureUrl = await saveFile(buffer, `avatar-${googleSub}-400.jpg`);
-          } else {
-            // Unduhan dari Google gagal (mis. 429) -> pakai URL Google langsung.
-            console.warn(`[google-auth] Foto profil gagal diunduh (HTTP ${res.status}) untuk ${email}`);
-            pictureUrl = user.pictureUrl ?? googlePicture;
+          let pictureUrl = previousPicture; // fallback: pertahankan foto lama
+          if (payload.picture) {
+            const googlePicture = payload.picture;
+            try {
+              // Minta resolusi tinggi (default ID token hanya s96 -> blur saat ditampilkan besar).
+              const hiRes = /=[sS]\d+(-c)?$/.test(googlePicture)
+                ? googlePicture.replace(/=[sS]\d+(-c)?$/, '=s400-c')
+                : `${googlePicture}=s400-c`;
+              const res = await fetch(hiRes, { signal: AbortSignal.timeout(5000) });
+              if (res.ok) {
+                const buffer = Buffer.from(await res.arrayBuffer());
+                pictureUrl = await saveFile(buffer, `avatar-${googleSub}-400.jpg`);
+              } else {
+                // Unduhan dari Google gagal (mis. 429) -> pakai URL Google langsung.
+                console.warn(`[google-auth] Foto profil gagal diunduh (HTTP ${res.status}) untuk ${email}`);
+                pictureUrl = previousPicture ?? googlePicture;
+              }
+            } catch (e) {
+              // Simpan ke storage gagal -> pakai URL Google langsung agar foto tetap tampil.
+              console.warn(`[google-auth] Gagal simpan foto profil untuk ${email}:`, e);
+              pictureUrl = previousPicture ?? googlePicture;
+            }
+          }
+
+          if (!user.googleSub || previousPicture !== pictureUrl) {
+            await prisma.user.update({
+              where: { idUser: user.idUser },
+              data: { ...(user.googleSub ? {} : { googleSub }), pictureUrl },
+            });
           }
         } catch (e) {
-          // Simpan ke storage gagal -> pakai URL Google langsung agar foto tetap tampil.
-          console.warn(`[google-auth] Gagal simpan foto profil untuk ${email}:`, e);
-          pictureUrl = user.pictureUrl ?? googlePicture;
+          console.warn(`[google-auth] Sinkronisasi profil tertunda gagal untuk ${email}:`, e);
         }
-      }
-
-      if (!user.googleSub || user.pictureUrl !== pictureUrl) {
-        await prisma.user.update({
-          where: { idUser: user.idUser },
-          data: { ...(user.googleSub ? {} : { googleSub }), pictureUrl },
-        });
-      }
+      });
     }
 
     const nama = user.karyawan?.nama ?? user.email;
