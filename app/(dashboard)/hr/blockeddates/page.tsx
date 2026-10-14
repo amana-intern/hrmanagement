@@ -1,4 +1,4 @@
-'use client';
+'use client';;
 
 import { useEffect, useState } from 'react';
 import PageTopBar from '@/app/components/layout/PageTopBar';
