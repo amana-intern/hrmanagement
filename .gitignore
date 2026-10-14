@@ -42,3 +42,6 @@ next-env.d.ts
 
 # uploaded user files (dev)
 public/uploads/
+
+# data karyawan (jangan di-push)
+/guide/
