@@ -186,7 +186,7 @@ export default function DataTable<T extends { id: number | string }>({
   return (
     <>
       <div
-        className="shrink-0 overflow-hidden rounded-[4.88px] bg-amana-neutral-100 pb-[19.51px]"
+        className="min-h-0 overflow-hidden rounded-[4.88px] bg-amana-neutral-100 pb-[19.51px]"
         style={{ height: tableHeight }}
       >
         <div ref={scrollRef} className="h-full overflow-auto">{table}</div>
