@@ -3,8 +3,17 @@ import { prisma } from '@/lib/prisma';
 import { createSession, deleteSession } from '@/lib/session';
 import { hasPendingFirstAssessment } from '@/lib/assessment-gate';
 import { canUseEmployeeFeatures } from '@/lib/roles';
+import { isDemoMode } from '@/lib/auth-mode';
 
 export async function POST(request: NextRequest) {
+  // Login email hanya untuk mode demo/lokal. Production wajib lewat Google SSO.
+  if (!isDemoMode()) {
+    return Response.json(
+      { error: 'Email login is disabled. Please sign in with Google.' },
+      { status: 403 }
+    );
+  }
+
   try {
     const body = await request.json();
     const { email } = body || {};
